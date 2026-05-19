@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <div class="two-column">
+            <div>
+                <h1>{{ event.title }}</h1>
+                <div class="flex" style="gap: 1rem; margin-bottom: 1rem;">
+                    <span>📅 {{ event.event_date|date:"F d, Y • g:i A" }}</span>
+                    <span>📍 {{ event.venue }}</span>
+                </div>
+                <div class="np-card">
+                    <h3>About This Event</h3>
+                    <p>{{ event.description|linebreaks }}</p>
+                </div>
+            </div>
+            <div>
+                <div class="np-card-solid sticky-element">
+                    <h3>Get Your Tickets</h3>
+                    {% for ticket in ticket_types %}
+                    <div style="border-bottom: 1px solid #eef2f0; padding: 1rem 0;">
+                        <div class="flex justify-between">
+                            <div><strong>{{ ticket.name }}</strong></div>
+                            <div><span style="font-size: 1.25rem; font-weight: 800;">KES {{ ticket.price }}</span></div>
+                        </div>
+                        <form method="POST" action="{% url 'booking' event_slug=event.slug %}" style="margin-top: 0.5rem;">
+                            {% csrf_token %}
+                            <input type="hidden" name="ticket_type" value="{{ ticket.id }}">
+                            <div class="flex gap-2">
+                                <select name="quantity" class="np-input" style="width: 80px;">
+                                    {% for i in "1234567890"|make_list %}
+                                    <option value="{{ i }}">{{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn-primary flex-1">Book Now</button>
+                            </div>
+                        </form>
+                    </div>
+                    {% empty %}
+                    <p>No tickets available.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

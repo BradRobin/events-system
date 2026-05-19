@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container" style="max-width: 40rem;">
+        <div class="np-card-solid text-center">
+            <div style="font-size: 4rem;">✅</div>
+            <h2>Booking Confirmed!</h2>
+            <p>Your tickets have been booked successfully.</p>
+            <div class="np-card" style="text-align: left; margin: 1.5rem 0;">
+                <p><strong>Booking Reference:</strong> {{ booking.booking_reference }}</p>
+                <p><strong>Event:</strong> {{ booking.event.title }}</p>
+                <p><strong>Date:</strong> {{ booking.event.event_date|date:"F d, Y • g:i A" }}</p>
+                <p><strong>Venue:</strong> {{ booking.event.venue }}</p>
+                <p><strong>Quantity:</strong> {{ booking.quantity }}</p>
+                <p><strong>Total Paid:</strong> KES {{ booking.total_price }}</p>
+            </div>
+            <div class="flex" style="gap: 1rem; justify-content: center;">
+                <a href="{% url 'dashboard' %}" class="btn-primary">Go to Dashboard</a>
+                <a href="{% url 'home' %}" class="btn-secondary">Back to Home</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

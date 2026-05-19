@@ -1,0 +1,93 @@
+{% load static %}
+
+<section class="section stats-section" style="background: var(--np-bg); padding: 4rem 0;">
+    <div class="container">
+        <h2 style="text-align: center;"><i class="fas fa-chart-line"></i> Our Impact</h2>
+        <div class="analytics-grid" id="statsSection" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 2rem;">
+            <div class="analytics-card" style="background: white; border-radius: 1rem; padding: 1.5rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div class="analytics-number" id="countEvents" data-target="1248" style="font-size: 2.5rem; font-weight: 800; color: #ec6408; margin-bottom: 0.5rem;">0</div>
+                <p><i class="fas fa-calendar-check"></i> Events Hosted</p>
+            </div>
+            <div class="analytics-card" style="background: white; border-radius: 1rem; padding: 1.5rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div class="analytics-number" id="countTickets" data-target="15842" style="font-size: 2.5rem; font-weight: 800; color: #ec6408; margin-bottom: 0.5rem;">0</div>
+                <p><i class="fas fa-ticket-alt"></i> Tickets Sold</p>
+            </div>
+            <div class="analytics-card" style="background: white; border-radius: 1rem; padding: 1.5rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div class="analytics-number" id="countOrganizers" data-target="326" style="font-size: 2.5rem; font-weight: 800; color: #ec6408; margin-bottom: 0.5rem;">0</div>
+                <p><i class="fas fa-users"></i> Organizers</p>
+            </div>
+            <div class="analytics-card" style="background: white; border-radius: 1rem; padding: 1.5rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div class="analytics-number" id="countSatisfaction" data-target="98" style="font-size: 2.5rem; font-weight: 800; color: #ec6408; margin-bottom: 0.5rem;">0</div>
+                <p><i class="fas fa-smile"></i> Satisfaction Rate</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    let hasAnimated = false;
+    let countersReset = false;
+    
+    function animateNumber(element, target, isPercentage) {
+        let current = 0;
+        const increment = target / 50;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                element.textContent = isPercentage ? target + '%' : target + '+';
+                clearInterval(timer);
+            } else {
+                element.textContent = Math.floor(current);
+            }
+        }, 30);
+    }
+    
+    function startCounters() {
+        if (hasAnimated) return;
+        hasAnimated = true;
+        
+        const events = document.getElementById('countEvents');
+        const tickets = document.getElementById('countTickets');
+        const organizers = document.getElementById('countOrganizers');
+        const satisfaction = document.getElementById('countSatisfaction');
+        
+        if (events) animateNumber(events, 1248, false);
+        if (tickets) animateNumber(tickets, 15842, false);
+        if (organizers) animateNumber(organizers, 326, false);
+        if (satisfaction) animateNumber(satisfaction, 98, true);
+    }
+    
+    function resetCounters() {
+        if (!hasAnimated) return;
+        hasAnimated = false;
+        
+        const events = document.getElementById('countEvents');
+        const tickets = document.getElementById('countTickets');
+        const organizers = document.getElementById('countOrganizers');
+        const satisfaction = document.getElementById('countSatisfaction');
+        
+        if (events) events.textContent = '0';
+        if (tickets) tickets.textContent = '0';
+        if (organizers) organizers.textContent = '0';
+        if (satisfaction) satisfaction.textContent = '0';
+    }
+    
+    // Check when stats section is visible
+    const statsSection = document.getElementById('statsSection');
+    
+    function checkVisibility() {
+        if (!statsSection) return;
+        const rect = statsSection.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight - 100 && rect.bottom > 100;
+        
+        if (isVisible) {
+            startCounters();
+        } else {
+            resetCounters();
+        }
+    }
+    
+    window.addEventListener('scroll', checkVisibility);
+    window.addEventListener('load', checkVisibility);
+    checkVisibility();
+</script>

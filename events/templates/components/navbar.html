@@ -1,0 +1,108 @@
+{% load static %}
+
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/" class="logo">
+            <div class="logo-icon">E</div>
+            <span class="logo-text">EventHub</span>
+        </a>
+        
+        <div class="nav-menu">
+            <a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a>
+            <a href="/events/" class="nav-link"><i class="fas fa-calendar-alt"></i> Events</a>
+            <a href="/stories/" class="nav-link"><i class="fas fa-users"></i> Customer Stories</a>
+            <a href="/about/" class="nav-link"><i class="fas fa-info-circle"></i> About</a>
+            
+            {% if user.is_authenticated %}
+                <a href="/dashboard/" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                {% if user.role == 'organizer' %}
+                    <a href="/dashboard/create-event/" class="btn-primary btn-sm"><i class="fas fa-plus"></i> Create Event</a>
+                {% endif %}
+                <div class="auth-dropdown">
+                    <div class="auth-btn">
+                        <i class="fas fa-user-circle"></i>
+                        <span>{{ user.username }}</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="auth-dropdown-menu">
+                        <a href="/dashboard/" class="auth-dropdown-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                        <a href="/dashboard/profile/" class="auth-dropdown-item"><i class="fas fa-user-edit"></i> Profile</a>
+                        <a href="/my-bookings/" class="auth-dropdown-item"><i class="fas fa-ticket-alt"></i> My Bookings</a>
+                        {% if user.role == 'organizer' %}
+                            <a href="/my-events/" class="auth-dropdown-item"><i class="fas fa-calendar-check"></i> My Events</a>
+                        {% endif %}
+                        <div class="auth-dropdown-divider"></div>
+                        <a href="/notifications/" class="auth-dropdown-item"><i class="fas fa-bell"></i> Notifications</a>
+                        <div class="auth-dropdown-divider"></div>
+                        <a href="/logout/" class="auth-dropdown-item" style="color: #f81d1d;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="auth-dropdown">
+                    <div class="auth-btn">
+                        <i class="fas fa-user"></i>
+                        <span>Account</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="auth-dropdown-menu">
+                        <a href="/login/" class="auth-dropdown-item"><i class="fas fa-sign-in-alt"></i> Login</a>
+                        <div class="auth-dropdown-divider"></div>
+                        <a href="/help/" class="auth-dropdown-item"><i class="fas fa-question-circle"></i> Help Center</a>
+                        <a href="/reviews/" class="auth-dropdown-item"><i class="fas fa-star"></i> Reviews & Feedback</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <label for="mobile-menu-toggle" class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </label>
+    </div>
+</nav>
+
+<input type="checkbox" id="mobile-menu-toggle">
+
+<!-- Mobile Menu Overlay -->
+<label for="mobile-menu-toggle" class="mobile-menu-overlay"></label>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu">
+    <div class="mobile-menu-header">
+        <label for="mobile-menu-toggle" class="mobile-menu-close">
+            <i class="fas fa-times"></i>
+        </label>
+    </div>
+    
+    {% if user.is_authenticated %}
+        <div class="mobile-user-info">
+            <div class="mobile-user-avatar">{{ user.username|make_list|first|upper }}</div>
+            <div class="mobile-user-details">
+                <div class="user-name">{{ user.username }}</div>
+                <div class="user-role">{{ user.role|title }}</div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a>
+    <a href="/events/" class="nav-link"><i class="fas fa-calendar-alt"></i> Events</a>
+    <a href="/stories/" class="nav-link"><i class="fas fa-users"></i> Customer Stories</a>
+    <a href="/about/" class="nav-link"><i class="fas fa-info-circle"></i> About</a>
+    
+    {% if user.is_authenticated %}
+        <a href="/dashboard/" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+        <a href="/dashboard/profile/" class="nav-link"><i class="fas fa-user-edit"></i> Profile</a>
+        <a href="/my-bookings/" class="nav-link"><i class="fas fa-ticket-alt"></i> My Bookings</a>
+        {% if user.role == 'organizer' %}
+            <a href="/my-events/" class="nav-link"><i class="fas fa-calendar-check"></i> My Events</a>
+            <a href="/dashboard/create-event/" class="btn-primary btn-sm" style="margin-top: 0.5rem; text-align: center;"><i class="fas fa-plus"></i> Create Event</a>
+        {% endif %}
+        <a href="/notifications/" class="nav-link"><i class="fas fa-bell"></i> Notifications</a>
+        <div class="auth-dropdown-divider"></div>
+        <a href="/logout/" class="nav-link" style="color: #f81d1d;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    {% else %}
+        <a href="/login/" class="btn-secondary"><i class="fas fa-sign-in-alt"></i> Login</a>
+        <div class="auth-dropdown-divider"></div>
+        <a href="/help/" class="btn-outline"><i class="fas fa-question-circle"></i> Help Center</a>
+        <a href="/reviews/" class="btn-outline"><i class="fas fa-star"></i> Reviews & Feedback</a>
+    {% endif %}
+</div>

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Help Center - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<section class="hero-section">
+    <div class="container">
+        <h1>Help <span class="text-red">Center</span></h1>
+        <p class="hero-subtitle">How can we help you today?</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="help-categories">
+            <div class="help-category">
+                <i class="fas fa-ticket-alt"></i>
+                <h3>Booking & Tickets</h3>
+                <ul>
+                    <li><a href="#">How to book tickets?</a></li>
+                    <li><a href="#">How to cancel a booking?</a></li>
+                    <li><a href="#">Where to find my tickets?</a></li>
+                    <li><a href="#">Ticket refund policy</a></li>
+                </ul>
+            </div>
+            <div class="help-category">
+                <i class="fas fa-user"></i>
+                <h3>Account & Profile</h3>
+                <ul>
+                    <li><a href="#">How to create an account?</a></li>
+                    <li><a href="#">How to reset password?</a></li>
+                    <li><a href="#">How to update profile?</a></li>
+                    <li><a href="#">Account security tips</a></li>
+                </ul>
+            </div>
+            <div class="help-category">
+                <i class="fas fa-calendar-alt"></i>
+                <h3>Events & Organizers</h3>
+                <ul>
+                    <li><a href="#">How to find events?</a></li>
+                    <li><a href="#">How to become an organizer?</a></li>
+                    <li><a href="#">How to create an event?</a></li>
+                    <li><a href="#">Event promotion tips</a></li>
+                </ul>
+            </div>
+            <div class="help-category">
+                <i class="fas fa-credit-card"></i>
+                <h3>Payments & Refunds</h3>
+                <ul>
+                    <li><a href="#">Accepted payment methods</a></li>
+                    <li><a href="#">How to request a refund?</a></li>
+                    <li><a href="#">Payment security</a></li>
+                    <li><a href="#">Billing inquiries</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-bg-light">
+    <div class="container">
+        <h2>Still Need Help?</h2>
+        <div class="contact-support">
+            <p>Contact our support team for assistance</p>
+            <a href="/contact/" class="btn-primary">Contact Support</a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

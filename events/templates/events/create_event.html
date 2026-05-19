@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container" style="max-width: 48rem;">
+        <div class="np-card-solid">
+            <h2>Create New Event</h2>
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group"><label class="np-label">Event Title</label><input type="text" name="title" class="np-input" required></div>
+                <div class="form-group"><label class="np-label">Category</label><select name="category" class="np-input"><option value="music">Music</option><option value="sports">Sports</option><option value="tech">Technology</option><option value="food">Food</option><option value="arts">Arts</option><option value="business">Business</option><option value="education">Education</option><option value="other">Other</option></select></div>
+                <div class="form-group"><label class="np-label">Description</label><textarea name="description" class="np-input" rows="5" required></textarea></div>
+                <div class="form-group"><label class="np-label">Banner Image</label><input type="file" name="banner_image" class="np-input" accept="image/*"></div>
+                <div class="form-group"><label class="np-label">Thumbnail</label><input type="file" name="thumbnail" class="np-input" accept="image/*"></div>
+                <div class="form-group"><label class="np-label">Event Date & Time</label><input type="datetime-local" name="event_date" class="np-input" required></div>
+                <div class="form-group"><label class="np-label">Venue</label><input type="text" name="venue" class="np-input" required></div>
+                <div class="form-group"><label class="np-label">Capacity</label><input type="number" name="capacity" class="np-input" required></div>
+                <div class="form-group"><label><input type="checkbox" name="is_published"> Publish Immediately</label></div>
+                <button type="submit" class="btn-primary w-full">Create Event</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

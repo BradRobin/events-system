@@ -1,0 +1,18 @@
+{% load static %}
+
+<section class="hero-section">
+    <div class="container">
+        <h1 style="color: white; text-align: center;">Discover Amazing<br><span style="color: var(--np-yellow);">Events</span> Near You</h1>
+        <p class="hero-subtitle">From concerts to conferences, find and book tickets for the best events across Africa.</p>
+        <div class="flex" style="gap: 1rem; justify-content: center;">
+            <a href="/events/" class="btn-primary"><i class="fas fa-calendar-alt"></i> Explore Events</a>
+            <a href="/register/?role=organizer" class="btn-secondary"><i class="fas fa-chalkboard-user"></i> Become an Organizer</a>
+        </div>
+        
+        <form method="GET" action="/events/" class="search-bar">
+            <input type="text" name="search" placeholder="Search events..." class="search-input">
+            <input type="text" name="location" placeholder="Location" class="search-input">
+            <button type="submit" class="btn-primary search-btn"><i class="fas fa-search"></i> Search</button>
+        </form>
+    </div>
+</section>

@@ -1,0 +1,46 @@
+@import url('variables.css');
+@import url('reset.css');
+@import url('typography.css');
+@import url('layout.css');
+@import url('navbar.css');
+@import url('buttons.css');
+@import url('forms.css');
+@import url('cards.css');
+@import url('carousel.css');
+@import url('hero.css');
+@import url('footer.css');
+@import url('animations.css');
+@import url('messages.css');
+@import url('utilities.css');
+@import url('responsive.css');
+@import url('icons.css');
+@import url('stats.css');
+@import url('pages.css');
+
+.floating-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.floating-bg-circle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.04;
+}
+
+main {
+    position: relative;
+    z-index: 1;
+    min-height: calc(100vh - 70px);
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+}

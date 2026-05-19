@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <div class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <h2>My Events</h2>
+            <a href="{% url 'create_event' %}" class="btn-primary">+ Create New Event</a>
+        </div>
+        <div class="event-grid">
+            {% for event in events %}
+            <div class="np-card-image">
+                <div class="card-content">
+                    <div class="flex justify-between">
+                        <h3>{{ event.title }}</h3>
+                        {% if event.is_published %}<span class="badge-featured">Published</span>{% else %}<span class="badge-soldout">Draft</span>{% endif %}
+                    </div>
+                    <p class="text-sm text-muted">📅 {{ event.event_date|date:"M d, Y" }}</p>
+                    <p class="text-sm text-muted">📍 {{ event.venue|truncatechars:30 }}</p>
+                    <div class="flex gap-2 mt-3">
+                        <a href="{% url 'event_detail' slug=event.slug %}" class="btn-outline btn-sm">View</a>
+                        <a href="#" class="btn-outline btn-sm">Edit</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p>No events yet. <a href="{% url 'create_event' %}">Create your first event</a></p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Customer Stories - EventHub{% endblock %}
+
+{% block content %}
+
+<section class="page-hero">
+    <div class="container">
+        <h1 style="color: white; text-align: center;">Customer <span style="color: var(--np-yellow);">Stories</span></h1>
+        <p class="hero-subtitle" style="color: rgba(255,255,255,0.9);">Hear what our customers have to say about their EventHub experience.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <h2>What Our Customers Say</h2>
+        <div class="stories-grid">
+            <div class="testimonial-card">
+                <div class="flex items-center" style="gap: 1rem; margin-bottom: 1rem; align-items: center;">
+                    <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Amina" class="testimonial-avatar-img" onerror="this.src='https://via.placeholder.com/55/f59e0b/ffffff?text=A'">
+                    <div><div class="font-semibold">Amina Mwangi</div><p class="text-sm text-muted"><i class="fas fa-map-marker-alt"></i> Nairobi, Kenya</p></div>
+                </div>
+                <div class="stars-display"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p>"Finding events is so easy now. The booking process is seamless and I love the digital tickets with QR codes! I've attended 5 events this year alone."</p>
+                <p class="text-sm text-muted" style="margin-top: 1rem;"><i class="fas fa-calendar-check"></i> Attended: 5 events</p>
+            </div>
+            <div class="testimonial-card">
+                <div class="flex items-center" style="gap: 1rem; margin-bottom: 1rem; align-items: center;">
+                    <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="James" class="testimonial-avatar-img" onerror="this.src='https://via.placeholder.com/55/f59e0b/ffffff?text=J'">
+                    <div><div class="font-semibold">James Okonkwo</div><p class="text-sm text-muted"><i class="fas fa-map-marker-alt"></i> Lagos, Nigeria</p></div>
+                </div>
+                <div class="stars-display"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p>"As an organizer, the analytics dashboard helps me track ticket sales in real-time. EventHub has transformed how I manage my events. Game changer!"</p>
+                <p class="text-sm text-muted" style="margin-top: 1rem;"><i class="fas fa-chart-line"></i> Organized: 12 events</p>
+            </div>
+            <div class="testimonial-card">
+                <div class="flex items-center" style="gap: 1rem; margin-bottom: 1rem; align-items: center;">
+                    <img src="https://randomuser.me/api/portraits/women/45.jpg" alt="Sarah" class="testimonial-avatar-img" onerror="this.src='https://via.placeholder.com/55/f59e0b/ffffff?text=S'">
+                    <div><div class="font-semibold">Sarah Kariuki</div><p class="text-sm text-muted"><i class="fas fa-map-marker-alt"></i> Accra, Ghana</p></div>
+                </div>
+                <div class="stars-display"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p>"I've booked tickets for 5 events this year. The platform is reliable, fast, and customer support is excellent. Best event platform in Africa!"</p>
+                <p class="text-sm text-muted" style="margin-top: 1rem;"><i class="fas fa-ticket-alt"></i> Tickets purchased: 15</p>
+            </div>
+            <div class="testimonial-card">
+                <div class="flex items-center" style="gap: 1rem; margin-bottom: 1rem; align-items: center;">
+                    <img src="https://randomuser.me/api/portraits/men/52.jpg" alt="Michael" class="testimonial-avatar-img" onerror="this.src='https://via.placeholder.com/55/f59e0b/ffffff?text=M'">
+                    <div><div class="font-semibold">Michael Omondi</div><p class="text-sm text-muted"><i class="fas fa-map-marker-alt"></i> Kampala, Uganda</p></div>
+                </div>
+                <div class="stars-display"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p>"The QR code tickets make entry so smooth. No more paper tickets! This platform is the future of event management in Africa."</p>
+                <p class="text-sm text-muted" style="margin-top: 1rem;"><i class="fas fa-smile"></i> Attended: 8 events</p>
+            </div>
+            <div class="testimonial-card">
+                <div class="flex items-center" style="gap: 1rem; margin-bottom: 1rem; align-items: center;">
+                    <img src="https://randomuser.me/api/portraits/women/23.jpg" alt="Patience" class="testimonial-avatar-img" onerror="this.src='https://via.placeholder.com/55/f59e0b/ffffff?text=P'">
+                    <div><div class="font-semibold">Patience Zulu</div><p class="text-sm text-muted"><i class="fas fa-map-marker-alt"></i> Lusaka, Zambia</p></div>
+                </div>
+                <div class="stars-display"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p>"Amazing platform! I discovered so many events I would have missed. The early bird discounts save me money too!"</p>
+                <p class="text-sm text-muted" style="margin-top: 1rem;"><i class="fas fa-tag"></i> Saved: 30% on early bird</p>
+            </div>
+            <div class="testimonial-card">
+                <div class="flex items-center" style="gap: 1rem; margin-bottom: 1rem; align-items: center;">
+                    <img src="https://randomuser.me/api/portraits/men/78.jpg" alt="Brian" class="testimonial-avatar-img" onerror="this.src='https://via.placeholder.com/55/f59e0b/ffffff?text=B'">
+                    <div><div class="font-semibold">Brian Mutua</div><p class="text-sm text-muted"><i class="fas fa-map-marker-alt"></i> Dar es Salaam, Tanzania</p></div>
+                </div>
+                <div class="stars-display"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p>"EventHub made organizing my tech meetup effortless. Ticket sales were easy to track and attendees loved the digital check-in."</p>
+                <p class="text-sm text-muted" style="margin-top: 1rem;"><i class="fas fa-users"></i> Sold: 200+ tickets</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

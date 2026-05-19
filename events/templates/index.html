@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+{% include 'sections/hero.html' %}
+{% include 'sections/categories.html' %}
+{% include 'sections/featured_events.html' %}
+{% include 'sections/stats.html' %}
+{% include 'sections/how_it_works.html' %}
+{% include 'sections/testimonials.html' %}
+{% include 'sections/newsletter.html' %}
+
+<script>
+// Category Carousel with Arrow Buttons
+const categoryCarousel = document.getElementById('categoryCarousel');
+const catPrevBtn = document.getElementById('catPrevBtn');
+const catNextBtn = document.getElementById('catNextBtn');
+
+if (catPrevBtn && catNextBtn && categoryCarousel) {
+    catPrevBtn.addEventListener('click', () => {
+        categoryCarousel.scrollBy({ left: -350, behavior: 'smooth' });
+    });
+    catNextBtn.addEventListener('click', () => {
+        categoryCarousel.scrollBy({ left: 350, behavior: 'smooth' });
+    });
+}
+
+// Featured Events Auto Rotate Carousel
+const eventCarousel = document.getElementById('eventCarousel');
+let eventAutoInterval;
+let eventIndex = 0;
+let eventItems = [];
+
+function updateEventItems() {
+    eventItems = document.querySelectorAll('#eventCarousel .testimonial-item');
+    return eventItems[0]?.offsetWidth + 20 || 380;
+}
+
+function rotateEventCarousel() {
+    if (!eventCarousel) return;
+    const eventItemWidth = updateEventItems();
+    if (eventItems.length === 0) return;
+    eventIndex++;
+    if (eventIndex >= eventItems.length) {
+        eventIndex = 0;
+        eventCarousel.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+        eventCarousel.scrollTo({ left: eventIndex * eventItemWidth, behavior: 'smooth' });
+    }
+}
+
+function startEventAutoRotate() {
+    if (eventAutoInterval) clearInterval(eventAutoInterval);
+    eventAutoInterval = setInterval(rotateEventCarousel, 5000);
+}
+
+// Testimonials Auto Rotate Carousel with Dots
+const testimonialCarousel = document.getElementById('testimonialCarousel');
+let testAutoInterval;
+let testIndex = 0;
+let testItems = [];
+
+function updateTestItems() {
+    testItems = document.querySelectorAll('#testimonialCarousel .testimonial-item');
+    return testItems[0]?.offsetWidth + 20 || 380;
+}
+
+function createTestimonialDots() {
+    const dotsContainer = document.getElementById('testimonialDots');
+    if (!dotsContainer) return;
+    dotsContainer.innerHTML = '';
+    testItems.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.classList.add('testimonial-dot');
+        if (i === testIndex) dot.classList.add('active');
+        dot.addEventListener('click', () => {
+            testIndex = i;
+            const testItemWidth = updateTestItems();
+            testimonialCarousel.scrollTo({ left: testIndex * testItemWidth, behavior: 'smooth' });
+            updateTestimonialDots();
+            resetTestAutoRotate();
+        });
+        dotsContainer.appendChild(dot);
+    });
+}
+
+function updateTestimonialDots() {
+    const dots = document.querySelectorAll('.testimonial-dot');
+    dots.forEach((dot, i) => {
+        if (i === testIndex) {
+            dot.classList.add('active');
+        } else {
+            dot.classList.remove('active');
+        }
+    });
+}
+
+function rotateTestCarousel() {
+    if (!testimonialCarousel) return;
+    const testItemWidth = updateTestItems();
+    if (testItems.length === 0) return;
+    testIndex++;
+    if (testIndex >= testItems.length) {
+        testIndex = 0;
+        testimonialCarousel.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+        testimonialCarousel.scrollTo({ left: testIndex * testItemWidth, behavior: 'smooth' });
+    }
+    updateTestimonialDots();
+}
+
+function startTestAutoRotate() {
+    if (testAutoInterval) clearInterval(testAutoInterval);
+    testAutoInterval = setInterval(rotateTestCarousel, 6000);
+}
+
+function resetTestAutoRotate() {
+    if (testAutoInterval) clearInterval(testAutoInterval);
+    startTestAutoRotate();
+}
+
+if (testimonialCarousel) {
+    updateTestItems();
+    createTestimonialDots();
+    startTestAutoRotate();
+}
+
+if (eventCarousel) {
+    updateEventItems();
+    startEventAutoRotate();
+}
+
+// Count Up Animation
+let countStarted = false;
+const counters = [
+    { element: document.getElementById('countEvents'), target: 1248 },
+    { element: document.getElementById('countTickets'), target: 15842 },
+    { element: document.getElementById('countOrganizers'), target: 326 },
+    { element: document.getElementById('countSatisfaction'), target: 98 }
+];
+
+function startCounters() {
+    if (countStarted) return;
+    countStarted = true;
+    counters.forEach(counter => {
+        if (!counter.element) return;
+        let current = 0;
+        const target = counter.target;
+        const increment = target / 60;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                counter.element.textContent = target + (counter.element.id === 'countSatisfaction' ? '%' : '+');
+                clearInterval(timer);
+            } else {
+                counter.element.textContent = Math.floor(current) + (counter.element.id === 'countSatisfaction' ? '%' : '');
+            }
+        }, 30);
+    });
+}
+
+const countObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) startCounters();
+    });
+}, { threshold: 0.5 });
+
+const statsSection = document.getElementById('statsSection');
+if (statsSection) countObserver.observe(statsSection);
+
+window.addEventListener('resize', () => {
+    if (testimonialCarousel) {
+        updateTestItems();
+        createTestimonialDots();
+        const testItemWidth = updateTestItems();
+        testimonialCarousel.scrollTo({ left: testIndex * testItemWidth, behavior: 'auto' });
+    }
+    if (eventCarousel) {
+        updateEventItems();
+        const eventItemWidth = updateEventItems();
+        eventCarousel.scrollTo({ left: eventIndex * eventItemWidth, behavior: 'auto' });
+    }
+});
+</script>
+
+{% endblock %}

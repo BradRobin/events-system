@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <h2>{{ event.title }} - Analytics</h2>
+        <div class="analytics-grid">
+            <div class="analytics-card"><div class="analytics-number">{{ total_tickets_sold }}</div><p>Tickets Sold</p></div>
+            <div class="analytics-card"><div class="analytics-number">KES {{ total_revenue|floatformat:0 }}</div><p>Revenue</p></div>
+        </div>
+        <div class="np-card">
+            <h3>Ticket Sales by Type</h3>
+            <div class="responsive-table">
+                <table style="width:100%">
+                    <thead><tr><th>Ticket Type</th><th>Price</th><th>Available</th><th>Sold</th></tr></thead>
+                    <tbody>{% for ticket in ticket_types %}<tr><td>{{ ticket.name }}</td><td>KES {{ ticket.price }}</td><td>{{ ticket.remaining_quantity }}</td><td>{{ ticket.quantity_sold }}</td></tr>{% endfor %}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

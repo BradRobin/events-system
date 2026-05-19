@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign Up - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="auth-background register-bg"></div>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-card-inner">
+            
+            <a href="/" class="auth-back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+
+            <div class="auth-logo">
+                <div class="auth-logo-wrapper">
+                    <div class="auth-logo-glow"></div>
+                    <div class="auth-logo-icon">
+                        <span>E</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="auth-title">Create Account</h2>
+
+            <button class="social-login-btn">
+                <i class="fab fa-google social-login-icon"></i>
+                Continue with Google
+            </button>
+
+            <div class="auth-divider">
+                <div class="auth-divider-line">
+                    <span></span>
+                </div>
+                <div class="auth-divider-text">
+                    <span>OR</span>
+                </div>
+            </div>
+
+            <form method="POST" action="{% url 'register' %}" id="registerForm">
+                {% csrf_token %}
+                
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-user auth-input-icon"></i>
+                    <input type="text" name="name" id="fullName" placeholder="Full name" class="auth-input" required>
+                </div>
+                <div id="nameError" class="error-message hidden"></div>
+
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-envelope auth-input-icon"></i>
+                    <input type="email" name="email" id="email" placeholder="Email address" class="auth-input" required>
+                </div>
+                <div id="emailError" class="error-message hidden"></div>
+
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-lock auth-input-icon"></i>
+                    <input type="password" name="password1" id="password1" placeholder="Password" class="auth-input" required>
+                    <button type="button" onclick="togglePassword('password1', 'toggleIcon1')" class="auth-password-toggle">
+                        <i class="fas fa-eye-slash" id="toggleIcon1"></i>
+                    </button>
+                </div>
+                <div id="passwordStrength" class="password-strength hidden"></div>
+
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-lock auth-input-icon"></i>
+                    <input type="password" name="password2" id="password2" placeholder="Confirm password" class="auth-input" required>
+                    <button type="button" onclick="togglePassword('password2', 'toggleIcon2')" class="auth-password-toggle">
+                        <i class="fas fa-eye-slash" id="toggleIcon2"></i>
+                    </button>
+                </div>
+                <div id="passwordMatchError" class="error-message hidden"></div>
+
+                <div class="auth-role-group">
+                    <label class="auth-role-label">I am a</label>
+                    <div class="auth-role-options">
+                        <label class="auth-role-option">
+                            <input type="radio" name="role" value="attendee" checked>
+                            <span>Attendee</span>
+                        </label>
+                        <label class="auth-role-option">
+                            <input type="radio" name="role" value="organizer" id="organizerRadio">
+                            <span>Organizer</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="organizerFields" class="organizer-fields">
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-building auth-input-icon"></i>
+                        <input type="text" name="organization_name" id="orgName" placeholder="Organization name" class="auth-input">
+                    </div>
+                </div>
+
+                <button type="submit" id="registerBtn" class="auth-btn">Sign Up</button>
+            </form>
+
+            <div class="auth-footer">
+                Already have an account?
+                <a href="{% url 'login' %}">Sign In</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function validateEmail(email) {
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    function checkPasswordStrength(password) {
+        var strengthDiv = document.getElementById('passwordStrength');
+        if (password.length === 0) {
+            strengthDiv.classList.add('hidden');
+            return false;
+        }
+        
+        strengthDiv.classList.remove('hidden');
+        
+        if (password.length < 6) {
+            strengthDiv.innerHTML = '<span class="strength-weak">⚠️ Weak password - min 6 characters</span>';
+            return false;
+        } else if (password.length < 10) {
+            strengthDiv.innerHTML = '<span class="strength-medium">✓ Medium strength</span>';
+            return true;
+        } else {
+            strengthDiv.innerHTML = '<span class="strength-strong">✓ Strong password!</span>';
+            return true;
+        }
+    }
+
+    var password1 = document.getElementById('password1');
+    if (password1) {
+        password1.addEventListener('input', function() {
+            checkPasswordStrength(this.value);
+            
+            var password2 = document.getElementById('password2').value;
+            var matchError = document.getElementById('passwordMatchError');
+            if (password2) {
+                if (this.value !== password2) {
+                    matchError.textContent = 'Passwords do not match';
+                    matchError.classList.remove('hidden');
+                } else {
+                    matchError.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    var password2 = document.getElementById('password2');
+    if (password2) {
+        password2.addEventListener('input', function() {
+            var password1 = document.getElementById('password1').value;
+            var matchError = document.getElementById('passwordMatchError');
+            if (password1 !== this.value) {
+                matchError.textContent = 'Passwords do not match';
+                matchError.classList.remove('hidden');
+            } else {
+                matchError.classList.add('hidden');
+            }
+        });
+    }
+
+    var registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            var isValid = true;
+            
+            var name = document.getElementById('fullName').value.trim();
+            var nameError = document.getElementById('nameError');
+            if (!name) {
+                nameError.textContent = 'Full name is required';
+                nameError.classList.remove('hidden');
+                isValid = false;
+            } else if (name.length < 2) {
+                nameError.textContent = 'Name must be at least 2 characters';
+                nameError.classList.remove('hidden');
+                isValid = false;
+            } else {
+                nameError.classList.add('hidden');
+            }
+            
+            var email = document.getElementById('email').value.trim();
+            var emailError = document.getElementById('emailError');
+            if (!email) {
+                emailError.textContent = 'Email address is required';
+                emailError.classList.remove('hidden');
+                isValid = false;
+            } else if (!validateEmail(email)) {
+                emailError.textContent = 'Please enter a valid email address';
+                emailError.classList.remove('hidden');
+                isValid = false;
+            } else {
+                emailError.classList.add('hidden');
+            }
+            
+            var pwd1 = document.getElementById('password1').value;
+            if (!pwd1 || pwd1.length < 6) {
+                isValid = false;
+            }
+            
+            var pwd2 = document.getElementById('password2').value;
+            var matchError = document.getElementById('passwordMatchError');
+            if (pwd1 !== pwd2) {
+                matchError.textContent = 'Passwords do not match';
+                matchError.classList.remove('hidden');
+                isValid = false;
+            }
+            
+            var roleRadios = document.querySelectorAll('input[name="role"]');
+            var selectedRole = 'attendee';
+            for (var i = 0; i < roleRadios.length; i++) {
+                if (roleRadios[i].checked) {
+                    selectedRole = roleRadios[i].value;
+                    break;
+                }
+            }
+            
+            if (selectedRole === 'organizer') {
+                var orgName = document.getElementById('orgName').value.trim();
+                if (!orgName) {
+                    var orgError = document.getElementById('orgNameError');
+                    if (!orgError) {
+                        var errDiv = document.createElement('div');
+                        errDiv.id = 'orgNameError';
+                        errDiv.className = 'error-message hidden';
+                        document.getElementById('organizerFields').appendChild(errDiv);
+                    }
+                    var orgErrorDiv = document.getElementById('orgNameError');
+                    orgErrorDiv.textContent = 'Organization name is required for organizers';
+                    orgErrorDiv.classList.remove('hidden');
+                    isValid = false;
+                }
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    function togglePassword(fieldId, iconId) {
+        var field = document.getElementById(fieldId);
+        var icon = document.getElementById(iconId);
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        } else {
+            field.type = 'password';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    }
+
+    var organizerRadio = document.getElementById('organizerRadio');
+    var organizerFields = document.getElementById('organizerFields');
+    
+    if (organizerRadio && organizerFields) {
+        organizerRadio.addEventListener('change', function() {
+            if (this.checked) {
+                organizerFields.classList.add('show');
+            } else {
+                organizerFields.classList.remove('show');
+            }
+        });
+    }
+</script>
+
+{% endblock %}

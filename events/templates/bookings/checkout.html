@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container" style="max-width: 48rem;">
+        <div class="two-column">
+            <div class="np-card-solid">
+                <h3>Payment Details</h3>
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="form-group"><label class="np-label">Card Number</label><input type="text" class="np-input" placeholder="1234 5678 9012 3456"></div>
+                    <div class="flex" style="gap: 1rem;"><div class="flex-1"><label class="np-label">Expiry Date</label><input type="text" class="np-input" placeholder="MM/YY"></div><div class="flex-1"><label class="np-label">CVV</label><input type="text" class="np-input" placeholder="123"></div></div>
+                    <button type="submit" name="payment_method" value="card" class="btn-primary w-full mt-3">Pay Now</button>
+                </form>
+            </div>
+            <div class="np-card-solid">
+                <h3>Order Summary</h3>
+                <p><strong>{{ booking.event.title }}</strong></p>
+                <p>{{ booking.ticket_type.name }} x {{ booking.quantity }}</p>
+                <p class="text-red" style="font-size: 1.5rem; font-weight: 800;">KES {{ booking.total_price }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

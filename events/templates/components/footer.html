@@ -1,0 +1,37 @@
+{% load static %}
+
+<footer class="footer">
+    <div class="footer-container">
+        <!-- Centered Logo with decorative lines -->
+        <div class="footer-logo-center">
+            <div class="footer-line-left"></div>
+            <div class="footer-logo-wrapper">
+                <div class="logo-icon">E</div>
+                <span class="logo-text">EventHub</span>
+            </div>
+            <div class="footer-line-right"></div>
+        </div>
+
+        <!-- Quick Links - Single row -->
+        <div class="footer-links">
+            <a href="{% url 'home' %}" class="footer-link">Home</a>
+            <span class="footer-separator">•</span>
+            <a href="{% url 'event_list' %}" class="footer-link">Events</a>
+            <span class="footer-separator">•</span>
+            <a href="{% url 'about' %}" class="footer-link">About</a>
+            <span class="footer-separator">•</span>
+            <a href="{% url 'stories' %}" class="footer-link">Stories</a>
+            <span class="footer-separator">•</span>
+            <a href="{% url 'faq' %}" class="footer-link">FAQ</a>
+            <span class="footer-separator">•</span>
+            <a href="{% url 'privacy' %}" class="footer-link">Privacy</a>
+            <span class="footer-separator">•</span>
+            <a href="{% url 'terms' %}" class="footer-link">Terms</a>
+        </div>
+
+        <!-- Bottom Bar - Copyright only -->
+        <div class="footer-copyright">
+            Copyright © {% now "Y" %} EventHub. All Rights Reserved.
+        </div>
+    </div>
+</footer>

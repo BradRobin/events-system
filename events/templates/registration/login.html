@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="auth-background login-bg"></div>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-card-inner">
+            
+            <a href="/" class="auth-back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+
+            <div class="auth-logo">
+                <div class="auth-logo-wrapper">
+                    <div class="auth-logo-glow"></div>
+                    <div class="auth-logo-icon">
+                        <span>E</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="auth-title">Welcome Back</h2>
+
+            <button class="social-login-btn">
+                <i class="fab fa-google social-login-icon"></i>
+                Continue with Google
+            </button>
+
+            <div class="auth-divider">
+                <div class="auth-divider-line">
+                    <span></span>
+                </div>
+                <div class="auth-divider-text">
+                    <span>OR</span>
+                </div>
+            </div>
+
+            <form method="POST" action="{% url 'login' %}" id="loginForm">
+                {% csrf_token %}
+                
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-envelope auth-input-icon"></i>
+                    <input type="email" name="email" id="loginEmail" placeholder="Email address" class="auth-input" required>
+                </div>
+
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-lock auth-input-icon"></i>
+                    <input type="password" name="password" id="password" placeholder="Password" class="auth-input" required>
+                    <button type="button" onclick="togglePassword()" class="auth-password-toggle">
+                        <i class="fas fa-eye-slash" id="toggleIcon"></i>
+                    </button>
+                </div>
+
+                <div class="checkbox-container">
+                    <label class="auth-checkbox">
+                        <input type="checkbox" name="remember">
+                        <span>Remember me</span>
+                    </label>
+                    
+                    <a href="{% url 'reset_password' %}" class="auth-link">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="auth-btn">Sign In</button>
+            </form>
+
+            <div class="auth-footer">
+                Don't have an account?
+                <a href="{% url 'register' %}">Sign Up</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePassword() {
+        var password = document.getElementById('password');
+        var icon = document.getElementById('toggleIcon');
+        if (password.type === 'password') {
+            password.type = 'text';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        } else {
+            password.type = 'password';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    }
+    
+    var loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            var email = document.getElementById('loginEmail').value.trim();
+            var password = document.getElementById('password').value;
+            
+            if (!email) {
+                e.preventDefault();
+                alert('Please enter your email address');
+                return;
+            }
+            
+            if (!password) {
+                e.preventDefault();
+                alert('Please enter your password');
+                return;
+            }
+        });
+    }
+</script>
+
+{% endblock %}

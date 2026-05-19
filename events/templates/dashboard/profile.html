@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container" style="max-width: 48rem;">
+        <h2>Edit Profile</h2>
+        <div class="np-card-solid">
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="flex" style="gap: 1rem; margin-bottom: 1rem;">
+                    <div class="flex-1"><label class="np-label">First Name</label><input type="text" name="first_name" class="np-input" value="{{ user.first_name }}"></div>
+                    <div class="flex-1"><label class="np-label">Last Name</label><input type="text" name="last_name" class="np-input" value="{{ user.last_name }}"></div>
+                </div>
+                <div class="form-group"><label class="np-label">Email</label><input type="email" name="email" class="np-input" value="{{ user.email }}"></div>
+                <div class="form-group"><label class="np-label">Phone</label><input type="tel" name="phone" class="np-input" value="{{ user.phone }}"></div>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

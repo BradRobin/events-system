@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <h2>My Bookings</h2>
+        <div class="event-grid">
+            {% for booking in bookings %}
+            <div class="np-card-image">
+                <div class="card-content">
+                    <h3>{{ booking.event.title }}</h3>
+                    <p class="text-sm text-muted">Booking #{{ booking.booking_reference }}</p>
+                    <p class="text-sm">📅 {{ booking.event.event_date|date:"M d, Y" }}</p>
+                    <p class="text-sm">📍 {{ booking.event.venue|truncatechars:30 }}</p>
+                    <p class="text-sm">🎟️ {{ booking.quantity }} tickets</p>
+                    <a href="{% url 'event_detail' slug=booking.event.slug %}" class="btn-primary btn-sm mt-2">View Event</a>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-center">No bookings found.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

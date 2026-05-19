@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <h2>All Events</h2>
+        <div class="event-grid">
+            {% for event in events %}
+            <div class="np-card-image">
+                <img src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=200&fit=crop" style="width:100%; height:180px; object-fit:cover;">
+                <div class="card-content">
+                    <h3>{{ event.title }}</h3>
+                    <p class="text-sm text-muted">📅 {{ event.event_date|date:"M d, Y" }}</p>
+                    <p class="text-sm text-muted">📍 {{ event.venue|truncatechars:30 }}</p>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="analytics-number" style="font-size:1.25rem;">KES {{ event.lowest_ticket_price }}</span>
+                        <a href="{% url 'event_detail' slug=event.slug %}" class="btn-primary btn-sm">Book Now</a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-center">No events found.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

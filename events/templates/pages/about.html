@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}About Us - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<section class="hero-section">
+    <div class="container">
+        <h1>About <span class="text-red">EventHub</span></h1>
+        <p class="hero-subtitle">Making event discovery and ticketing seamless across Africa.</p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="two-column">
+            <div>
+                <h2>Our Story</h2>
+                <p>EventHub was founded with a simple mission: to make event discovery and ticketing effortless for everyone across Africa. We believe that great experiences bring people together, and we're here to help you find them.</p>
+                <p style="margin-top: 1rem;">Since our launch, we've helped thousands of attendees discover amazing events and empowered organizers to reach larger audiences.</p>
+                <div class="about-stats">
+                    <div class="about-stat-card">
+                        <div class="about-stat-number">500+</div>
+                        <p>Events</p>
+                    </div>
+                    <div class="about-stat-card">
+                        <div class="about-stat-number">50k+</div>
+                        <p>Attendees</p>
+                    </div>
+                    <div class="about-stat-card">
+                        <div class="about-stat-number">100+</div>
+                        <p>Organizers</p>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="np-card-solid">
+                    <h3>Our Mission</h3>
+                    <p>To connect people through memorable experiences by providing a seamless platform for event discovery, booking, and management.</p>
+                    <h3 style="margin-top: 1.5rem;">Our Vision</h3>
+                    <p>To become Africa's most trusted event management platform, empowering communities to grow through shared experiences.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-bg-light">
+    <div class="container">
+        <h2>Meet Our Team</h2>
+        <div class="team-grid">
+            <div class="team-card">
+                <div class="team-avatar-icon">JD</div>
+                <h3>John Doe</h3>
+                <p class="text-muted">CEO & Founder</p>
+            </div>
+            <div class="team-card">
+                <div class="team-avatar-icon">JS</div>
+                <h3>Jane Smith</h3>
+                <p class="text-muted">CTO</p>
+            </div>
+            <div class="team-card">
+                <div class="team-avatar-icon">MK</div>
+                <h3>Michael Kim</h3>
+                <p class="text-muted">Head of Operations</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

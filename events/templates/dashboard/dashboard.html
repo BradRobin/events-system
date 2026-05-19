@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="section">
+    <div class="container">
+        <h2>Dashboard</h2>
+        <div class="dashboard-layout">
+            <aside class="dashboard-sidebar">
+                <a href="?tab=overview" class="dashboard-nav-link">📊 Overview</a>
+                <a href="?tab=bookings" class="dashboard-nav-link">🎟️ My Bookings</a>
+                <a href="?tab=profile" class="dashboard-nav-link">👤 Profile</a>
+                {% if user.role == 'organizer' %}
+                <a href="?tab=events" class="dashboard-nav-link">📅 My Events</a>
+                <a href="{% url 'create_event' %}" class="dashboard-nav-link">✨ Create Event</a>
+                {% endif %}
+            </aside>
+            <main>
+                <div class="np-card"><h3>Welcome back, {{ user.username }}!</h3><p>Role: {{ user.role|title }}</p></div>
+                <div class="np-card mt-3"><h3>Quick Stats</h3><div class="analytics-grid" style="margin-top:1rem"><div class="analytics-card"><div class="analytics-number">0</div><p>Events</p></div><div class="analytics-card"><div class="analytics-number">0</div><p>Tickets</p></div></div></div>
+            </main>
+        </div>
+    </div>
+</div>
+{% endblock %}

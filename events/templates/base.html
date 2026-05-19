@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EventHub - Event Management System{% endblock %}</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome 6 (Free Icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    
+    <div class="floating-bg">
+        <div class="floating-bg-circle animate-float" style="top: 5rem; left: 2rem; width: 18rem; height: 18rem; background: rgba(248, 29, 29, 0.04);"></div>
+        <div class="floating-bg-circle animate-float" style="bottom: 5rem; right: 2rem; width: 24rem; height: 24rem; background: rgba(255, 208, 69, 0.04);"></div>
+    </div>
+    
+    <!-- Hide navbar on auth pages -->
+    {% if not hide_navbar %}
+        {% include 'components/navbar.html' %}
+    {% endif %}
+    
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Hide footer on auth pages -->
+    {% if not hide_footer %}
+        {% include 'components/footer.html' %}
+    {% endif %}
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
