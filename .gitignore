@@ -4,11 +4,9 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 venv/
+env/
 ENV/
-env.bak/
-venv.bak/
 
 # Django
 *.log
@@ -17,8 +15,8 @@ venv.bak/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-/media/
 /staticfiles/
+/media/
 
 # IDE
 .vscode/
@@ -30,14 +28,4 @@ db.sqlite3-journal
 
 # Environment
 .env
-.venv
-
-# Testing
-.coverage
-htmlcov/
-.tox/
-.pytest_cache/
-
-# Uploads
-/media/
-/static/uploads/
+.env.local
