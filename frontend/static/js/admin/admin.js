@@ -46,7 +46,10 @@ async function apiRequest(url, method = 'GET', data = null) {
             msg = 'Server connection error. Please try again.';
         }
         
-        showToast(msg, 'error');
+        // Suppress 404 Not Found from showing toast popups automatically
+        if (!msg.includes('404')) {
+            showToast(msg, 'error');
+        }
         throw error;
     }
 }

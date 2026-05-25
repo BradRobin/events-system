@@ -99,7 +99,9 @@
         
         {% if messages %}
             {% for message in messages %}
+                {% ifchanged message.message %}
                 <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endifchanged %}
             {% endfor %}
         {% endif %}
         
