@@ -1,24 +1,24 @@
 /* 
-   EventHub Organizer Dashboard Stylesheet
-   Design Ethos: Premium, High-Contrast, Professional, Modern, Vibrant
+   EventHub Organizer Dashboard - Premium Dark Theme
+   Design Ethos: Sleek Midnight Black, Vibrant Orange Accents, Crisp White Typography
 */
 
 :root {
-    /* Brand Colors */
-    --primary: #f59e0b;
-    --primary-hover: #d97706;
-    --primary-dark: #b45309;
-    --primary-light: #fef3c7;
-    --primary-soft: rgba(245, 158, 11, 0.08);
+    /* Brand Colors (Vibrant Orange Palette) */
+    --primary: #ff6b00; /* Pure Premium Orange */
+    --primary-hover: #e05e00;
+    --primary-dark: #b84d00;
+    --primary-light: #ffedd5;
+    --primary-soft: rgba(255, 107, 0, 0.08);
 
     /* Contextual Palette */
     --success: #10b981;
     --success-soft: rgba(16, 185, 129, 0.08);
     --success-dark: #065f46;
     
-    --warning: #f59e0b;
-    --warning-soft: rgba(245, 158, 11, 0.08);
-    --warning-dark: #92400e;
+    --warning: #ff6b00;
+    --warning-soft: rgba(255, 107, 0, 0.08);
+    --warning-dark: #b84d00;
     
     --danger: #ef4444;
     --danger-soft: rgba(239, 68, 68, 0.08);
@@ -28,19 +28,19 @@
     --info-soft: rgba(59, 130, 246, 0.08);
     --info-dark: #1e40af;
 
-    /* Neutrals */
-    --dark: #0f172a;
-    --dark-muted: #334155;
-    --light: #f8fafc;
-    --white: #ffffff;
-    --border: #f1f5f9;
-    --border-hover: #e2e8f0;
-    --gray-muted: #64748b;
-    --gray-light: #94a3b8;
+    /* High-Contrast Neutrals (Black & White Theme) */
+    --dark: #ffffff; /* Primary Text is Pure White */
+    --dark-muted: #e2e8f0; /* Subtext is clean off-white */
+    --light: #000000; /* Background is Pure Midnight Black */
+    --white: #111111; /* Card backgrounds are sleek solid Charcoal Black */
+    --border: #222222; /* Clean dark-gray borders */
+    --border-hover: #333333;
+    --gray-muted: #94a3b8; /* Soft slate gray */
+    --gray-light: #475569;
     
     /* Layout Properties */
     --sidebar-width: 260px;
-    --sidebar-bg: #0f172a;
+    --sidebar-bg: #080808; /* Deep black sidebar */
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 16px;
@@ -48,10 +48,10 @@
     --radius-full: 9999px;
     
     /* Shadows & Transitions */
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.02);
-    --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.04), 0 2px 4px -1px rgba(15, 23, 42, 0.02);
-    --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.05), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
-    --shadow-xl: 0 25px 50px -12px rgba(15, 23, 42, 0.1);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.8);
+    --shadow-lg: 0 10px 30px rgba(255, 107, 0, 0.05), 0 4px 20px rgba(0,0,0,0.9);
+    --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.95);
     
     --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -78,7 +78,7 @@ body {
     min-height: 100vh;
 }
 
-/* PREMIUM SIDEBAR */
+/* PREMIUM BLACK SIDEBAR */
 .sidebar {
     width: var(--sidebar-width);
     background-color: var(--sidebar-bg);
@@ -91,7 +91,7 @@ body {
     left: 0;
     top: 0;
     z-index: 100;
-    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    border-right: 1px solid var(--border);
 }
 
 .sidebar-brand {
@@ -110,9 +110,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--white);
+    color: #ffffff;
     font-size: 1.2rem;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
 }
 
 .sidebar-brand h2 {
@@ -120,7 +120,7 @@ body {
     font-size: 1.4rem;
     font-weight: 800;
     letter-spacing: -0.5px;
-    background: linear-gradient(to right, var(--white), #e2e8f0);
+    background: linear-gradient(to right, #ffffff, #e2e8f0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -137,7 +137,7 @@ body {
     align-items: center;
     gap: 16px;
     padding: 12px 16px;
-    color: var(--gray-light);
+    color: var(--gray-muted);
     text-decoration: none;
     font-size: 0.95rem;
     font-weight: 500;
@@ -152,30 +152,32 @@ body {
 }
 
 .menu-item:hover {
-    color: var(--white);
-    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
 .menu-item.active {
-    color: var(--white);
+    color: #ffffff;
     background: linear-gradient(135deg, var(--primary), #ec6408);
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+    box-shadow: 0 4px 14px rgba(255, 107, 0, 0.35);
 }
 
 .sidebar-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--border);
     padding-top: 20px;
 }
 
 .back-home {
-    background-color: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--border);
+    color: var(--dark-muted) !important;
 }
 
 .back-home:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--gray-light);
+    color: #ffffff !important;
 }
 
 /* MAIN CONTENT */
@@ -184,6 +186,7 @@ body {
     margin-left: var(--sidebar-width);
     padding: 40px 48px;
     max-width: calc(100vw - var(--sidebar-width));
+    background-color: var(--light);
 }
 
 /* TOPBAR */
@@ -199,6 +202,7 @@ body {
     font-size: 1.85rem;
     font-weight: 700;
     letter-spacing: -0.5px;
+    color: #ffffff;
     margin-bottom: 4px;
 }
 
@@ -218,8 +222,8 @@ body {
     width: 44px;
     height: 44px;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-hover);
-    background-color: var(--white);
+    border: 1px solid var(--border);
+    background-color: var(--sidebar-bg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -230,7 +234,8 @@ body {
 }
 
 .notification-badge:hover {
-    background-color: var(--border);
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-hover);
     transform: translateY(-2px);
 }
 
@@ -240,7 +245,7 @@ body {
     right: 12px;
     width: 7px;
     height: 7px;
-    background-color: var(--danger);
+    background-color: var(--primary);
     border-radius: var(--radius-full);
 }
 
@@ -249,7 +254,7 @@ body {
     align-items: center;
     gap: 12px;
     padding-left: 20px;
-    border-left: 1px solid var(--border-hover);
+    border-left: 1px solid var(--border);
 }
 
 .user-profile img {
@@ -257,7 +262,7 @@ body {
     height: 42px;
     border-radius: var(--radius-full);
     object-fit: cover;
-    border: 2px solid var(--primary-light);
+    border: 2px solid var(--primary);
 }
 
 .profile-meta {
@@ -268,7 +273,7 @@ body {
 .profile-name {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--dark);
+    color: #ffffff;
 }
 
 .profile-role {
@@ -293,30 +298,30 @@ body {
 
 .btn-primary {
     background: linear-gradient(135deg, var(--primary), #ec6408);
-    color: var(--white);
-    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(255, 107, 0, 0.4);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+    box-shadow: 0 6px 20px rgba(255, 107, 0, 0.5);
 }
 
 .btn-outline {
-    background-color: var(--white);
-    border: 1px solid var(--border-hover);
+    background-color: var(--sidebar-bg);
+    border: 1px solid var(--border);
     color: var(--dark-muted);
 }
 
 .btn-outline:hover {
-    background-color: var(--border);
-    color: var(--dark);
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
 }
 
 .btn-outline.active {
     background-color: var(--primary-soft);
     border-color: var(--primary);
-    color: var(--primary-hover);
+    color: var(--primary);
 }
 
 .btn-sm {
@@ -324,7 +329,7 @@ body {
     font-size: 0.8rem;
 }
 
-/* METRIC CARDS GRID */
+/* METRIC CARDS GRID (Charcoal Cards) */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -346,7 +351,7 @@ body {
 .metric-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
-    border-color: var(--border-hover);
+    border-color: var(--primary);
 }
 
 .metric-header {
@@ -394,7 +399,7 @@ body {
     font-family: 'Outfit', sans-serif;
     font-size: 2.1rem;
     font-weight: 700;
-    color: var(--dark);
+    color: #ffffff;
     letter-spacing: -0.5px;
 }
 
@@ -454,6 +459,7 @@ body {
     font-family: 'Outfit', sans-serif;
     font-size: 1.2rem;
     font-weight: 700;
+    color: #ffffff;
 }
 
 .chart-actions {
@@ -493,6 +499,7 @@ body {
     font-family: 'Outfit', sans-serif;
     font-size: 1.3rem;
     font-weight: 700;
+    color: #ffffff;
 }
 
 .table-actions {
@@ -518,27 +525,33 @@ body {
     padding: 10px 14px 10px 40px;
     font-size: 0.9rem;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-hover);
-    background-color: var(--light);
+    border: 1px solid var(--border);
+    background-color: var(--sidebar-bg);
+    color: #ffffff;
     outline: none;
     transition: var(--transition);
 }
 
 .search-box input:focus {
     border-color: var(--primary);
-    background-color: var(--white);
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    background-color: var(--light);
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15);
 }
 
 .filter-select {
     padding: 10px 16px;
     font-size: 0.9rem;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-hover);
-    background-color: var(--white);
+    border: 1px solid var(--border);
+    background-color: var(--sidebar-bg);
     outline: none;
     cursor: pointer;
     color: var(--dark-muted);
+    transition: var(--transition);
+}
+
+.filter-select:focus {
+    border-color: var(--primary);
 }
 
 /* Tables */
@@ -576,12 +589,12 @@ table tbody tr {
 }
 
 table tbody tr:hover {
-    background-color: rgba(248, 250, 252, 0.85);
+    background-color: rgba(255, 255, 255, 0.02);
 }
 
 .event-name-td {
     font-weight: 600;
-    color: var(--dark);
+    color: #ffffff;
 }
 
 /* Status Badges */
@@ -619,8 +632,8 @@ table tbody tr:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--white);
-    border: 1px solid var(--border-hover);
+    background-color: var(--sidebar-bg);
+    border: 1px solid var(--border);
     color: var(--gray-muted);
     cursor: pointer;
     transition: var(--transition);
@@ -632,15 +645,15 @@ table tbody tr:hover {
     border-color: rgba(239, 68, 68, 0.2);
 }
 
-/* CREATE EVENT MODAL OVERLAY */
+/* CREATE EVENT MODAL OVERLAY (Sleek Dark glassmorphism) */
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(4px);
+    background-color: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -656,11 +669,12 @@ table tbody tr:hover {
 }
 
 .modal-container {
-    background-color: var(--white);
+    background-color: #0c0c0c; /* Deepest black for modal card */
+    border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     width: 650px;
     max-width: 90vw;
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(255, 107, 0, 0.05);
     transform: translateY(30px);
     transition: var(--transition);
     overflow: hidden;
@@ -682,6 +696,7 @@ table tbody tr:hover {
     font-family: 'Outfit', sans-serif;
     font-size: 1.3rem;
     font-weight: 700;
+    color: #ffffff;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -697,7 +712,7 @@ table tbody tr:hover {
 }
 
 .close-modal-btn:hover {
-    color: var(--dark);
+    color: #ffffff;
 }
 
 .modal-body {
@@ -734,17 +749,18 @@ table tbody tr:hover {
     padding: 12px 14px;
     font-size: 0.95rem;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-hover);
+    border: 1px solid var(--border);
     outline: none;
-    background-color: var(--light);
+    background-color: var(--sidebar-bg);
+    color: #ffffff;
     transition: var(--transition);
 }
 
 .form-group input:focus,
 .form-group select:focus {
     border-color: var(--primary);
-    background-color: var(--white);
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    background-color: var(--light);
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.15);
 }
 
 .modal-footer {
@@ -753,7 +769,7 @@ table tbody tr:hover {
     gap: 12px;
     padding: 20px 28px;
     border-top: 1px solid var(--border);
-    background-color: var(--light);
+    background-color: var(--sidebar-bg);
 }
 
 /* TOAST SYSTEMS */
@@ -768,8 +784,9 @@ table tbody tr:hover {
 }
 
 .toast {
-    background-color: var(--sidebar-bg);
-    color: var(--white);
+    background-color: #0c0c0c;
+    border: 1px solid var(--border);
+    color: #ffffff;
     padding: 16px 24px;
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-xl);

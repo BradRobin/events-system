@@ -187,10 +187,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 salesTrendChart.destroy();
             }
 
-            // Beautiful Gradient Accent for Area Chart
+            // Beautiful Gradient Accent for Area Chart (Vibrant Orange Theme)
             const primaryGradient = salesCtx.createLinearGradient(0, 0, 0, 300);
-            primaryGradient.addColorStop(0, 'rgba(245, 158, 11, 0.4)');
-            primaryGradient.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
+            primaryGradient.addColorStop(0, 'rgba(255, 107, 0, 0.4)');
+            primaryGradient.addColorStop(1, 'rgba(255, 107, 0, 0.0)');
 
             salesTrendChart = new Chart(salesCtx, {
                 type: 'line',
@@ -199,13 +199,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     datasets: [{
                         label: 'Tickets Purchased',
                         data: salesData,
-                        borderColor: '#f59e0b',
+                        borderColor: '#ff6b00',
                         borderWidth: 3,
                         backgroundColor: primaryGradient,
                         fill: true,
                         tension: 0.4,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: '#f59e0b',
+                        pointBackgroundColor: '#111111',
+                        pointBorderColor: '#ff6b00',
                         pointBorderWidth: 2,
                         pointRadius: 5,
                         pointHoverRadius: 7
@@ -220,12 +220,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { borderDash: [5, 5], color: '#f1f5f9' },
-                            ticks: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 11 } }
+                            grid: { borderDash: [5, 5], color: '#222222' },
+                            ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 11 } }
                         },
                         x: {
                             grid: { display: false },
-                            ticks: { color: '#64748b', font: { family: 'Plus Jakarta Sans', size: 11 } }
+                            ticks: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 11 } }
                         }
                     }
                 }
@@ -251,14 +251,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     datasets: [{
                         data: categoryData,
                         backgroundColor: [
-                            '#f59e0b', // Tech
+                            '#ff6b00', // Pure Premium Orange (Tech)
                             '#10b981', // Music
                             '#3b82f6', // Business
                             '#ef4444', // Health
                             '#8b5cf6'  // Education
                         ],
                         borderWidth: 2,
-                        borderColor: '#fff'
+                        borderColor: '#111111'
                     }]
                 },
                 options: {
@@ -268,7 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                color: '#475569',
+                                color: '#e2e8f0',
                                 font: { family: 'Plus Jakarta Sans', size: 12 },
                                 usePointStyle: true,
                                 pointStyle: 'circle'
