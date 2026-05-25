@@ -7,6 +7,9 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 urlpatterns = [
+    # Auth
+    path('login/', TemplateView.as_view(template_name='shared/auth/login.html'), name='attendee_login'),
+    
     # Homepage
     path('', TemplateView.as_view(template_name='attendee/pages/homepage/homepage.html'), name='attendee_home'),
     

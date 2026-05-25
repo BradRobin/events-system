@@ -7,6 +7,9 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 urlpatterns = [
+    # Auth
+    path('login/', TemplateView.as_view(template_name='shared/auth/login.html'), name='organizer_login'),
+    
     # Dashboard
     path('', TemplateView.as_view(template_name='organizer/dashboard/dashboard.html'), name='organizer_home'),
     path('dashboard/', TemplateView.as_view(template_name='organizer/dashboard/dashboard.html'), name='organizer_dashboard'),
