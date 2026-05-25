@@ -1,0 +1,352 @@
+/* ============================================
+   ERROR PAGES CSS - EventHub Style
+   ============================================ */
+
+@import url('typography.css');
+
+/* Error Container */
+.error-container {
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-4xl) var(--spacing-xl);
+}
+
+/* Error Content */
+.error-content {
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Error Code */
+.error-code {
+    font-size: 8rem;
+    font-weight: 800;
+    background: var(--np-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: var(--spacing-lg);
+    text-shadow: 0 2px 10px rgba(245, 158, 11, 0.2);
+}
+
+/* Error Heading */
+.error-content h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+    color: var(--np-dark);
+}
+
+/* Error Message */
+.error-content p {
+    font-size: 1rem;
+    color: var(--np-gray);
+    margin-bottom: var(--spacing-2xl);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Error Actions */
+.error-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.error-actions .btn-primary,
+.error-actions .btn-outline {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+}
+
+/* Error Illustration */
+.error-illustration {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.error-illustration img {
+    max-width: 300px;
+    height: auto;
+}
+
+/* Error with Illustration */
+.error-container.with-illustration {
+    flex-direction: column;
+    text-align: center;
+}
+
+/* 404 Specific */
+.error-404 .error-code {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* 500 Specific */
+.error-500 .error-code {
+    background: linear-gradient(135deg, #ef4444, #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* 403 Specific */
+.error-403 .error-code {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* 503 Specific */
+.error-503 .error-code {
+    background: linear-gradient(135deg, #10b981, #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .error-container {
+        padding: var(--spacing-3xl) var(--spacing-lg);
+        min-height: 60vh;
+    }
+    
+    .error-code {
+        font-size: 6rem;
+    }
+    
+    .error-content h1 {
+        font-size: 1.5rem;
+    }
+    
+    .error-content p {
+        font-size: 0.9rem;
+    }
+    
+    .error-actions {
+        flex-direction: column;
+        width: 100%;
+        max-width: 250px;
+        margin: 0 auto;
+    }
+    
+    .error-actions .btn-primary,
+    .error-actions .btn-outline {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .error-container {
+        padding: var(--spacing-2xl) var(--spacing-md);
+    }
+    
+    .error-code {
+        font-size: 4rem;
+    }
+    
+    .error-content h1 {
+        font-size: 1.2rem;
+    }
+    
+    .error-illustration img {
+        max-width: 200px;
+    }
+}
+
+/* Animation Delays */
+.error-content .error-code {
+    animation: fadeInUp 0.5s ease 0.1s both;
+}
+
+.error-content h1 {
+    animation: fadeInUp 0.5s ease 0.2s both;
+}
+
+.error-content p {
+    animation: fadeInUp 0.5s ease 0.3s both;
+}
+
+.error-actions {
+    animation: fadeInUp 0.5s ease 0.4s both;
+}
+
+/* Search Form on Error Page */
+.error-search {
+    margin-top: var(--spacing-2xl);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.error-search .search-form {
+    display: flex;
+    gap: var(--spacing-sm);
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-full);
+    padding: var(--spacing-xs);
+    overflow: hidden;
+}
+
+.error-search .search-form input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    outline: none;
+    font-size: 0.9rem;
+}
+
+.error-search .search-form button {
+    padding: 0.75rem 1.5rem;
+    background: var(--np-gradient);
+    color: white;
+    border: none;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.error-search .search-form button:hover {
+    transform: scale(1.02);
+}
+
+/* Help Links */
+.error-help-links {
+    margin-top: var(--spacing-xl);
+    display: flex;
+    gap: var(--spacing-lg);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.error-help-links a {
+    color: var(--np-gray);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color var(--transition-fast);
+}
+
+.error-help-links a:hover {
+    color: var(--np-gold);
+}
+
+/* Contact Support Button */
+.error-contact {
+    margin-top: var(--spacing-xl);
+}
+
+.error-contact .btn-outline {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.85rem;
+}
+/* ============================================
+   ADDITIONAL ERROR STYLES
+   ============================================ */
+
+/* Network Error Toast */
+.network-error-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: var(--np-dark);
+    color: white;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md) var(--spacing-lg);
+    z-index: 10000;
+    animation: slideUp 0.3s ease;
+    box-shadow: var(--shadow-lg);
+}
+
+.network-error-toast .toast-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.network-error-toast i {
+    color: var(--np-gold);
+    font-size: 1.2rem;
+}
+
+.network-error-toast button {
+    background: var(--np-gold);
+    color: white;
+    border: none;
+    padding: var(--spacing-xs) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.network-error-toast button:hover {
+    transform: scale(1.02);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Offline Indicator */
+.offline-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #ef4444;
+    color: white;
+    text-align: center;
+    padding: var(--spacing-xs);
+    font-size: 0.8rem;
+    z-index: 10001;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Graceful Degradation */
+.no-js .error-container {
+    display: block;
+}
+
+.no-js .error-actions {
+    margin-top: 20px;
+}

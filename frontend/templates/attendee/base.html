@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EventHub - Attendee Portal{% endblock %}</title>
+    
+    {% load static %}
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Kaushan+Script&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="{% static 'css/attendee/variables.css' %}">
+    <link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+    <link rel="stylesheet" href="{% static 'css/attendee/main.css' %}">
+    <link rel="stylesheet" href="{% static 'css/attendee/events.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-role="attendee">
+    <!-- Loading Overlay -->
+    <div id="globalLoader" class="global-loader" style="display: none;">
+        <div class="loader-container">
+            <div class="loader-spinner"></div>
+            <div class="loader-text">Loading...</div>
+        </div>
+    </div>
+
+    <div class="app-wrapper">
+        <!-- Navbar -->
+        {% include 'attendee/components/navbar.html' %}
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+        
+        <!-- Footer -->
+        {% include 'attendee/components/footer.html' %}
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Shared JavaScript -->
+    <script src="{% static 'js/attendee/api.config.js' %}"></script>
+    <script src="{% static 'js/attendee/api.service.js' %}"></script>
+    <script src="{% static 'js/attendee/api.endpoints.js' %}"></script>
+    <script src="{% static 'js/attendee/utils.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+    
+    <script>
+        function getCSRFToken() {
+            return document.cookie.match('(^|; )csrftoken=([^;]*)')?.[2] || '';
+        }
+        
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.clear();
+                window.location.href = '/logout/';
+            }
+        }
+    </script>
+</body>
+</html>

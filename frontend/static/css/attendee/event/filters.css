@@ -1,0 +1,125 @@
+/* ============================================
+   FILTERS PANEL CSS - EventHub Style
+   ============================================ */
+
+.filters-panel {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-2xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-normal);
+}
+
+.filters-panel.open {
+    display: block;
+}
+
+.filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    align-items: flex-end;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 160px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--np-gray);
+    margin-bottom: var(--spacing-xs);
+    letter-spacing: 0.5px;
+}
+
+.filter-group .search-group {
+    display: flex;
+    align-items: center;
+    background: var(--np-bg);
+    border-radius: var(--radius-md);
+    padding: 0 var(--spacing-md);
+    gap: var(--spacing-sm);
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.filter-group .search-group:focus-within {
+    border-color: var(--np-gold);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.filter-group .search-group i {
+    color: var(--np-gray);
+}
+
+.filter-group .search-group input {
+    flex: 1;
+    padding: 0.7rem 0;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 0.875rem;
+}
+
+.filter-group select {
+    width: 100%;
+    padding: 0.7rem var(--spacing-md);
+    background: var(--np-bg);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-md) center;
+    background-size: 14px;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--np-gold);
+    background: white;
+}
+
+.price-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.price-range-inputs input {
+    width: 100%;
+    padding: 0.6rem var(--spacing-md);
+    background: var(--np-bg);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+}
+
+.price-range-inputs span {
+    color: var(--np-gray);
+}
+
+.btn-secondary {
+    background: var(--np-bg);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 0.6rem 1.25rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-secondary:hover {
+    background: var(--np-gradient);
+    color: white;
+    border-color: transparent;
+}

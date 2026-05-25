@@ -1,0 +1,149 @@
+/* ============================================
+   BOOKING FILTERS - EventHub Style
+   ============================================ */
+
+.filters-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.filters-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    align-items: flex-end;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    color: var(--np-gray);
+    margin-bottom: var(--spacing-xs);
+    letter-spacing: 0.5px;
+}
+
+/* Search Group */
+.filter-group.search-group {
+    display: flex;
+    align-items: center;
+    background: var(--np-bg);
+    border-radius: var(--radius-md);
+    padding: 0 var(--spacing-md);
+    gap: var(--spacing-sm);
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.filter-group.search-group:focus-within {
+    border-color: var(--np-gold);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.filter-group.search-group i {
+    color: var(--np-gray);
+    font-size: 0.9rem;
+    transition: color var(--transition-fast);
+}
+
+.filter-group.search-group:focus-within i {
+    color: var(--np-gold);
+}
+
+.filter-group.search-group input {
+    flex: 1;
+    padding: 0.7rem 0;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Select Input */
+.filter-group select {
+    width: 100%;
+    padding: 0.7rem var(--spacing-md);
+    background: var(--np-bg);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-md) center;
+    background-size: 14px;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--np-gold);
+    background: white;
+}
+
+.filter-group select:hover {
+    border-color: var(--np-gold);
+}
+
+/* Date Input */
+.filter-group input[type="date"] {
+    width: 100%;
+    padding: 0.7rem var(--spacing-md);
+    background: var(--np-bg);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.filter-group input[type="date"]:focus {
+    outline: none;
+    border-color: var(--np-gold);
+    background: white;
+}
+
+.filter-group input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.filter-group input[type="date"]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+}
+
+/* Range Input Group */
+.filter-group.range-group {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.filter-group.range-group input {
+    flex: 1;
+}
+
+.filter-group.range-group span {
+    color: var(--np-gray);
+    font-weight: 600;
+}

@@ -1,0 +1,196 @@
+/* ============================================
+   REVIEWS PAGE CSS - EventHub Style
+   ============================================ */
+
+@import url('common.css');
+
+/* Reviews Summary */
+.reviews-summary {
+    display: flex;
+    gap: var(--spacing-3xl);
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    margin-bottom: var(--spacing-3xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.rating-overall {
+    text-align: center;
+    flex: 1;
+}
+
+.rating-number {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--np-gold);
+}
+
+.stars-display {
+    color: var(--np-gold);
+    margin: var(--spacing-sm) 0;
+    font-size: 1.1rem;
+}
+
+.rating-count {
+    font-size: 0.85rem;
+    color: var(--np-gray);
+}
+
+.rating-breakdown {
+    flex: 2;
+}
+
+.rating-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.rating-bar span:first-child {
+    width: 40px;
+    font-size: 0.85rem;
+}
+
+.rating-bar .bar {
+    flex: 1;
+    height: 8px;
+    background: var(--np-bg);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.rating-bar .fill {
+    height: 100%;
+    background: var(--np-gold);
+    border-radius: var(--radius-full);
+}
+
+.rating-bar span:last-child {
+    width: 45px;
+    font-size: 0.85rem;
+    color: var(--np-gray);
+}
+
+/* Reviews Grid */
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-xl);
+}
+
+.review-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all var(--transition-normal);
+}
+
+.review-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+}
+
+.review-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.reviewer-avatar {
+    width: 50px;
+    height: 50px;
+    background: var(--np-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.reviewer-info h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+}
+
+.reviewer-info .stars-display {
+    font-size: 0.8rem;
+    margin: var(--spacing-xs) 0;
+}
+
+.review-date {
+    font-size: 0.7rem;
+    color: var(--np-gray);
+}
+
+.review-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--np-dark);
+    margin-bottom: var(--spacing-md);
+}
+
+.review-event {
+    font-size: 0.8rem;
+    color: var(--np-gold);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Write Review Section */
+.write-review {
+    text-align: center;
+    margin-top: var(--spacing-3xl);
+    padding: var(--spacing-2xl);
+    background: var(--np-bg);
+    border-radius: var(--radius-xl);
+}
+
+.write-review h3 {
+    margin-bottom: var(--spacing-sm);
+}
+
+.write-review p {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Load More */
+.load-more {
+    text-align: center;
+    margin-top: var(--spacing-2xl);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .reviews-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 768px) {
+    .reviews-summary {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .rating-bar {
+        justify-content: center;
+    }
+    
+    .reviews-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .review-card {
+        padding: var(--spacing-lg);
+    }
+}

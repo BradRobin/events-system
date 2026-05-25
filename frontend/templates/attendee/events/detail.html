@@ -1,0 +1,62 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}Event Details - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/events.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="event-detail-container">
+    <div id="eventDetailContent">
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading event details...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Review Modal -->
+<div id="reviewModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-star"></i> Write a Review</h3>
+            <button class="modal-close" onclick="closeReviewModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="reviewForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Rating</label>
+                    <div class="rating-input" id="ratingInput">
+                        <i class="far fa-star" data-rating="1"></i>
+                        <i class="far fa-star" data-rating="2"></i>
+                        <i class="far fa-star" data-rating="3"></i>
+                        <i class="far fa-star" data-rating="4"></i>
+                        <i class="far fa-star" data-rating="5"></i>
+                    </div>
+                    <input type="hidden" id="reviewRating" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="reviewTitle" class="form-control" placeholder="Summarize your experience">
+                </div>
+                <div class="form-group">
+                    <label>Review</label>
+                    <textarea id="reviewComment" rows="5" class="form-control" placeholder="Share your experience..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeReviewModal()">Cancel</button>
+            <button class="btn-primary" onclick="submitReview()">Submit Review</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/attendee/events/event-detail.js' %}"></script>
+{% endblock %}

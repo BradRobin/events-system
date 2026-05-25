@@ -1,0 +1,8 @@
+/* ============================================
+   TICKETS MAIN CSS - Import all ticket styles
+   ============================================ */
+
+@import url('tickets/tickets.css');
+@import url('tickets/ticket-card.css');
+@import url('tickets/ticket-detail.css');
+@import url('tickets/ticket-qr.css');

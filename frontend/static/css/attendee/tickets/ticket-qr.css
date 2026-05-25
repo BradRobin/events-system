@@ -1,0 +1,164 @@
+/* ============================================
+   TICKET QR CSS - EventHub Style
+   ============================================ */
+
+@import url('../typography.css');
+
+.qr-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: var(--spacing-2xl) var(--spacing-xl);
+}
+
+.qr-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.qr-header {
+    text-align: center;
+    padding: var(--spacing-2xl) var(--spacing-xl);
+    background: linear-gradient(135deg, var(--np-bg), white);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.qr-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+    color: var(--np-dark);
+}
+
+.qr-header h2 i {
+    color: var(--np-gold);
+    margin-right: var(--spacing-sm);
+}
+
+.qr-header p {
+    color: var(--np-gray);
+    font-size: 0.875rem;
+}
+
+.qr-body {
+    padding: var(--spacing-2xl);
+    text-align: center;
+}
+
+.qr-code-wrapper {
+    margin-bottom: var(--spacing-2xl);
+    display: flex;
+    justify-content: center;
+}
+
+.qr-code-wrapper img {
+    max-width: 250px;
+    height: auto;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.ticket-info {
+    text-align: left;
+    background: var(--np-bg);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--np-gray);
+    font-size: 0.8rem;
+}
+
+.info-value {
+    color: var(--np-dark);
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.qr-footer {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    background: var(--np-bg);
+}
+
+.qr-footer button {
+    flex: 1;
+    justify-content: center;
+}
+
+/* Loading State */
+.loading-state {
+    text-align: center;
+    padding: var(--spacing-3xl);
+    color: var(--np-gray);
+}
+
+.loading-state .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(245, 158, 11, 0.2);
+    border-top-color: var(--np-gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto var(--spacing-md);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .qr-container {
+        padding: var(--spacing-lg);
+    }
+    
+    .qr-header h2 {
+        font-size: 1.3rem;
+    }
+    
+    .qr-body {
+        padding: var(--spacing-lg);
+    }
+    
+    .qr-code-wrapper img {
+        max-width: 200px;
+    }
+    
+    .qr-footer {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .qr-container {
+        padding: var(--spacing-md);
+    }
+    
+    .qr-header {
+        padding: var(--spacing-lg);
+    }
+    
+    .info-row {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+}

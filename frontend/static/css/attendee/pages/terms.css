@@ -1,0 +1,75 @@
+/* ============================================
+   TERMS OF SERVICE CSS - EventHub Style
+   ============================================ */
+
+@import url('common.css');
+
+.terms-content {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.terms-section {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.terms-section:last-child {
+    margin-bottom: 0;
+}
+
+.terms-section h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+    color: var(--np-dark);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.terms-section h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+    color: var(--np-dark);
+}
+
+.terms-section p {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--np-gray);
+    margin-bottom: var(--spacing-md);
+}
+
+.terms-section ul,
+.terms-section ol {
+    padding-left: var(--spacing-xl);
+    margin-bottom: var(--spacing-md);
+}
+
+.terms-section li {
+    font-size: 0.9rem;
+    color: var(--np-gray);
+    margin-bottom: var(--spacing-xs);
+}
+
+.last-updated {
+    margin-top: var(--spacing-2xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    text-align: right;
+    font-size: 0.8rem;
+    color: var(--np-gray);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .terms-content {
+        padding: var(--spacing-lg);
+    }
+    
+    .terms-section h2 {
+        font-size: 1.1rem;
+    }
+}

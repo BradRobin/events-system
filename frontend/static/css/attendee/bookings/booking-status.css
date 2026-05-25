@@ -1,0 +1,108 @@
+/* ============================================
+   BOOKING STATUS BADGES - EventHub Style
+   ============================================ */
+
+.booking-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 0.3rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    text-transform: capitalize;
+}
+
+.booking-status i {
+    font-size: 0.7rem;
+}
+
+/* Status Colors */
+.booking-status.confirmed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.booking-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.booking-status.cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.booking-status.refunded {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.booking-status.completed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Status Variants with Icons */
+.booking-status.confirmed i {
+    color: #10b981;
+}
+
+.booking-status.pending i {
+    color: #f59e0b;
+}
+
+.booking-status.cancelled i {
+    color: #ef4444;
+}
+
+.booking-status.refunded i {
+    color: #f59e0b;
+}
+
+.booking-status.completed i {
+    color: #3b82f6;
+}
+
+/* Size Variants */
+.booking-status-sm {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.65rem;
+}
+
+.booking-status-lg {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.85rem;
+}
+
+/* Status Badge with Dot */
+.booking-status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.booking-status-dot::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.booking-status-dot.confirmed::before {
+    background: #10b981;
+}
+
+.booking-status-dot.pending::before {
+    background: #f59e0b;
+}
+
+.booking-status-dot.cancelled::before {
+    background: #ef4444;
+}
+
+.booking-status-dot.refunded::before {
+    background: #f59e0b;
+}

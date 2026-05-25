@@ -1,0 +1,11 @@
+/* ============================================
+   EVENTS MAIN CSS - Import all partials
+   ============================================ */
+
+@import url('event/events.css');
+@import url('event/event-card.css');
+@import url('event/event-detail.css');
+@import url('event/filters.css');
+@import url('event/reviews.css');
+@import url('event/ticket-selector.css');
+@import url('event/responsive.css');

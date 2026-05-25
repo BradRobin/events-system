@@ -1,0 +1,193 @@
+/* ============================================
+   TICKETS MAIN CSS - EventHub Style
+   ============================================ */
+
+@import url('../typography.css');
+
+/* Tickets Container */
+.tickets-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+}
+
+/* Page Header */
+.page-header {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+}
+
+.page-header h1 i {
+    color: var(--np-gold);
+    margin-right: var(--spacing-sm);
+}
+
+.page-header .text-muted {
+    color: var(--np-gray);
+    font-size: 0.875rem;
+}
+
+/* Tabs Container */
+.tabs-container {
+    display: flex;
+    gap: var(--spacing-sm);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    margin-bottom: var(--spacing-xl);
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: var(--spacing-md) var(--spacing-xl);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--np-gray);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+.tab-btn:hover {
+    color: var(--np-gold);
+}
+
+.tab-btn.active {
+    color: var(--np-gold);
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--np-gradient);
+    border-radius: 2px;
+}
+
+/* Filters Card */
+.filters-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.filter-group.search-group {
+    display: flex;
+    align-items: center;
+    background: var(--np-bg);
+    border-radius: var(--radius-md);
+    padding: 0 var(--spacing-md);
+    gap: var(--spacing-sm);
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.filter-group.search-group:focus-within {
+    border-color: var(--np-gold);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.filter-group.search-group i {
+    color: var(--np-gray);
+}
+
+.filter-group.search-group input {
+    flex: 1;
+    padding: 0.7rem 0;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 0.875rem;
+}
+
+/* Tickets List */
+.tickets-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* Loading State */
+.loading-state {
+    text-align: center;
+    padding: var(--spacing-4xl);
+    color: var(--np-gray);
+}
+
+.loading-state .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(245, 158, 11, 0.2);
+    border-top-color: var(--np-gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto var(--spacing-md);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-4xl);
+    color: var(--np-gray);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.5;
+    color: var(--np-gold);
+}
+
+.empty-state h3 {
+    margin-bottom: var(--spacing-sm);
+    font-size: 1.2rem;
+}
+
+.empty-state p {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .tickets-container {
+        padding: 0 var(--spacing-lg);
+    }
+    
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .tabs-container {
+        gap: var(--spacing-xs);
+    }
+    
+    .tab-btn {
+        padding: var(--spacing-sm) var(--spacing-lg);
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .tickets-container {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .tab-btn {
+        padding: var(--spacing-xs) var(--spacing-md);
+        font-size: 0.75rem;
+    }
+}

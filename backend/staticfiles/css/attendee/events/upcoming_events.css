@@ -1,0 +1,193 @@
+/* Upcoming Events Styles - Using EventHub Color Theme */
+.upcoming-header {
+    text-align: center;
+    margin: 40px 0;
+}
+
+.upcoming-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.upcoming-header p {
+    color: #666;
+}
+
+/* Tabs */
+.upcoming-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 40px;
+}
+
+.tab-btn {
+    padding: 10px 25px;
+    background: transparent;
+    border: 2px solid #e0e0e0;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.tab-btn:hover {
+    border-color: #ec6408;
+    color: #ec6408;
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, #ec6408, #f59e0b);
+    color: white;
+    border-color: transparent;
+}
+
+/* Upcoming Events List */
+.upcoming-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.upcoming-item {
+    display: flex;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.35s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.upcoming-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 10px 25px rgba(236, 100, 8, 0.15);
+    border-color: rgba(236, 100, 8, 0.2);
+}
+
+.upcoming-date {
+    min-width: 100px;
+    background: linear-gradient(135deg, #1a1a2e, #0f172a);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    padding: 20px;
+}
+
+.upcoming-date .day {
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+.upcoming-date .month {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.upcoming-info {
+    flex: 1;
+    padding: 20px;
+}
+
+.upcoming-info h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.upcoming-meta {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.upcoming-meta i {
+    color: #ec6408;
+    margin-right: 5px;
+}
+
+.upcoming-info p {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.upcoming-price {
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-left: 1px solid #eee;
+}
+
+.upcoming-price .price {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #ec6408;
+}
+
+.upcoming-price .seats {
+    font-size: 0.75rem;
+    color: #28a745;
+    margin-top: 5px;
+}
+
+.no-events {
+    text-align: center;
+    padding: 60px;
+    color: #666;
+    font-size: 1.1rem;
+    background: #f8f9fa;
+    border-radius: 20px;
+}
+
+@media (max-width: 768px) {
+    .upcoming-item {
+        flex-direction: column;
+    }
+    
+    .upcoming-date {
+        flex-direction: row;
+        gap: 20px;
+        padding: 15px;
+    }
+    
+    .upcoming-price {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 15px;
+        border-left: none;
+        border-top: 1px solid #eee;
+    }
+    
+    .upcoming-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+        padding: 8px 20px;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .upcoming-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .upcoming-info h3 {
+        font-size: 1rem;
+    }
+}

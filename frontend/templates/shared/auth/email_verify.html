@@ -1,0 +1,57 @@
+{% extends "shared/auth_base.html" %}
+{% load static %}
+
+{% block title %}Verify Email - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/shared/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-background email-bg"></div>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-card-inner">
+            <a href="javascript:history.back()" class="auth-back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div class="auth-logo">
+                <div class="auth-logo-wrapper">
+                    <div class="auth-logo-glow"></div>
+                    <div class="auth-logo-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                </div>
+            </div>
+            <h2 class="auth-title">Verify Your Email</h2>
+            <p class="auth-subtitle">Enter the 6-digit code sent to your email</p>
+
+            <div class="otp-container">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="0" id="digit-0">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="1" id="digit-1">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="2" id="digit-2">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="3" id="digit-3">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="4" id="digit-4">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="5" id="digit-5">
+            </div>
+            <div id="otpError" class="error-message hidden"></div>
+
+            <button onclick="verifyOTP()" id="verifyBtn" class="auth-btn">Verify Email</button>
+
+            <div class="resend-container">
+                <span id="resendText" class="resend-text">Resend code in <span id="timer">60</span>s</span>
+                <button id="resendBtn" onclick="resendOTP()" class="auth-link resend-btn hidden">Didn't receive the code? Resend</button>
+            </div>
+
+            <div class="auth-info-banner">
+                <i class="fas fa-bolt"></i>
+                <span>Never share your verification code with anyone</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/auth/email-verify.js' %}"></script>
+{% endblock %}

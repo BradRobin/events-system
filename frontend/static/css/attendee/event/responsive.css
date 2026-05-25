@@ -1,0 +1,167 @@
+/* ============================================
+   EVENTS RESPONSIVE CSS - EventHub Style
+   ============================================ */
+
+/* Tablet Landscape */
+@media (max-width: 1024px) {
+    .events-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: var(--spacing-xl);
+    }
+    
+    .event-content-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .event-sidebar {
+        position: static;
+    }
+}
+
+/* Tablet Portrait */
+@media (max-width: 768px) {
+    .events-container,
+    .search-results-container,
+    .event-detail-container {
+        padding: 0 var(--spacing-lg);
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filters-row {
+        flex-direction: column;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .events-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+    
+    .event-banner-large {
+        height: 300px;
+    }
+    
+    .event-banner-overlay h1 {
+        font-size: 1.5rem;
+    }
+    
+    .event-info-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .event-section {
+        padding: var(--spacing-lg);
+    }
+    
+    .ticket-type {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-md);
+    }
+    
+    .ticket-quantity {
+        margin-left: 0;
+        justify-content: center;
+    }
+    
+    .event-actions {
+        flex-direction: column;
+    }
+    
+    .similar-events-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .reviews-header {
+        flex-direction: column;
+    }
+    
+    .rating-summary {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* Mobile Large */
+@media (max-width: 640px) {
+    .events-container,
+    .search-results-container,
+    .event-detail-container {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .event-banner-large {
+        height: 250px;
+    }
+    
+    .event-banner-overlay {
+        padding: var(--spacing-lg);
+    }
+    
+    .event-banner-overlay h1 {
+        font-size: 1.2rem;
+    }
+    
+    .price-range-inputs {
+        flex-direction: column;
+    }
+    
+    .price-range-inputs span {
+        display: none;
+    }
+    
+    .review-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* Mobile Small */
+@media (max-width: 480px) {
+    .event-banner-large {
+        height: 200px;
+    }
+    
+    .event-section h3 {
+        font-size: 1rem;
+    }
+    
+    .organizer-info {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .rating-value {
+        font-size: 2rem;
+    }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .event-card {
+        cursor: pointer;
+    }
+    
+    .event-card:active {
+        transform: scale(0.99);
+    }
+    
+    .filter-group select,
+    .filter-group input,
+    .quantity-minus,
+    .quantity-plus {
+        min-height: 44px;
+    }
+}

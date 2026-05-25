@@ -1,0 +1,346 @@
+/* ============================================
+   ICONS STYLES - Modern Icon Styling
+   ============================================ */
+
+/* Base Icon Styles */
+i, .icon {
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Navigation Icons */
+.nav-link i {
+    margin-right: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover i {
+    transform: translateX(3px);
+    color: var(--np-red);
+}
+
+/* Auth Dropdown Icons */
+.auth-dropdown-item i {
+    margin-right: 10px;
+    width: 20px;
+    font-size: 0.9rem;
+}
+
+.auth-dropdown-item:hover i {
+    transform: translateX(3px);
+}
+
+/* Button Icons */
+.btn-primary i, .btn-secondary i, .btn-outline i {
+    margin-right: 8px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover i, .btn-secondary:hover i {
+    transform: translateX(3px);
+}
+
+/* Category Card Icons */
+.category-icon {
+    font-size: 2.5rem;
+    transition: all 0.3s ease;
+}
+
+.category-card:hover .category-icon {
+    transform: scale(1.1);
+    color: var(--np-red);
+}
+
+/* Premium Card Icons */
+.card-category i {
+    margin-right: 6px;
+    font-size: 0.7rem;
+}
+
+.card-meta i {
+    margin-right: 5px;
+    font-size: 0.7rem;
+    opacity: 0.9;
+}
+
+.card-price i {
+    margin-right: 5px;
+    font-size: 0.8rem;
+}
+
+.card-hover-info i {
+    margin-right: 6px;
+}
+
+/* Featured Events Icons */
+.premium-card .card-content i {
+    margin-right: 6px;
+}
+
+/* Stats Icons */
+.analytics-card i {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    color: var(--np-red);
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.analytics-card:hover i {
+    transform: scale(1.1);
+}
+
+/* Testimonial Icons */
+.testimonial-avatar i {
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stars-display i {
+    margin-right: 3px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    color: #ffd045;
+}
+
+.stars-display i:hover {
+    transform: scale(1.1);
+}
+
+/* Footer Icons */
+.footer ul li i {
+    margin-right: 8px;
+    font-size: 0.7rem;
+    color: var(--np-red);
+    width: 18px;
+    transition: all 0.3s ease;
+}
+
+.footer ul li:hover i {
+    transform: translateX(3px);
+}
+
+.social-links a i {
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.social-links a:hover i {
+    transform: scale(1.2);
+}
+
+/* Social Media Icon Colors */
+.social-links a:nth-child(1) i { color: #1877f2; }
+.social-links a:nth-child(2) i { color: #1da1f2; }
+.social-links a:nth-child(3) i { color: #e4405f; }
+.social-links a:nth-child(4) i { color: #0077b5; }
+
+.social-links a:hover i {
+    color: white !important;
+}
+
+/* Hero Section Icons */
+.hero-section .btn-primary i,
+.hero-section .btn-secondary i {
+    margin-right: 8px;
+}
+
+/* Search Bar Icon */
+.search-btn i {
+    margin-right: 8px;
+}
+
+/* Newsletter Icon */
+.newsletter-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--np-red);
+}
+
+/* How It Works Icons */
+.how-it-works-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--np-red);
+    transition: all 0.3s ease;
+}
+
+.how-it-works-card:hover .how-it-works-icon {
+    transform: translateY(-5px);
+}
+
+/* Arrow Icons */
+.category-arrow i {
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.category-arrow:hover i {
+    transform: scale(1.2);
+}
+
+/* Mobile Menu Icons */
+.mobile-menu .nav-link i {
+    width: 25px;
+    margin-right: 10px;
+}
+
+/* Auth Button Icons */
+.auth-btn i {
+    margin-right: 5px;
+}
+
+.auth-btn i:last-child {
+    margin-left: 5px;
+    margin-right: 0;
+    font-size: 0.7rem;
+}
+
+/* Logo Icon Animation */
+.logo-icon {
+    transition: all 0.3s ease;
+}
+
+.logo:hover .logo-icon {
+    transform: rotate(5deg) scale(1.05);
+}
+
+/* Floating Icons Animation */
+.floating-icon {
+    animation: floatIcon 3s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+/* Pulse Animation for Important Icons */
+.pulse-icon {
+    animation: pulseIcon 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseIcon {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Rotate on Hover */
+.rotate-icon {
+    transition: transform 0.3s ease;
+}
+
+.rotate-icon:hover {
+    transform: rotate(15deg);
+}
+
+/* Icon Colors */
+.icon-primary {
+    color: var(--np-red);
+}
+
+.icon-secondary {
+    color: var(--np-orange);
+}
+
+.icon-success {
+    color: #10b981;
+}
+
+.icon-warning {
+    color: var(--np-yellow);
+}
+
+.icon-white {
+    color: white;
+}
+
+.icon-dark {
+    color: var(--np-dark);
+}
+
+.icon-gray {
+    color: var(--np-gray);
+}
+
+/* Icon Sizes */
+.icon-xs {
+    font-size: 0.75rem;
+}
+
+.icon-sm {
+    font-size: 0.875rem;
+}
+
+.icon-md {
+    font-size: 1rem;
+}
+
+.icon-lg {
+    font-size: 1.25rem;
+}
+
+.icon-xl {
+    font-size: 1.5rem;
+}
+
+.icon-2xl {
+    font-size: 2rem;
+}
+
+.icon-3xl {
+    font-size: 2.5rem;
+}
+
+.icon-4xl {
+    font-size: 3rem;
+}
+
+/* Responsive Icon Adjustments */
+@media (max-width: 768px) {
+    .nav-link i {
+        font-size: 0.9rem;
+    }
+    
+    .analytics-card i {
+        font-size: 1.5rem;
+    }
+    
+    .category-icon {
+        font-size: 2rem;
+    }
+    
+    .how-it-works-icon {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-link i {
+        margin-right: 5px;
+    }
+    
+    .btn-primary i, .btn-secondary i {
+        margin-right: 5px;
+    }
+    
+    .category-icon {
+        font-size: 1.5rem;
+    }
+    
+    .analytics-card i {
+        font-size: 1.2rem;
+    }
+}

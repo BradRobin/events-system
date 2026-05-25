@@ -1,0 +1,98 @@
+/* ============================================
+   ACTIVITY LIST CSS - EventHub Style
+   ============================================ */
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-lg);
+    transition: background var(--transition-fast);
+    cursor: pointer;
+}
+
+.activity-item:hover {
+    background: var(--np-bg);
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activity-icon.booking {
+    background: #d1fae5;
+    color: #10b981;
+}
+
+.activity-icon.payment {
+    background: #dbeafe;
+    color: #3b82f6;
+}
+
+.activity-icon.refund {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.activity-icon.review {
+    background: #fce7f3;
+    color: #ec489a;
+}
+
+.activity-icon.checkin {
+    background: #d1fae5;
+    color: #10b981;
+}
+
+.activity-icon.default {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: var(--spacing-xs);
+    color: var(--np-dark);
+}
+
+.activity-description {
+    font-size: 0.8rem;
+    color: var(--np-gray);
+    margin-bottom: var(--spacing-xs);
+}
+
+.activity-time {
+    font-size: 0.7rem;
+    color: var(--np-light-gray);
+}
+
+.activity-link {
+    color: var(--np-gold);
+    font-size: 0.8rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.activity-link:hover {
+    text-decoration: underline;
+}

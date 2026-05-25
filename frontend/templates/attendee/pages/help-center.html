@@ -1,0 +1,94 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}Help Center - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/pages/help-center.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="hero-section">
+    <div class="container">
+        <h1>Help <span class="text-red">Center</span></h1>
+        <p class="hero-subtitle">How can we help you today?</p>
+    </div>
+</div>
+
+<div class="section">
+    <div class="container">
+        <div class="search-section">
+            <h3>Search for answers</h3>
+            <form class="search-form">
+                <input type="text" placeholder="Search help articles...">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+
+        <div class="help-categories">
+            <div class="help-category">
+                <i class="fas fa-ticket-alt"></i>
+                <h3>Booking & Tickets</h3>
+                <ul>
+                    <li><a href="#">How to book tickets?</a></li>
+                    <li><a href="#">How to cancel a booking?</a></li>
+                    <li><a href="#">Where to find my tickets?</a></li>
+                    <li><a href="#">Ticket refund policy</a></li>
+                    <li><a href="#">How to transfer tickets?</a></li>
+                </ul>
+            </div>
+            <div class="help-category">
+                <i class="fas fa-user"></i>
+                <h3>Account & Profile</h3>
+                <ul>
+                    <li><a href="#">How to create an account?</a></li>
+                    <li><a href="#">How to reset password?</a></li>
+                    <li><a href="#">How to update profile?</a></li>
+                    <li><a href="#">Account security tips</a></li>
+                    <li><a href="#">How to delete account?</a></li>
+                </ul>
+            </div>
+            <div class="help-category">
+                <i class="fas fa-calendar-alt"></i>
+                <h3>Events & Organizers</h3>
+                <ul>
+                    <li><a href="#">How to find events?</a></li>
+                    <li><a href="#">How to become an organizer?</a></li>
+                    <li><a href="#">How to create an event?</a></li>
+                    <li><a href="#">Event promotion tips</a></li>
+                    <li><a href="#">Organizer verification process</a></li>
+                </ul>
+            </div>
+            <div class="help-category">
+                <i class="fas fa-credit-card"></i>
+                <h3>Payments & Refunds</h3>
+                <ul>
+                    <li><a href="#">Accepted payment methods</a></li>
+                    <li><a href="#">How to request a refund?</a></li>
+                    <li><a href="#">Payment security</a></li>
+                    <li><a href="#">Billing inquiries</a></li>
+                    <li><a href="#">M-Pesa payment issues</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="popular-topics">
+            <h3>Popular Topics</h3>
+            <div class="topics-grid">
+                <a href="#" class="topic-tag">QR Code Tickets</a>
+                <a href="#" class="topic-tag">M-Pesa Payment</a>
+                <a href="#" class="topic-tag">Event Check-in</a>
+                <a href="#" class="topic-tag">Ticket Transfer</a>
+                <a href="#" class="topic-tag">Organizer Dashboard</a>
+                <a href="#" class="topic-tag">Refund Policy</a>
+            </div>
+        </div>
+
+        <div class="contact-support">
+            <p>Still need help? Contact our support team for assistance</p>
+            <a href="/attendee/pages/contact/" class="btn-primary">Contact Support</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

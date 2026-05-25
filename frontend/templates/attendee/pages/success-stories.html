@@ -1,0 +1,92 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}Success Stories - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/pages/success-stories.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>Success <span class="highlight">Stories</span></h1>
+        <p>Read inspiring stories from our community</p>
+    </div>
+
+    <div class="stories-grid">
+        <div class="story-card">
+            <div class="story-image" style="background-image: url('{% static 'images/stories/music-festival.jpg' %}')">
+                <span class="story-category">Music</span>
+            </div>
+            <div class="story-content">
+                <h3>From Small Venue to Sold-Out Arena</h3>
+                <div class="story-meta">
+                    <span><i class="fas fa-user"></i> John Mwangi, Organizer</span>
+                    <span><i class="fas fa-calendar"></i> March 2024</span>
+                </div>
+                <p class="story-excerpt">How one organizer used EventHub to grow their audience from 200 to 5,000 attendees in just 6 months.</p>
+                <a href="#" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <div class="story-card">
+            <div class="story-image" style="background-image: url('{% static 'images/stories/tech-summit.jpg' %}')">
+                <span class="story-category">Tech</span>
+            </div>
+            <div class="story-content">
+                <h3>Building Africa's Largest Tech Community</h3>
+                <div class="story-meta">
+                    <span><i class="fas fa-user"></i> Sarah Kimani, Organizer</span>
+                    <span><i class="fas fa-calendar"></i> February 2024</span>
+                </div>
+                <p class="story-excerpt">The story of how the Africa Tech Summit grew from a meetup to a continent-wide conference.</p>
+                <a href="#" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <div class="story-card">
+            <div class="story-image" style="background-image: url('{% static 'images/stories/food-festival.jpg' %}')">
+                <span class="story-category">Food</span>
+            </div>
+            <div class="story-content">
+                <h3>Celebrating Kenyan Cuisine Worldwide</h3>
+                <div class="story-meta">
+                    <span><i class="fas fa-user"></i> Michael Otieno, Organizer</span>
+                    <span><i class="fas fa-calendar"></i> January 2024</span>
+                </div>
+                <p class="story-excerpt">How the Nairobi Food Festival became an international sensation through EventHub.</p>
+                <a href="#" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <div class="story-card">
+            <div class="story-image" style="background-image: url('{% static 'images/stories/art-exhibition.jpg' %}')">
+                <span class="story-category">Art</span>
+            </div>
+            <div class="story-content">
+                <h3>Empowering Local Artists</h3>
+                <div class="story-meta">
+                    <span><i class="fas fa-user"></i> Grace Wanjiku, Organizer</span>
+                    <span><i class="fas fa-calendar"></i> December 2023</span>
+                </div>
+                <p class="story-excerpt">The journey of an art collective using EventHub to showcase Kenyan talent.</p>
+                <a href="#" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="load-more">
+        <button class="btn-outline">Load More Stories</button>
+    </div>
+
+    <div class="share-story">
+        <div class="share-story-content">
+            <h3>Have a Success Story to Share?</h3>
+            <p>We'd love to hear how EventHub has helped you!</p>
+            <a href="/attendee/pages/contact/" class="btn-primary">Share Your Story</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

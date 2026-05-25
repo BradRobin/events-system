@@ -1,0 +1,93 @@
+/* ============================================
+   BOOKING PAGINATION - EventHub Style
+   ============================================ */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-2xl);
+    flex-wrap: wrap;
+    padding: var(--spacing-md) 0;
+}
+
+/* Pagination Buttons */
+.pagination button {
+    padding: 0.5rem 1rem;
+    min-width: 40px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    color: var(--np-dark);
+}
+
+.pagination button:hover:not(:disabled) {
+    background: var(--np-gradient);
+    color: white;
+    border-color: transparent;
+    transform: translateY(-2px);
+}
+
+.pagination button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.pagination button.active {
+    background: var(--np-gradient);
+    color: white;
+    border-color: transparent;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Pagination Info Text */
+.pagination-info {
+    text-align: center;
+    margin-top: var(--spacing-lg);
+    font-size: 0.8rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--np-gray);
+}
+
+/* Pagination with Ellipsis */
+.pagination .ellipsis {
+    padding: 0.5rem 0.25rem;
+    color: var(--np-gray);
+    font-size: 0.85rem;
+}
+
+/* Compact Pagination for Mobile */
+@media (max-width: 640px) {
+    .pagination {
+        gap: var(--spacing-xs);
+    }
+    
+    .pagination button {
+        padding: 0.4rem 0.8rem;
+        min-width: 34px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Small Screens */
+@media (max-width: 480px) {
+    .pagination {
+        gap: 0.25rem;
+    }
+    
+    .pagination button {
+        padding: 0.35rem 0.6rem;
+        min-width: 30px;
+        font-size: 0.7rem;
+    }
+}

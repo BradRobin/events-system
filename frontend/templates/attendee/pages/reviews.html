@@ -1,0 +1,198 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}Reviews & Feedback - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/pages/reviews.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="hero-section">
+    <div class="container">
+        <h1>Reviews & <span class="text-red">Feedback</span></h1>
+        <p class="hero-subtitle">See what people are saying about events</p>
+    </div>
+</div>
+
+<div class="section">
+    <div class="container">
+        <div class="reviews-summary">
+            <div class="rating-overall">
+                <div class="rating-number">4.8</div>
+                <div class="stars-display">
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star"></i>
+                    <i class="fas fa-star-half-alt"></i>
+                </div>
+                <div class="rating-count">Based on 12,345 reviews</div>
+            </div>
+            <div class="rating-breakdown">
+                <div class="rating-bar">
+                    <span>5 ★</span>
+                    <div class="bar"><div class="fill" style="width: 85%;"></div></div>
+                    <span>85%</span>
+                </div>
+                <div class="rating-bar">
+                    <span>4 ★</span>
+                    <div class="bar"><div class="fill" style="width: 10%;"></div></div>
+                    <span>10%</span>
+                </div>
+                <div class="rating-bar">
+                    <span>3 ★</span>
+                    <div class="bar"><div class="fill" style="width: 3%;"></div></div>
+                    <span>3%</span>
+                </div>
+                <div class="rating-bar">
+                    <span>2 ★</span>
+                    <div class="bar"><div class="fill" style="width: 1%;"></div></div>
+                    <span>1%</span>
+                </div>
+                <div class="rating-bar">
+                    <span>1 ★</span>
+                    <div class="bar"><div class="fill" style="width: 1%;"></div></div>
+                    <span>1%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section section-bg-light">
+    <div class="container">
+        <div class="section-header">
+            <h2>Latest Reviews</h2>
+            <p>Real feedback from our community</p>
+        </div>
+
+        <div class="reviews-grid">
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-avatar">AM</div>
+                    <div class="reviewer-info">
+                        <h4>Amina Mwangi</h4>
+                        <div class="stars-display">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <span class="review-date">2 days ago</span>
+                    </div>
+                </div>
+                <p class="review-text">"Amazing experience! The event was well organized and the ticket booking was seamless. Highly recommend EventHub!"</p>
+                <div class="review-event">🎵 African Music Festival 2026</div>
+            </div>
+
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-avatar">JO</div>
+                    <div class="reviewer-info">
+                        <h4>James Okonkwo</h4>
+                        <div class="stars-display">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <span class="review-date">5 days ago</span>
+                    </div>
+                </div>
+                <p class="review-text">"The analytics dashboard for organizers is fantastic. I could track ticket sales in real-time. Will definitely use again!"</p>
+                <div class="review-event">💻 Africa Tech Summit 2026</div>
+            </div>
+
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-avatar">SK</div>
+                    <div class="reviewer-info">
+                        <h4>Sarah Kariuki</h4>
+                        <div class="stars-display">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <span class="review-date">1 week ago</span>
+                    </div>
+                </div>
+                <p class="review-text">"The QR code tickets made entry so smooth. No waiting in long lines. Best event platform in Africa!"</p>
+                <div class="review-event">🎨 Nairobi Art Exhibition</div>
+            </div>
+
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-avatar">BO</div>
+                    <div class="reviewer-info">
+                        <h4>Brian Omondi</h4>
+                        <div class="stars-display">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <span class="review-date">2 weeks ago</span>
+                    </div>
+                </div>
+                <p class="review-text">"Customer support was incredibly helpful when I had issues with my ticket. Resolved within minutes!"</p>
+                <div class="review-event">⚽ Nairobi Sports Festival</div>
+            </div>
+
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-avatar">LW</div>
+                    <div class="reviewer-info">
+                        <h4>Lucy Wambui</h4>
+                        <div class="stars-display">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <span class="review-date">3 weeks ago</span>
+                    </div>
+                </div>
+                <p class="review-text">"Easy to use, great selection of events, and instant ticket delivery. What more could you ask for?"</p>
+                <div class="review-event">🎭 Nairobi Theatre Night</div>
+            </div>
+
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-avatar">DK</div>
+                    <div class="reviewer-info">
+                        <h4>David Kipchoge</h4>
+                        <div class="stars-display">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <span class="review-date">1 month ago</span>
+                    </div>
+                </div>
+                <p class="review-text">"Found amazing events I would have never known about. The recommendations are spot on!"</p>
+                <div class="review-event">🍽️ Nairobi Food Festival</div>
+            </div>
+        </div>
+
+        <div class="load-more">
+            <button class="btn-outline">Load More Reviews</button>
+        </div>
+
+        <div class="write-review">
+            <h3>Share Your Experience</h3>
+            <p>Have you attended an event recently? We'd love to hear your feedback!</p>
+            <a href="/attendee/dashboard/" class="btn-primary">Write a Review</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

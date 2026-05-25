@@ -1,0 +1,88 @@
+{% load static %}
+<header class="app-header">
+    <div class="header-container">
+        <div class="header-left">
+            <a href="/attendee/" class="logo">
+                <i class="fas fa-calendar-alt"></i>
+                <span>EventHub</span>
+                <span class="role-badge">Attendee</span>
+            </a>
+        </div>
+        
+        <div class="header-center">
+            <form class="search-form" action="/attendee/events/search/" method="GET">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="q" placeholder="Search events, venues, or categories...">
+                    <button type="submit">Search</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="header-right">
+            <a href="/attendee/cart/" class="cart-link">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-badge" id="cartBadge"></span>
+            </a>
+            
+            <div class="notifications-dropdown">
+                <button class="notifications-btn" id="notificationsBtn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationBadge"></span>
+                </button>
+                <div class="notifications-panel" id="notificationsPanel">
+                    <div class="notifications-header">
+                        <h4>Notifications</h4>
+                        <button onclick="markAllNotificationsRead()">Mark all as read</button>
+                    </div>
+                    <div class="notifications-list" id="notificationsList">
+                        <div class="loading-state">Loading...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="user-menu">
+                <div class="user-avatar">
+                    <span id="userInitial">U</span>
+                </div>
+                <div class="user-info">
+                    <span class="user-name" id="userName">Guest</span>
+                    <span class="user-role">Attendee</span>
+                </div>
+                <i class="fas fa-chevron-down"></i>
+                <div class="user-dropdown">
+                    <a href="/attendee/dashboard/"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="/attendee/profile/"><i class="fas fa-user"></i> My Profile</a>
+                    <a href="/attendee/tickets/"><i class="fas fa-ticket-alt"></i> My Tickets</a>
+                    <a href="/attendee/bookings/"><i class="fas fa-receipt"></i> My Bookings</a>
+                    <a href="/attendee/wishlist/"><i class="fas fa-heart"></i> Wishlist</a>
+                    <hr>
+                    <a href="/attendee/support/"><i class="fas fa-headset"></i> Support</a>
+                    <hr>
+                    <a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+    if (user.name) {
+        document.getElementById('userName').textContent = user.name;
+        document.getElementById('userInitial').textContent = user.name.charAt(0).toUpperCase();
+    }
+    
+    if (window.AttendeeAPIEndpoints && window.AttendeeAPIEndpoints.cart) {
+        window.AttendeeAPIEndpoints.cart.getCart().then(cart => {
+            const count = cart.items?.length || 0;
+            const badge = document.getElementById('cartBadge');
+            if (badge && count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline-block';
+            }
+        }).catch(console.error);
+    }
+});
+</script>

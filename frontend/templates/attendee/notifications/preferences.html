@@ -1,0 +1,105 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}Notification Preferences - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/preferences.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="preferences-container">
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-sliders-h"></i> Notification Preferences</h1>
+            <p class="text-muted">Choose how you want to receive notifications</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-envelope"></i> Email Notifications</h3>
+        </div>
+        <div class="card-body">
+            <form id="emailPrefsForm">
+                {% csrf_token %}
+                <div class="preference-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="emailBooking"> Booking Confirmation
+                    </label>
+                    <p class="preference-desc">Receive email when you successfully book tickets</p>
+                </div>
+                <div class="preference-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="emailReminder"> Event Reminders
+                    </label>
+                    <p class="preference-desc">Get reminded about upcoming events 24 hours before</p>
+                </div>
+                <div class="preference-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="emailPromotion"> Promotions & Offers
+                    </label>
+                    <p class="preference-desc">Receive exclusive deals and discounts</p>
+                </div>
+                <div class="preference-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="emailEventUpdate"> Event Updates
+                    </label>
+                    <p class="preference-desc">Get notified about event changes or cancellations</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-bell"></i> Push Notifications</h3>
+        </div>
+        <div class="card-body">
+            <form id="pushPrefsForm">
+                {% csrf_token %}
+                <div class="preference-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="pushBooking"> Booking Confirmation
+                    </label>
+                </div>
+                <div class="preference-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="pushReminder"> Event Reminders
+                    </label>
+                </div>
+                <div class="preference-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="pushPromotion"> Promotions & Offers
+                    </label>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-sms"></i> SMS Notifications</h3>
+        </div>
+        <div class="card-body">
+            <form id="smsPrefsForm">
+                {% csrf_token %}
+                <div class="preference-item">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="smsReminder"> Event Reminders
+                    </label>
+                    <p class="preference-desc">Get SMS reminder 24 hours before your event</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button class="btn-primary" onclick="saveAllPreferences()">Save All Preferences</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/attendee/notifications/preferences.js' %}"></script>
+{% endblock %}

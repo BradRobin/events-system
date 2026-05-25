@@ -1,0 +1,83 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}About Us - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/pages/about.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>About <span class="highlight">EventHub</span></h1>
+        <p>Kenya's premier event discovery and ticketing platform</p>
+    </div>
+
+    <div class="about-content">
+        <div class="about-section">
+            <h2>Our Story</h2>
+            <p>EventHub was founded in 2020 with a simple mission: to make event discovery and ticketing seamless for everyone in Kenya. We saw a gap in the market where event organizers struggled to sell tickets online, and attendees found it difficult to discover exciting events happening around them.</p>
+            <p>Today, EventHub has grown to become Kenya's leading event ticketing platform, hosting thousands of events and serving millions of happy attendees. From intimate workshops to large-scale music festivals, we're proud to power experiences that bring people together.</p>
+        </div>
+
+        <div class="about-section">
+            <h2>Our Mission</h2>
+            <p>To connect people with unforgettable experiences through a seamless, secure, and intuitive event discovery and ticketing platform.</p>
+        </div>
+
+        <div class="about-section">
+            <h2>Our Values</h2>
+            <div class="values-grid">
+                <div class="value-card">
+                    <i class="fas fa-star"></i>
+                    <h3>Excellence</h3>
+                    <p>We strive for excellence in everything we do, from our technology to our customer support.</p>
+                </div>
+                <div class="value-card">
+                    <i class="fas fa-handshake"></i>
+                    <h3>Trust</h3>
+                    <p>Building trust with our users and partners is at the core of our business.</p>
+                </div>
+                <div class="value-card">
+                    <i class="fas fa-bolt"></i>
+                    <h3>Innovation</h3>
+                    <p>Continuously improving our platform to deliver the best experience possible.</p>
+                </div>
+                <div class="value-card">
+                    <i class="fas fa-users"></i>
+                    <h3>Community</h3>
+                    <p>Bringing people together through memorable events and experiences.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="about-section">
+            <h2>Meet Our Team</h2>
+            <div class="team-grid">
+                <div class="team-card">
+                    <div class="team-avatar">JD</div>
+                    <h4>John Doe</h4>
+                    <p>CEO & Co-founder</p>
+                </div>
+                <div class="team-card">
+                    <div class="team-avatar">JS</div>
+                    <h4>Jane Smith</h4>
+                    <p>CTO & Co-founder</p>
+                </div>
+                <div class="team-card">
+                    <div class="team-avatar">MK</div>
+                    <h4>Michael Kimani</h4>
+                    <p>Head of Operations</p>
+                </div>
+                <div class="team-card">
+                    <div class="team-avatar">SW</div>
+                    <h4>Sarah Wanjiku</h4>
+                    <p>Customer Success Lead</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

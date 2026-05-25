@@ -1,0 +1,215 @@
+/* ============================================
+   REVIEWS SECTION CSS - EventHub Style
+   ============================================ */
+
+.reviews-section {
+    margin-top: var(--spacing-2xl);
+}
+
+.reviews-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.rating-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+}
+
+.average-rating {
+    text-align: center;
+}
+
+.rating-value {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--np-gold);
+    line-height: 1;
+}
+
+.rating-stars {
+    color: var(--np-gold);
+    margin-top: var(--spacing-xs);
+}
+
+.rating-count {
+    font-size: 0.8rem;
+    color: var(--np-gray);
+}
+
+.rating-bars {
+    flex: 1;
+}
+
+.rating-bar-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.rating-star-label {
+    width: 40px;
+    font-size: 0.8rem;
+    color: var(--np-gray);
+}
+
+.rating-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--np-bg);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.rating-bar-fill {
+    height: 100%;
+    background: var(--np-gold);
+    border-radius: var(--radius-full);
+}
+
+.rating-percent {
+    width: 45px;
+    font-size: 0.75rem;
+    color: var(--np-gray);
+}
+
+/* Review List */
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.review-item {
+    padding: var(--spacing-lg);
+    background: var(--np-bg);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+}
+
+.review-item:hover {
+    background: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.reviewer {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.reviewer-avatar {
+    width: 40px;
+    height: 40px;
+    background: var(--np-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+.reviewer-info strong {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+}
+
+.review-stars {
+    color: var(--np-gold);
+    font-size: 0.8rem;
+}
+
+.review-date {
+    font-size: 0.75rem;
+    color: var(--np-gray);
+}
+
+.review-title {
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+    color: var(--np-dark);
+}
+
+.review-content {
+    color: var(--np-gray);
+    line-height: 1.6;
+    margin-bottom: var(--spacing-md);
+}
+
+.organizer-response {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: rgba(245, 158, 11, 0.05);
+    border-left: 3px solid var(--np-gold);
+    border-radius: var(--radius-md);
+}
+
+.organizer-response strong {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    color: var(--np-gold);
+}
+
+.review-helpful {
+    margin-top: var(--spacing-md);
+}
+
+.review-helpful button {
+    background: none;
+    border: none;
+    color: var(--np-gray);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.review-helpful button:hover {
+    color: var(--np-gold);
+}
+
+/* Write Review Form */
+.write-review-form {
+    margin-top: var(--spacing-2xl);
+    padding: var(--spacing-xl);
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.write-review-form h4 {
+    margin-bottom: var(--spacing-lg);
+}
+
+.rating-input {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-lg);
+}
+
+.rating-input i {
+    font-size: 1.5rem;
+    color: var(--np-gray);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.rating-input i:hover,
+.rating-input i.active {
+    color: var(--np-gold);
+}

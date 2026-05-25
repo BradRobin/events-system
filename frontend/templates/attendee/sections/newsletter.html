@@ -1,0 +1,14 @@
+{% load static %}
+<section class="newsletter-section">
+    <div class="container">
+        <div class="newsletter-content">
+            <h2>Stay Updated</h2>
+            <p>Subscribe to our newsletter for the latest events and exclusive offers</p>
+            <form class="newsletter-form" id="newsletterForm">
+                {% csrf_token %}
+                <input type="email" placeholder="Enter your email address" required>
+                <button type="submit">Subscribe</button>
+            </form>
+        </div>
+    </div>
+</section>

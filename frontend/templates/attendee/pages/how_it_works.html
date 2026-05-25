@@ -1,0 +1,126 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}How It Works - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/pages/how-it-works.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="hero-section">
+    <div class="container">
+        <h1>How It <span class="text-red">Works</span></h1>
+        <p class="hero-subtitle">Get started with EventHub in three simple steps</p>
+    </div>
+</div>
+
+<div class="section">
+    <div class="container">
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <i class="fas fa-search step-icon"></i>
+                <h3>Discover Events</h3>
+                <p>Browse through hundreds of exciting events happening near you. Filter by category, date, location, or price to find what interests you.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <i class="fas fa-ticket-alt step-icon"></i>
+                <h3>Book Tickets</h3>
+                <p>Select your tickets, choose quantity, and complete payment securely using M-Pesa, card, or other payment methods.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <i class="fas fa-qrcode step-icon"></i>
+                <h3>Attend Event</h3>
+                <p>Show your QR code at the venue for instant check-in. Download tickets to your phone or print them.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section section-bg-light">
+    <div class="container">
+        <div class="section-header">
+            <h2>For Organizers</h2>
+            <p>Everything you need to manage successful events</p>
+        </div>
+
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <i class="fas fa-user-plus step-icon"></i>
+                <h3>Sign Up</h3>
+                <p>Create your organizer account and submit your business documents for verification.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <i class="fas fa-calendar-plus step-icon"></i>
+                <h3>Create Event</h3>
+                <p>Add event details, set ticket prices, upload images, and publish your event for approval.</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <i class="fas fa-chart-line step-icon"></i>
+                <h3>Manage & Grow</h3>
+                <p>Track ticket sales, manage attendees, and receive payouts directly to your account.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="container">
+        <div class="video-section">
+            <h2>Watch the Demo</h2>
+            <p>See how EventHub works in action</p>
+            <div class="video-container">
+                <div class="video-placeholder">
+                    <i class="fas fa-play-circle"></i>
+                    <h3>Watch Demo Video</h3>
+                    <p>Learn how to discover and book events</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section section-bg-light">
+    <div class="container">
+        <div class="still-need-help">
+            <h3>Ready to Get Started?</h3>
+            <p>Join thousands of happy event-goers and organizers on EventHub</p>
+            <div class="cta-buttons">
+                <a href="/attendee/auth/register/" class="btn-primary">Create Account</a>
+                <a href="/organizer/auth/register/" class="btn-outline">Become an Organizer</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cta-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    margin-top: var(--spacing-xl);
+}
+
+.still-need-help {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 640px) {
+    .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+</style>
+{% endblock %}

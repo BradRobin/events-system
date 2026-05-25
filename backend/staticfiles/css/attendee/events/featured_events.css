@@ -1,0 +1,276 @@
+/* Featured Events Styles - Using EventHub Color Theme */
+.featured-header {
+    text-align: center;
+    margin: 40px 0;
+}
+
+.featured-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.featured-header p {
+    color: #666;
+}
+
+/* Swiper Slider Styles */
+.featured-slider {
+    padding: 20px 0 40px;
+    margin-bottom: 40px;
+}
+
+.featured-card {
+    position: relative;
+    background: #1a1a2e;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.35s ease;
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.25);
+    height: 380px;
+}
+
+.featured-card:hover {
+    box-shadow: 0 25px 40px -15px rgba(0, 0, 0, 0.35);
+}
+
+.featured-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.featured-card:hover .featured-image {
+    transform: scale(1.05);
+}
+
+.featured-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e, #0f172a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 4rem;
+}
+
+.featured-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+    padding: 30px 20px 20px;
+    color: white;
+}
+
+.featured-overlay h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.featured-overlay p {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-bottom: 10px;
+}
+
+.featured-price {
+    display: inline-block;
+    background: linear-gradient(135deg, #ec6408, #f59e0b);
+    padding: 5px 15px;
+    border-radius: 30px;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+/* Swiper Navigation Customization */
+.swiper-button-next,
+.swiper-button-prev {
+    background: rgba(255, 255, 255, 0.9);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #ec6408;
+}
+
+.swiper-button-next:after,
+.swiper-button-prev:after {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.swiper-button-next:hover,
+.swiper-button-prev:hover {
+    background: linear-gradient(135deg, #ec6408, #f59e0b);
+    color: white;
+}
+
+.swiper-pagination-bullet {
+    background: #ccc;
+}
+
+.swiper-pagination-bullet-active {
+    background: linear-gradient(135deg, #ec6408, #f59e0b);
+}
+
+/* Section Header */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.section-header h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.section-header a {
+    color: #ec6408;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.section-header a:hover {
+    color: #f59e0b;
+}
+
+/* Popular Events Grid */
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 25px;
+}
+
+.event-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.35s ease;
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.1);
+}
+
+.event-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 25px 40px -15px rgba(0, 0, 0, 0.2);
+}
+
+.event-image-wrapper {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.event-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.event-card:hover .event-image {
+    transform: scale(1.05);
+}
+
+.event-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e, #0f172a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+}
+
+.event-price {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: linear-gradient(135deg, #ec6408, #f59e0b);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 30px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.event-info {
+    padding: 20px;
+}
+
+.event-info h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.event-info p {
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.event-info p i {
+    width: 20px;
+    color: #ec6408;
+    margin-right: 5px;
+}
+
+.event-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.event-footer span {
+    color: #28a745;
+    font-size: 0.85rem;
+}
+
+.book-btn {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #ec6408, #f59e0b);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+}
+
+.book-btn:hover {
+    transform: scale(1.05);
+}
+
+.no-events {
+    text-align: center;
+    padding: 60px;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .featured-card {
+        height: 300px;
+    }
+    
+    .featured-overlay h3 {
+        font-size: 1.1rem;
+    }
+}

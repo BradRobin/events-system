@@ -1,0 +1,47 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}My Tickets - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/tickets/tickets.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/tickets/ticket-card.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="tickets-container">
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-ticket-alt"></i> My Tickets</h1>
+            <p class="text-muted">View and manage your event tickets</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <button class="tab-btn active" data-tab="upcoming" onclick="switchTab('upcoming')">Upcoming Events</button>
+        <button class="tab-btn" data-tab="past" onclick="switchTab('past')">Past Events</button>
+    </div>
+
+    <!-- Search -->
+    <div class="filters-card">
+        <div class="filter-group search-group">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchTickets" placeholder="Search by event or ticket number...">
+        </div>
+    </div>
+
+    <!-- Tickets List -->
+    <div id="ticketsList" class="tickets-list">
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading tickets...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/attendee/tickets/tickets.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,136 @@
+/* ============================================
+   BOOKING DETAIL MODAL STYLES - EventHub Style
+   ============================================ */
+
+.booking-detail-modal {
+    padding: var(--spacing-md);
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.detail-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-family: 'Manrope', 'Inter', sans-serif;
+    font-weight: 700;
+}
+
+.booking-date-detail {
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--np-gray);
+}
+
+.booking-date-detail i {
+    margin-right: var(--spacing-xs);
+}
+
+.detail-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.detail-section h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Manrope', 'Inter', sans-serif;
+    margin-bottom: var(--spacing-md);
+    color: var(--np-dark);
+    position: relative;
+    padding-left: var(--spacing-md);
+}
+
+.detail-section h4::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: var(--np-gradient);
+    border-radius: 3px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row .label {
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    color: var(--np-gray);
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.detail-row .value {
+    flex: 1;
+    color: var(--np-dark);
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    word-break: break-word;
+}
+
+.detail-row .value.amount {
+    color: var(--np-gold);
+    font-weight: 700;
+}
+
+.detail-row .value code {
+    background: rgba(245, 158, 11, 0.1);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+}
+
+/* Tickets Table */
+.tickets-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--spacing-md);
+}
+
+.tickets-table th,
+.tickets-table td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.tickets-table th {
+    background: var(--np-bg);
+    font-weight: 600;
+    font-size: 0.8rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--np-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tickets-table td {
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+}
+
+.tickets-table tfoot td {
+    font-weight: 700;
+    background: var(--np-bg);
+    border-top: 2px solid rgba(0, 0, 0, 0.06);
+}

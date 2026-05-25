@@ -1,0 +1,216 @@
+/* ============================================
+   PREFERENCES CSS - EventHub Style
+   ============================================ */
+
+@import url('typography.css');
+
+.preferences-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+}
+
+/* Page Header */
+.page-header {
+    margin-bottom: var(--spacing-2xl);
+}
+
+.page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+}
+
+.page-header h1 i {
+    color: var(--np-gold);
+    margin-right: var(--spacing-sm);
+}
+
+.page-header .text-muted {
+    color: var(--np-gray);
+    font-size: 0.875rem;
+}
+
+/* Card Styles */
+.card {
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    margin-bottom: var(--spacing-xl);
+}
+
+.card-header {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    background: linear-gradient(135deg, var(--np-bg), white);
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.card-header h3 i {
+    color: var(--np-gold);
+    margin-right: var(--spacing-sm);
+}
+
+.card-body {
+    padding: var(--spacing-xl);
+}
+
+/* Preference Items */
+.preference-item {
+    padding: var(--spacing-md) 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.preference-item:last-child {
+    border-bottom: none;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--np-dark);
+    margin-bottom: var(--spacing-xs);
+}
+
+.checkbox-label input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--np-gold);
+}
+
+.preference-desc {
+    font-size: 0.75rem;
+    color: var(--np-gray);
+    margin-left: 26px;
+    margin-top: var(--spacing-xs);
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+    padding-bottom: var(--spacing-2xl);
+}
+
+.btn-primary {
+    background: var(--np-gradient);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Toast Container */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1100;
+}
+
+.toast-notification {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-top: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    box-shadow: var(--shadow-lg);
+    animation: slideIn 0.3s ease;
+    border-left: 4px solid var(--np-success);
+}
+
+.toast-notification.toast-error {
+    border-left-color: var(--np-red);
+}
+
+.toast-notification i {
+    font-size: 1.1rem;
+}
+
+.toast-notification.toast-success i {
+    color: #10b981;
+}
+
+.toast-notification.toast-error i {
+    color: #ef4444;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .preferences-container {
+        padding: 0 var(--spacing-lg);
+    }
+    
+    .page-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .card-header {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    .card-body {
+        padding: var(--spacing-lg);
+    }
+    
+    .form-actions {
+        justify-content: stretch;
+    }
+    
+    .form-actions button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .preferences-container {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .checkbox-label {
+        font-size: 0.85rem;
+    }
+    
+    .preference-desc {
+        font-size: 0.7rem;
+        margin-left: 22px;
+    }
+}

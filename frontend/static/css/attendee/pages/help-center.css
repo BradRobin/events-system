@@ -1,0 +1,164 @@
+/* ============================================
+   HELP CENTER CSS - EventHub Style
+   ============================================ */
+
+@import url('common.css');
+
+.help-categories {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-xl);
+}
+
+.help-category {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all var(--transition-normal);
+}
+
+.help-category:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+}
+
+.help-category i {
+    font-size: 2.5rem;
+    color: var(--np-gold);
+    margin-bottom: var(--spacing-md);
+}
+
+.help-category h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-lg);
+    color: var(--np-dark);
+}
+
+.help-category ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.help-category li {
+    margin-bottom: var(--spacing-sm);
+}
+
+.help-category a {
+    color: var(--np-gray);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color var(--transition-fast);
+}
+
+.help-category a:hover {
+    color: var(--np-gold);
+}
+
+/* Search Section */
+.search-section {
+    background: var(--np-bg);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    text-align: center;
+    margin-bottom: var(--spacing-3xl);
+}
+
+.search-form {
+    display: flex;
+    max-width: 500px;
+    margin: var(--spacing-lg) auto 0;
+}
+
+.search-form input {
+    flex: 1;
+    padding: var(--spacing-md);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    font-size: 0.9rem;
+}
+
+.search-form button {
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: var(--np-gradient);
+    color: white;
+    border: none;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* Popular Topics */
+.popular-topics {
+    margin-top: var(--spacing-3xl);
+}
+
+.popular-topics h3 {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.topics-grid {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.topic-tag {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: var(--np-bg);
+    border-radius: var(--radius-full);
+    color: var(--np-dark);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all var(--transition-fast);
+}
+
+.topic-tag:hover {
+    background: var(--np-gradient);
+    color: white;
+}
+
+/* Contact Support */
+.contact-support {
+    text-align: center;
+    margin-top: var(--spacing-2xl);
+    padding: var(--spacing-2xl);
+    background: var(--np-bg);
+    border-radius: var(--radius-xl);
+}
+
+.contact-support p {
+    margin-bottom: var(--spacing-lg);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .help-categories {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 640px) {
+    .help-categories {
+        grid-template-columns: 1fr;
+    }
+    
+    .search-form {
+        flex-direction: column;
+    }
+    
+    .search-form input {
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .search-form button {
+        border-radius: var(--radius-md);
+    }
+}

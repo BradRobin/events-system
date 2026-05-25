@@ -1,0 +1,91 @@
+:root {
+    /* Primary Colors */
+    --np-red: #f81d1d;
+    --np-yellow: #ffd045;
+    --np-orange: #ec6408;
+    --np-gold: #f59e0b;
+    --np-bg: #eef1f0;
+    --np-white: #ffffff;
+    --np-dark: #0f172a;
+    --np-darker: #1e293b;
+    --np-gray: #64748b;
+    --np-light-gray: #94a3b8;
+    
+    /* Gradients */
+    --np-gradient: linear-gradient(135deg, #f59e0b, #ec6408);
+    --np-gradient-red: linear-gradient(135deg, #f81d1d, #ec6408);
+    --np-gradient-dark: linear-gradient(135deg, #0f172a, #1e293b);
+    
+    /* Spacing */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    --spacing-3xl: 4rem;
+    --spacing-4xl: 5rem;
+    --spacing-5xl: 6rem;
+    
+    /* Container Widths */
+    --container-sm: 640px;
+    --container-md: 768px;
+    --container-lg: 1024px;
+    --container-xl: 1280px;
+    --container-2xl: 1536px;
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+    
+    /* Border Radius */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-2xl: 2rem;
+    --radius-full: 9999px;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Text Color Utility Classes */
+.text-red { color: var(--np-red); }
+.text-yellow { color: var(--np-yellow); }
+.text-orange { color: var(--np-orange); }
+.text-gold { color: var(--np-gold); }
+.text-white { color: var(--np-white); }
+.text-dark { color: var(--np-dark); }
+.text-gray { color: var(--np-gray); }
+.text-light-gray { color: var(--np-light-gray); }
+
+/* Background Color Utility Classes */
+.bg-red { background: var(--np-red); }
+.bg-yellow { background: var(--np-yellow); }
+.bg-orange { background: var(--np-orange); }
+.bg-gold { background: var(--np-gold); }
+.bg-white { background: var(--np-white); }
+.bg-dark { background: var(--np-dark); }
+.bg-darker { background: var(--np-darker); }
+.bg-gray { background: var(--np-gray); }
+
+/* Gradient Background Utilities */
+.bg-gradient { background: var(--np-gradient); }
+.bg-gradient-red { background: var(--np-gradient-red); }
+.bg-gradient-dark { background: var(--np-gradient-dark); }
+
+/* Hero Section Specific */
+.hero-gradient-overlay {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.5));
+}
+
+.hero-bottom-gradient {
+    background: linear-gradient(to top, rgba(236, 100, 8, 0.4), transparent);
+}

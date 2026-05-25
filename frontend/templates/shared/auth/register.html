@@ -1,0 +1,227 @@
+{% extends "shared/auth_base.html" %}
+{% load static %}
+
+{% block title %}Sign Up - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/shared/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-background register-bg"></div>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-card-inner">
+            <a href="/" class="auth-back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div class="auth-logo">
+                <div class="auth-logo-wrapper">
+                    <div class="auth-logo-glow"></div>
+                    <div class="auth-logo-icon">
+                        <span>E</span>
+                    </div>
+                </div>
+            </div>
+            <h2 class="auth-title">Create Account</h2>
+
+            <button class="social-login-btn">
+                <i class="fab fa-google social-login-icon"></i>
+                Continue with Google
+            </button>
+
+            <div class="auth-divider">
+                <div class="auth-divider-line">
+                    <span></span>
+                </div>
+                <div class="auth-divider-text">
+                    <span>OR</span>
+                </div>
+            </div>
+
+            <form method="POST" action="/register/submit/" id="registerForm">
+                {% csrf_token %}
+                <input type="hidden" name="role" id="roleInput" value="">
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-user auth-input-icon"></i>
+                    <input type="text" name="name" id="fullName" placeholder="Full name" class="auth-input" required>
+                </div>
+                <div id="nameError" class="error-message hidden"></div>
+
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-envelope auth-input-icon"></i>
+                    <input type="email" name="email" id="email" placeholder="Email address" class="auth-input" required>
+                </div>
+                <div id="emailError" class="error-message hidden"></div>
+
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-lock auth-input-icon"></i>
+                    <input type="password" name="password1" id="password1" placeholder="Password" class="auth-input" required>
+                    <button type="button" onclick="togglePassword('password1', 'toggleIcon1')" class="auth-password-toggle">
+                        <i class="fas fa-eye-slash" id="toggleIcon1"></i>
+                    </button>
+                </div>
+                <div id="passwordStrength" class="password-strength hidden"></div>
+
+                <div class="auth-input-wrapper">
+                    <i class="fas fa-lock auth-input-icon"></i>
+                    <input type="password" name="password2" id="password2" placeholder="Confirm password" class="auth-input" required>
+                    <button type="button" onclick="togglePassword('password2', 'toggleIcon2')" class="auth-password-toggle">
+                        <i class="fas fa-eye-slash" id="toggleIcon2"></i>
+                    </button>
+                </div>
+                <div id="passwordMatchError" class="error-message hidden"></div>
+
+                <div id="organizerFields" class="organizer-fields">
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-building auth-input-icon"></i>
+                        <input type="text" name="organization_name" id="orgName" placeholder="Organization name" class="auth-input">
+                    </div>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-id-card auth-input-icon"></i>
+                        <input type="text" name="tax_id" id="taxId" placeholder="Tax ID / PIN (Optional)" class="auth-input">
+                    </div>
+                </div>
+
+                <button type="submit" id="registerBtn" class="auth-btn">Sign Up</button>
+            </form>
+
+            <div class="auth-footer">
+                Already have an account?
+                <a href="/login/">Sign In</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Set role based on URL
+    const path = window.location.pathname;
+    const roleInput = document.getElementById('roleInput');
+    if (path.includes('/organizer/')) {
+        roleInput.value = 'organizer';
+        document.getElementById('organizerFields').classList.add('show');
+    } else {
+        roleInput.value = 'attendee';
+    }
+    
+    function togglePassword(fieldId, iconId) {
+        const input = document.getElementById(fieldId);
+        const icon = document.getElementById(iconId);
+        const type = input.type === 'password' ? 'text' : 'password';
+        input.type = type;
+        icon.classList.toggle('fa-eye');
+        icon.classList.toggle('fa-eye-slash');
+    }
+    
+    // Password strength checker
+    const passwordInput = document.getElementById('password1');
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        const strengthDiv = document.getElementById('passwordStrength');
+        
+        if (password.length === 0) {
+            strengthDiv.classList.add('hidden');
+            return;
+        }
+        
+        strengthDiv.classList.remove('hidden');
+        let strength = 0;
+        
+        if (password.length >= 8) strength++;
+        if (password.match(/[a-z]/)) strength++;
+        if (password.match(/[A-Z]/)) strength++;
+        if (password.match(/[0-9]/)) strength++;
+        if (password.match(/[^a-zA-Z0-9]/)) strength++;
+        
+        let strengthText = '';
+        let strengthClass = '';
+        
+        if (strength <= 2) {
+            strengthText = 'Weak';
+            strengthClass = 'strength-weak';
+        } else if (strength <= 4) {
+            strengthText = 'Medium';
+            strengthClass = 'strength-medium';
+        } else {
+            strengthText = 'Strong';
+            strengthClass = 'strength-strong';
+        }
+        
+        strengthDiv.innerHTML = `<span class="${strengthClass}">${strengthText} password</span>`;
+    });
+    
+    // Password match checker
+    const confirmInput = document.getElementById('password2');
+    confirmInput.addEventListener('input', function() {
+        const password = document.getElementById('password1').value;
+        const confirm = this.value;
+        const errorDiv = document.getElementById('passwordMatchError');
+        
+        if (confirm.length === 0) {
+            errorDiv.classList.add('hidden');
+            return;
+        }
+        
+        if (password !== confirm) {
+            errorDiv.textContent = 'Passwords do not match';
+            errorDiv.classList.remove('hidden');
+        } else {
+            errorDiv.classList.add('hidden');
+        }
+    });
+    
+    // Form submission
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        
+        // Validation
+        const password = document.getElementById('password1').value;
+        const confirm = document.getElementById('password2').value;
+        
+        if (password !== confirm) {
+            showToast('Passwords do not match', 'error');
+            return;
+        }
+        
+        if (password.length < 6) {
+            showToast('Password must be at least 6 characters', 'error');
+            return;
+        }
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Registration successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                }, 1500);
+            } else {
+                showToast(data.error || 'Registration failed', 'error');
+            }
+        })
+        .catch(error => {
+            showToast('An error occurred', 'error');
+        });
+    });
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+</script>
+{% endblock %}

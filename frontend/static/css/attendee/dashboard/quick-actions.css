@@ -1,0 +1,60 @@
+/* ============================================
+   QUICK ACTIONS CSS - EventHub Style
+   ============================================ */
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-lg);
+    background: var(--np-bg);
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    width: 100%;
+}
+
+.quick-action-btn i {
+    font-size: 1.5rem;
+    color: var(--np-gold);
+    transition: all var(--transition-normal);
+}
+
+.quick-action-btn span {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--np-dark);
+}
+
+.quick-action-btn:hover {
+    background: var(--np-gradient);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.quick-action-btn:hover i,
+.quick-action-btn:hover span {
+    color: white;
+}
+
+@media (max-width: 480px) {
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .quick-action-btn {
+        flex-direction: row;
+        justify-content: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+    }
+}

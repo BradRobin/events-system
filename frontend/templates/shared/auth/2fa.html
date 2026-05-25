@@ -1,0 +1,53 @@
+{% extends "shared/auth_base.html" %}
+{% load static %}
+
+{% block title %}Two-Factor Authentication - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/shared/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-background login-bg"></div>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-card-inner">
+            <a href="{% url 'login' %}" class="auth-back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div class="auth-logo">
+                <div class="auth-logo-wrapper">
+                    <div class="auth-logo-glow"></div>
+                    <div class="auth-logo-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                </div>
+            </div>
+            <h2 class="auth-title">Two-Factor Authentication</h2>
+            <p class="auth-subtitle">Enter the 6-digit code from your authenticator app</p>
+            
+            <div class="otp-container">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="0" id="digit-0">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="1" id="digit-1">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="2" id="digit-2">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="3" id="digit-3">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="4" id="digit-4">
+                <input type="text" maxlength="1" class="otp-input digit-input" data-index="5" id="digit-5">
+            </div>
+            <div id="otpError" class="error-message hidden"></div>
+            
+            <button onclick="verify2FA()" id="verifyBtn" class="auth-btn">Verify</button>
+            
+            <div class="auth-footer">
+                <a href="#" onclick="resendCode()">Resend Code</a>
+                <span class="separator">|</span>
+                <a href="{% url 'login' %}">Use another method</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/auth/2fa.js' %}"></script>
+{% endblock %}

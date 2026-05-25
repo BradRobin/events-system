@@ -1,0 +1,33 @@
+{% load static %}
+<section class="hero-section">
+    <div class="hero-container">
+        <div class="hero-content">
+            <h1>Discover Amazing <span class="highlight">Events</span> Near You</h1>
+            <p>Find and book tickets for the best concerts, conferences, workshops, and entertainment events in Kenya.</p>
+            <div class="hero-search">
+                <form action="/attendee/events/search/" method="GET">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="q" placeholder="Search events, categories, or venues...">
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-number">500+</span>
+                    <span class="stat-label">Events</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">50K+</span>
+                    <span class="stat-label">Happy Attendees</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">200+</span>
+                    <span class="stat-label">Organizers</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-image">
+            <img src="{% static 'images/hero-illustration.svg' %}" alt="Events illustration">
+        </div>
+    </div>
+</section>

@@ -1,0 +1,265 @@
+/* ============================================
+   DASHBOARD MAIN CSS - EventHub Style
+   ============================================ */
+
+@import url('../typography.css');
+
+/* Dashboard Container */
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+}
+
+/* Welcome Section */
+.welcome-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+    padding: var(--spacing-xl);
+    background: linear-gradient(135deg, var(--np-dark), var(--np-darker));
+    border-radius: var(--radius-xl);
+    color: white;
+}
+
+.welcome-content h1 {
+    font-size: 1.75rem;
+    margin-bottom: var(--spacing-xs);
+    color: white;
+}
+
+.welcome-content h1 span {
+    background: var(--np-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.welcome-date {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    font-size: 0.9rem;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-2xl);
+    margin-top: var(--spacing-2xl);
+}
+
+/* Cards */
+.card {
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    margin-bottom: var(--spacing-xl);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    background: linear-gradient(135deg, var(--np-bg), white);
+}
+
+.card-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.card-header h3 i {
+    color: var(--np-gold);
+    margin-right: var(--spacing-sm);
+}
+
+.card-body {
+    padding: var(--spacing-xl);
+}
+
+/* Loading State */
+.loading-state {
+    text-align: center;
+    padding: var(--spacing-3xl);
+    color: var(--np-gray);
+}
+
+.loading-state .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(245, 158, 11, 0.2);
+    border-top-color: var(--np-gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto var(--spacing-md);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-3xl);
+    color: var(--np-gray);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.5;
+    color: var(--np-gold);
+}
+
+.empty-state h4 {
+    margin-bottom: var(--spacing-sm);
+    font-size: 1rem;
+}
+
+.empty-state p {
+    font-size: 0.85rem;
+}
+
+/* Stats Overview */
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-lg);
+}
+
+.overview-item {
+    text-align: center;
+    padding: var(--spacing-md);
+    background: var(--np-bg);
+    border-radius: var(--radius-lg);
+}
+
+.overview-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--np-gray);
+    margin-bottom: var(--spacing-xs);
+}
+
+.overview-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--np-dark);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-xl);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 0 var(--spacing-lg);
+    }
+    
+    .welcome-section {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stats-overview {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-container {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .welcome-content h1 {
+        font-size: 1.3rem;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        align-items: flex-start;
+    }
+    
+    .card-body {
+        padding: var(--spacing-lg);
+    }
+}
+/* Upcoming Tickets Styles */
+.upcoming-tickets-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.upcoming-ticket {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--np-bg);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.upcoming-ticket:hover {
+    background: linear-gradient(135deg, var(--np-bg), white);
+    transform: translateX(5px);
+}
+
+.ticket-event h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xs);
+}
+
+.ticket-date,
+.ticket-venue {
+    font-size: 0.75rem;
+    color: var(--np-gray);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-xs);
+}
+
+.ticket-status {
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.ticket-status.valid {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.ticket-status.checked_in {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.ticket-status.expired {
+    background: #fee2e2;
+    color: #991b1b;
+}

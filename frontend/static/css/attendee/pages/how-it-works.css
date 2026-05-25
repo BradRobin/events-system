@@ -1,0 +1,115 @@
+/* ============================================
+   HOW IT WORKS CSS - EventHub Style
+   ============================================ */
+
+@import url('common.css');
+
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-3xl);
+    margin-top: var(--spacing-xl);
+}
+
+.step-card {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    background: white;
+    border-radius: var(--radius-xl);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all var(--transition-normal);
+}
+
+.step-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+}
+
+.step-number {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto var(--spacing-lg);
+    background: var(--np-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.step-icon {
+    font-size: 2.5rem;
+    color: var(--np-gold);
+    margin-bottom: var(--spacing-lg);
+}
+
+.step-card h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+}
+
+.step-card p {
+    font-size: 0.9rem;
+    color: var(--np-gray);
+    line-height: 1.6;
+}
+
+/* Video Section */
+.video-section {
+    margin-top: var(--spacing-3xl);
+    text-align: center;
+}
+
+.video-container {
+    max-width: 800px;
+    margin: var(--spacing-xl) auto 0;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.video-placeholder {
+    background: var(--np-dark);
+    padding: var(--spacing-4xl);
+    text-align: center;
+    color: white;
+}
+
+.video-placeholder i {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-md);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+}
+
+.video-placeholder i:hover {
+    transform: scale(1.1);
+    color: var(--np-gold);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .steps-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-xl);
+    }
+    
+    .step-card {
+        padding: var(--spacing-xl);
+    }
+}
+
+@media (max-width: 480px) {
+    .step-number {
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    
+    .step-icon {
+        font-size: 2rem;
+    }
+}

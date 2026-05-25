@@ -1,0 +1,15 @@
+/* ============================================
+   PAGES MAIN CSS - Import all page styles
+   ============================================ */
+
+@import url('pages/common.css');
+@import url('pages/about.css');
+@import url('pages/contact.css');
+@import url('pages/faq.css');
+@import url('pages/help-center.css');
+@import url('pages/how-it-works.css');
+@import url('pages/privacy.css');
+@import url('pages/terms.css');
+@import url('pages/reviews.css');
+@import url('pages/success-stories.css');
+@import url('pages/profile.css');

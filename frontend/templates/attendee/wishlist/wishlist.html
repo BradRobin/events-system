@@ -1,0 +1,52 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}My Wishlist - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/wishlist/wishlist.css' %}">
+{% endblock %}
+
+{% block attendee_content %}
+<div class="wishlist-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-heart"></i> My Wishlist</h1>
+            <p class="text-muted">Events you've saved for later</p>
+        </div>
+        <button class="btn-danger btn-sm" id="clearWishlistBtn" style="display: none;">
+            <i class="fas fa-trash-alt"></i> Clear All
+        </button>
+    </div>
+
+    <!-- Search -->
+    <div class="filters-card">
+        <div class="filter-group search-group">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchWishlist" placeholder="Search saved events...">
+        </div>
+    </div>
+
+    <!-- Wishlist Count -->
+    <div class="wishlist-info">
+        <span id="wishlistCount">0 items</span>
+    </div>
+
+    <!-- Wishlist Grid -->
+    <div class="wishlist-grid" id="wishlistGrid">
+        <div class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading wishlist...</p>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="wishlistPagination" class="pagination"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/attendee/wishlist/wishlist.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,135 @@
+/* ============================================
+   FOOTER CSS - EventHub Attendee Portal
+   ============================================ */
+
+.footer {
+    background: var(--np-darker);
+    color: white;
+    padding: var(--spacing-3xl) 0 var(--spacing-xl);
+    margin-top: var(--spacing-4xl);
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+    text-align: center;
+}
+
+/* Logo Section */
+.footer-logo-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.footer-line-left,
+.footer-line-right {
+    width: 80px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.footer-logo-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.footer-logo-wrapper .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--np-gradient);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.footer-logo-wrapper .logo-text {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+/* Links */
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+    margin-bottom: var(--spacing-2xl);
+}
+
+.footer-link {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: color var(--transition-fast);
+}
+
+.footer-link:hover {
+    color: var(--np-gold);
+}
+
+.footer-separator {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.7rem;
+}
+
+/* Copyright */
+.footer-copyright {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.5);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .footer {
+        padding: var(--spacing-2xl) 0 var(--spacing-lg);
+        margin-top: var(--spacing-3xl);
+    }
+    
+    .footer-container {
+        padding: 0 var(--spacing-lg);
+    }
+    
+    .footer-line-left,
+    .footer-line-right {
+        width: 40px;
+    }
+    
+    .footer-links {
+        gap: 0.25rem 0.75rem;
+    }
+    
+    .footer-link {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-container {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .footer-line-left,
+    .footer-line-right {
+        width: 20px;
+    }
+    
+    .footer-logo-wrapper .logo-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+    
+    .footer-logo-wrapper .logo-text {
+        font-size: 1rem;
+    }
+}
