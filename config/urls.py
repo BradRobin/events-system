@@ -16,6 +16,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from events.views import organizer_dashboard_stats
+from accounts.auth_views import register_submit, login_submit
 import json
 
 # ============ ADMIN LOGIN VIEWS ============
@@ -236,7 +237,9 @@ urlpatterns = [
     
     # Shared Auth Pages
     path('login/', TemplateView.as_view(template_name='shared/auth/login.html'), name='login'),
+    path('login/submit/', login_submit, name='login_submit'),
     path('register/', TemplateView.as_view(template_name='shared/auth/register.html'), name='register'),
+    path('register/submit/', register_submit, name='register_submit'),
     path('forgot-password/', TemplateView.as_view(template_name='shared/auth/forgot_password.html'), name='forgot_password'),
     path('reset-password/', TemplateView.as_view(template_name='shared/auth/reset_password.html'), name='reset_password'),
     path('2fa/', TemplateView.as_view(template_name='shared/auth/2fa.html'), name='two_factor'),

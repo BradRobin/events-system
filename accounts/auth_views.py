@@ -24,7 +24,7 @@ def login_submit(request):
             return JsonResponse({'success': False, 'error': 'Invalid credentials'}, status=401)
         
         # Check role
-        if role == 'organizer' and not getattr(user, 'is_organizer', False):
+        if role == 'organizer' and user.role != 'organizer':
             return JsonResponse({'success': False, 'error': 'Not an organizer account'}, status=403)
         
         login(request, user)
@@ -38,7 +38,7 @@ def login_submit(request):
                 'id': user.id,
                 'name': user.get_full_name() or user.username,
                 'email': user.email,
-                'role': 'organizer' if getattr(user, 'is_organizer', False) else 'attendee'
+                'role': user.role
             }
         })
     except Exception as e:
@@ -72,7 +72,7 @@ def register_submit(request):
             password=password,
             first_name=first_name,
             last_name=last_name,
-            is_organizer=(role == 'organizer')
+            role=role if role in ['attendee', 'organizer'] else 'attendee'
         )
         
         if role == 'organizer' and organization_name:
@@ -88,9 +88,9 @@ def register_submit(request):
             'redirect_url': redirect_url,
             'user': {
                 'id': user.id,
-                'name': user.get_full_name(),
+                'name': user.get_full_name() or user.username,
                 'email': user.email,
-                'role': role
+                'role': user.role
             }
         })
     except Exception as e:
