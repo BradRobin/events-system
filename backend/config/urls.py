@@ -35,7 +35,7 @@ def admin_login_submit(request):
         if user is not None and user.is_staff:
             login(request, user)
             messages.success(request, f'Welcome back, {user.username}!')
-            return redirect('/admin/dashboard/')
+            return redirect('/admin-portal/dashboard/')
         else:
             messages.error(request, 'Invalid credentials or you do not have admin access.')
             return redirect('/admin/login/')
