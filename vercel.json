@@ -2,7 +2,6 @@
   "experimentalServices": {
     "frontend": {
       "root": "frontend",
-      "framework": "static",
       "routePrefix": "/"
     },
     "backend": {
