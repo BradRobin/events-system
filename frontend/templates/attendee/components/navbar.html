@@ -70,9 +70,12 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
-    if (user.name) {
-        document.getElementById('userName').textContent = user.name;
-        document.getElementById('userInitial').textContent = user.name.charAt(0).toUpperCase();
+    if (user.first_name) {
+        document.getElementById('userName').textContent = user.first_name;
+        document.getElementById('userInitial').textContent = user.first_name.charAt(0).toUpperCase();
+    } else if (user.username) {
+        document.getElementById('userName').textContent = user.username;
+        document.getElementById('userInitial').textContent = user.username.charAt(0).toUpperCase();
     }
     
     if (window.AttendeeAPIEndpoints && window.AttendeeAPIEndpoints.cart) {

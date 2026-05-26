@@ -44,12 +44,6 @@
                 <input type="hidden" name="role" id="roleInput" value="">
                 
                 <div class="auth-input-wrapper">
-                    <i class="fas fa-user auth-input-icon"></i>
-                    <input type="text" name="username" id="username" placeholder="Username" class="auth-input" required>
-                </div>
-                <div id="usernameError" class="error-message hidden"></div>
-
-                <div class="auth-input-wrapper">
                     <i class="fas fa-id-card auth-input-icon"></i>
                     <input type="text" name="name" id="fullName" placeholder="Full name" class="auth-input" required>
                 </div>
@@ -207,6 +201,13 @@
         data.first_name = nameParts[0] || '';
         data.last_name = nameParts.slice(1).join(' ') || '';
         data.password = password; // Map for backend
+        
+        // Auto-generate username from email since backend requires it
+        if (data.email) {
+            const emailPrefix = data.email.split('@')[0];
+            const randomDigits = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            data.username = `${emailPrefix}_${randomDigits}`;
+        }
         
         fetch(form.action, {
             method: 'POST',
