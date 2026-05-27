@@ -35,7 +35,7 @@ def admin_login_submit(request):
         if user is not None and user.is_staff:
             login(request, user)
             messages.success(request, f'Welcome back, {user.username}!')
-            return redirect('/admin/dashboard/')
+            return redirect('/admin-portal/dashboard/')
         else:
             messages.error(request, 'Invalid credentials or you do not have admin access.')
             return redirect('/admin/login/')
@@ -243,10 +243,11 @@ urlpatterns = [
     path('verify-email/', TemplateView.as_view(template_name='shared/auth/email_verify.html'), name='verify_email'),
     path('logout/', user_logout_view, name='logout'),
     
+    # Static Pages (Homepage)
+    path('', TemplateView.as_view(template_name='attendee/pages/homepage/homepage.html'), name='home'),
+    
     # API Endpoints
-    path('api/', include('accounts.urls')),
     path('api/organizer/dashboard/stats/', organizer_dashboard_stats, name='organizer_dashboard_stats'),
-    path('api/organizer/', include('accounts.urls')),
     path('api/contact/submit/', api_contact_submit, name='api_contact_submit'),
     path('api/events/categories/', get_categories_list, name='api_categories'),
     path('newsletter/subscribe/', newsletter_subscribe, name='newsletter_subscribe'),
@@ -288,14 +289,9 @@ urlpatterns = [
     path('api/admin/notifications/<int:notification_id>/read/', api_notification_mark_read, name='api_notification_mark_read'),
     path('api/admin/notifications/mark-all-read/', api_notifications_mark_all_read, name='api_notifications_mark_all_read'),
     
-    # ============ ATTENDEE PORTAL ============
+    # Portal URLs
     path('', include('config.attendee_urls')),
-    path('attendee/', include('config.attendee_urls')),
-    
-    # ============ ORGANIZER PORTAL ============
     path('organizer/', include('config.organizer_urls')),
-    
-    # ============ ADMIN PORTAL ============
     path('admin-portal/', include('config.admin_urls')),
 ]
 

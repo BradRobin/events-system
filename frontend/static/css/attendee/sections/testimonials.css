@@ -1,0 +1,312 @@
+/* ============================================
+   TESTIMONIALS SECTION - Cards with Border Colors
+   ============================================ */
+
+.testimonials-section {
+    padding: 4rem 0;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+/* Section Header */
+.section-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.section-header h2 {
+    font-family: 'Kaushan Script', cursive;
+    font-size: 2.5rem;
+    font-weight: 400;
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+}
+
+.section-header p {
+    font-size: 1rem;
+    color: #64748b;
+}
+
+/* Carousel Wrapper */
+.testimonials-carousel-wrapper {
+    position: relative;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Carousel Container - No scrollbar visible */
+.testimonials-carousel {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 1.5rem;
+    padding: 1rem 0.5rem;
+}
+
+.testimonials-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+/* Testimonial Item - 3 cards visible on desktop */
+.testimonial-item {
+    flex: 0 0 calc(33.333% - 1rem);
+    min-width: calc(33.333% - 1rem);
+    scroll-snap-align: start;
+}
+
+/* Testimonial Card with Border Gradient */
+.testimonial-card {
+    background: #ffffff;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e2e8f0;
+}
+
+/* Border color on hover - Gold */
+.testimonial-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    border-color: #f59e0b;
+}
+
+/* Different border colors for each card using nth-child */
+.testimonial-item:nth-child(1) .testimonial-card {
+    border-top: 3px solid #f59e0b;
+}
+
+.testimonial-item:nth-child(2) .testimonial-card {
+    border-top: 3px solid #ec6408;
+}
+
+.testimonial-item:nth-child(3) .testimonial-card {
+    border-top: 3px solid #f97316;
+}
+
+.testimonial-item:nth-child(4) .testimonial-card {
+    border-top: 3px solid #fbbf24;
+}
+
+.testimonial-item:nth-child(5) .testimonial-card {
+    border-top: 3px solid #f59e0b;
+}
+
+/* Glowing border effect on hover */
+.testimonial-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408, #f97316);
+    border-radius: 1rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+}
+
+.testimonial-card::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: #ffffff;
+    border-radius: calc(1rem - 2px);
+    z-index: -1;
+}
+
+.testimonial-card:hover::before {
+    opacity: 1;
+}
+
+/* Author Section - Centered on Top */
+.testimonial-author-top {
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+/* Author Avatar - Centered */
+.testimonial-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 0 auto 0.75rem;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+}
+
+.testimonial-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Author Info - Centered */
+.testimonial-author-info {
+    text-align: center;
+}
+
+.testimonial-author-info h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+    color: #1e293b;
+}
+
+.testimonial-author-info p {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin: 0;
+}
+
+/* Star Rating - Centered */
+.testimonial-rating {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    margin-top: 0.25rem;
+}
+
+.testimonial-rating i {
+    font-size: 0.75rem;
+    color: #fbbf24;
+}
+
+/* Quote Content */
+.testimonial-content {
+    position: relative;
+    margin-top: 0.5rem;
+    flex: 1;
+}
+
+.quote-icon {
+    position: absolute;
+    top: -5px;
+    left: -5px;
+}
+
+.quote-icon i {
+    font-size: 1.8rem;
+    color: #f59e0b;
+    opacity: 0.2;
+}
+
+.testimonial-text {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #475569;
+    position: relative;
+    z-index: 1;
+    padding-left: 1.5rem;
+    margin: 0;
+    text-align: center;
+}
+
+/* Carousel Dots */
+.testimonial-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.testimonial-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.testimonial-dot.active {
+    background: #f59e0b;
+    width: 24px;
+    border-radius: 20px;
+}
+
+.testimonial-dot:hover {
+    background: #f59e0b;
+    transform: scale(1.2);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .testimonial-item {
+        flex: 0 0 calc(50% - 0.75rem);
+        min-width: calc(50% - 0.75rem);
+    }
+}
+
+@media (max-width: 768px) {
+    .testimonials-section {
+        padding: 3rem 0;
+    }
+    
+    .container {
+        padding: 0 1rem;
+    }
+    
+    .testimonial-item {
+        flex: 0 0 calc(100% - 0rem);
+        min-width: calc(100% - 0rem);
+    }
+    
+    .testimonial-card {
+        padding: 1.25rem;
+    }
+    
+    .testimonial-avatar {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .testimonial-author-info h4 {
+        font-size: 0.9rem;
+    }
+    
+    .testimonial-text {
+        font-size: 0.8rem;
+        padding-left: 1.2rem;
+    }
+    
+    .quote-icon i {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .testimonial-card {
+        padding: 1rem;
+    }
+    
+    .testimonial-avatar {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .testimonial-author-info h4 {
+        font-size: 0.85rem;
+    }
+    
+    .testimonial-text {
+        font-size: 0.75rem;
+    }
+}

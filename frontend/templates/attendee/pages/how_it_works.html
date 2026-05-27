@@ -4,123 +4,193 @@
 {% block title %}How It Works - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
 <link rel="stylesheet" href="{% static 'css/attendee/pages/how-it-works.css' %}">
 {% endblock %}
 
-{% block attendee_content %}
-<div class="hero-section">
+{% block content %}
+<div class="how-it-works-page">
     <div class="container">
-        <h1>How It <span class="text-red">Works</span></h1>
-        <p class="hero-subtitle">Get started with EventHub in three simple steps</p>
-    </div>
-</div>
-
-<div class="section">
-    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>How It Works</h1>
+            <p>Get started in three simple steps</p>
+        </div>
+        
+        <!-- Steps Grid -->
         <div class="steps-grid">
+            <!-- Step 1 -->
             <div class="step-card">
                 <div class="step-number">1</div>
-                <i class="fas fa-search step-icon"></i>
+                <div class="step-icon-wrapper">
+                    <i class="fas fa-search"></i>
+                </div>
                 <h3>Discover Events</h3>
-                <p>Browse through hundreds of exciting events happening near you. Filter by category, date, location, or price to find what interests you.</p>
+                <p>Browse through hundreds of exciting events happening near you. Filter by category, date, or location to find the perfect experience.</p>
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Easy search & discovery</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Smart filters & categories</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Detailed event info</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Verified organizers</span>
+                    </div>
+                </div>
             </div>
+            
+            <!-- Step 2 -->
             <div class="step-card">
                 <div class="step-number">2</div>
-                <i class="fas fa-ticket-alt step-icon"></i>
+                <div class="step-icon-wrapper">
+                    <i class="fas fa-ticket-alt"></i>
+                </div>
                 <h3>Book Tickets</h3>
-                <p>Select your tickets, choose quantity, and complete payment securely using M-Pesa, card, or other payment methods.</p>
+                <p>Select your tickets, choose seating preferences, and complete payment securely in just a few clicks.</p>
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Secure payment gateway</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Multiple payment options</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Instant confirmation</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Email receipt & tickets</span>
+                    </div>
+                </div>
             </div>
+            
+            <!-- Step 3 -->
             <div class="step-card">
                 <div class="step-number">3</div>
-                <i class="fas fa-qrcode step-icon"></i>
+                <div class="step-icon-wrapper">
+                    <i class="fas fa-qrcode"></i>
+                </div>
                 <h3>Attend Event</h3>
-                <p>Show your QR code at the venue for instant check-in. Download tickets to your phone or print them.</p>
+                <p>Show your QR code at the venue, get scanned, and enjoy the experience. No paper tickets needed!</p>
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>QR code entry system</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Digital tickets on app</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Easy venue check-in</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Share tickets with friends</span>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="section section-bg-light">
-    <div class="container">
-        <div class="section-header">
-            <h2>For Organizers</h2>
-            <p>Everything you need to manage successful events</p>
+        
+        <!-- Benefits Section -->
+        <div class="benefits-section">
+            <div class="section-header">
+                <h2>Why Choose EventHub?</h2>
+                <p>We make event discovery and booking effortless</p>
+            </div>
+            
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Secure & Reliable</h3>
+                    <p>Your payments and data are protected with industry-standard security</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3>24/7 Support</h3>
+                    <p>Our support team is always here to help you with any questions</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Mobile Friendly</h3>
+                    <p>Book tickets on the go with our fully responsive platform</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <h3>Best Prices</h3>
+                    <p>Get the best deals and early bird discounts on popular events</p>
+                </div>
+            </div>
         </div>
-
-        <div class="steps-grid">
-            <div class="step-card">
-                <div class="step-number">1</div>
-                <i class="fas fa-user-plus step-icon"></i>
-                <h3>Sign Up</h3>
-                <p>Create your organizer account and submit your business documents for verification.</p>
-            </div>
-            <div class="step-card">
-                <div class="step-number">2</div>
-                <i class="fas fa-calendar-plus step-icon"></i>
-                <h3>Create Event</h3>
-                <p>Add event details, set ticket prices, upload images, and publish your event for approval.</p>
-            </div>
-            <div class="step-card">
-                <div class="step-number">3</div>
-                <i class="fas fa-chart-line step-icon"></i>
-                <h3>Manage & Grow</h3>
-                <p>Track ticket sales, manage attendees, and receive payouts directly to your account.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="section">
-    <div class="container">
+        
+        <!-- Video Section -->
         <div class="video-section">
-            <h2>Watch the Demo</h2>
-            <p>See how EventHub works in action</p>
-            <div class="video-container">
-                <div class="video-placeholder">
+            <div class="video-card">
+                <div class="video-icon">
                     <i class="fas fa-play-circle"></i>
-                    <h3>Watch Demo Video</h3>
-                    <p>Learn how to discover and book events</p>
+                </div>
+                <h3>Watch How It Works</h3>
+                <p>See how easy it is to discover and book events on EventHub</p>
+                <button class="video-btn" id="watchVideoBtn">
+                    <i class="fas fa-play"></i>
+                    Watch Demo Video
+                </button>
+            </div>
+        </div>
+        
+        <!-- CTA Section -->
+        <div class="cta-section">
+            <div class="cta-card">
+                <h3>Ready to get started?</h3>
+                <p>Join thousands of happy attendees and start discovering amazing events today!</p>
+                <div class="cta-buttons">
+                    <a href="/register/" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i>
+                        Create Free Account
+                    </a>
+                    <a href="/events/" class="btn btn-outline">
+                        <i class="fas fa-calendar"></i>
+                        Browse Events
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="section section-bg-light">
-    <div class="container">
-        <div class="still-need-help">
-            <h3>Ready to Get Started?</h3>
-            <p>Join thousands of happy event-goers and organizers on EventHub</p>
-            <div class="cta-buttons">
-                <a href="/attendee/auth/register/" class="btn-primary">Create Account</a>
-                <a href="/organizer/auth/register/" class="btn-outline">Become an Organizer</a>
-            </div>
+<!-- Video Modal (Hidden by default) -->
+<div class="video-modal" id="videoModal">
+    <div class="video-modal-content">
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+        <div class="video-container">
+            <iframe id="demoVideo" width="100%" height="400" src="https://www.youtube.com/embed/dQw4w9WgXcQ?si=placeholder" title="EventHub Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-.cta-buttons {
-    display: flex;
-    gap: var(--spacing-md);
-    justify-content: center;
-    margin-top: var(--spacing-xl);
-}
-
-.still-need-help {
-    text-align: center;
-    padding: var(--spacing-2xl);
-    background: white;
-    border-radius: var(--radius-xl);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-@media (max-width: 640px) {
-    .cta-buttons {
-        flex-direction: column;
-        align-items: center;
-    }
-}
-</style>
+{% block extra_js %}
+<script src="{% static 'js/attendee/pages/how-it-works.js' %}"></script>
 {% endblock %}

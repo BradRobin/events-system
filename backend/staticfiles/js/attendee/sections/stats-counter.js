@@ -1,50 +1,49 @@
-// ============================================
-// STATS COUNTER - Animated Number Counter
-// ============================================
-
+// Stats Counter Animation - Restarts on every scroll
 document.addEventListener('DOMContentLoaded', function() {
-    initStatsCounter();
-});
-
-function initStatsCounter() {
-    const statsSection = document.querySelector('.stats-section');
-    if (!statsSection) return;
+    const statsNumbers = document.querySelectorAll('.analytics-number');
+    let animationStarted = false;
     
+    function resetAndAnimateNumber(element) {
+        const target = parseInt(element.getAttribute('data-target'));
+        const suffix = element.querySelector('.suffix') ? element.querySelector('.suffix').textContent : '';
+        // Reset to 0
+        element.innerHTML = '0' + `<span class="suffix">${suffix}</span>`;
+        
+        let current = 0;
+        const increment = target / 50;
+        
+        // Clear any existing interval
+        if (element.interval) {
+            clearInterval(element.interval);
+        }
+        
+        element.interval = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                element.innerHTML = target.toLocaleString() + `<span class="suffix">${suffix}</span>`;
+                clearInterval(element.interval);
+                delete element.interval;
+            } else {
+                element.innerHTML = Math.floor(current).toLocaleString() + `<span class="suffix">${suffix}</span>`;
+            }
+        }, 30);
+    }
+    
+    // Create a single observer for all stats
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                animateNumbers();
-                observer.disconnect();
+                // Reset and restart animation for all stats when section becomes visible
+                statsNumbers.forEach(stat => {
+                    resetAndAnimateNumber(stat);
+                });
             }
         });
     }, { threshold: 0.3 });
     
-    observer.observe(statsSection);
-}
-
-function animateNumbers() {
-    const numbers = document.querySelectorAll('.analytics-number');
-    
-    numbers.forEach(num => {
-        const target = parseInt(num.getAttribute('data-target'));
-        if (isNaN(target)) return;
-        
-        let current = 0;
-        const duration = 2000;
-        const stepTime = 20;
-        const steps = duration / stepTime;
-        const increment = target / steps;
-        
-        const updateNumber = () => {
-            current += increment;
-            if (current < target) {
-                num.textContent = Math.floor(current).toLocaleString();
-                requestAnimationFrame(updateNumber);
-            } else {
-                num.textContent = target.toLocaleString();
-            }
-        };
-        
-        updateNumber();
-    });
-}
+    // Observe the stats section container
+    const statsSection = document.querySelector('.stats-section');
+    if (statsSection) {
+        observer.observe(statsSection);
+    }
+});

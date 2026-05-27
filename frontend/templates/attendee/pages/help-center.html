@@ -4,91 +4,261 @@
 {% block title %}Help Center - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
-<link rel="stylesheet" href="{% static 'css/attendee/pages/help-center.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/main.css' %}">
+<style>
+.help-search {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    padding: 3rem 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.help-search h2 {
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.help-search p {
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 1.5rem;
+}
+
+.search-box {
+    max-width: 500px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.search-box i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--np-gray);
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.5rem;
+    border: none;
+    border-radius: 50px;
+    outline: none;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.help-card {
+    background: var(--np-white);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-sm);
+}
+
+.help-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.help-card i {
+    font-size: 2rem;
+    color: var(--np-gold);
+    margin-bottom: 1rem;
+}
+
+.help-card h4 {
+    margin-bottom: 0.5rem;
+}
+
+.help-card p {
+    font-size: 0.8rem;
+    color: var(--np-gray);
+}
+
+.faq-section {
+    margin-top: 2rem;
+}
+
+@media (max-width: 1024px) {
+    .category-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 {% endblock %}
 
-{% block attendee_content %}
-<div class="hero-section">
-    <div class="container">
-        <h1>Help <span class="text-red">Center</span></h1>
-        <p class="hero-subtitle">How can we help you today?</p>
+{% block content %}
+<div class="page-container">
+    <div class="help-search">
+        <h2>How can we help you?</h2>
+        <p>Search for answers or browse our help topics</p>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="helpSearch" placeholder="Search for help articles...">
+        </div>
+    </div>
+    
+    <div class="category-grid">
+        <div class="help-card" onclick="scrollToFaq('booking')">
+            <i class="fas fa-ticket-alt"></i>
+            <h4>Booking & Tickets</h4>
+            <p>How to book, cancel, or transfer tickets</p>
+        </div>
+        <div class="help-card" onclick="scrollToFaq('payment')">
+            <i class="fas fa-credit-card"></i>
+            <h4>Payments & Refunds</h4>
+            <p>Payment methods, refunds, and disputes</p>
+        </div>
+        <div class="help-card" onclick="scrollToFaq('account')">
+            <i class="fas fa-user"></i>
+            <h4>Account & Profile</h4>
+            <p>Managing your account settings</p>
+        </div>
+        <div class="help-card" onclick="scrollToFaq('event')">
+            <i class="fas fa-calendar-alt"></i>
+            <h4>Events & Organizers</h4>
+            <p>Event details and organizer contact</p>
+        </div>
+    </div>
+    
+    <div class="faq-section" id="faqSection">
+        <h3 style="margin-bottom: 1rem;">Frequently Asked Questions</h3>
+        
+        <div class="faq-item" data-category="booking">
+            <div class="faq-question">
+                <span>How do I book tickets?</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                Simply browse events, select your preferred event, choose ticket quantity, and proceed to checkout. You'll receive a confirmation email with your tickets.
+            </div>
+        </div>
+        
+        <div class="faq-item" data-category="booking">
+            <div class="faq-question">
+                <span>How do I get my tickets?</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                After successful payment, you'll receive a QR code via email and in your account dashboard. Simply show the QR code at the venue for entry.
+            </div>
+        </div>
+        
+        <div class="faq-item" data-category="payment">
+            <div class="faq-question">
+                <span>Can I get a refund?</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                Refund policies vary by event. Please check the event details page or contact the event organizer directly for their refund policy.
+            </div>
+        </div>
+        
+        <div class="faq-item" data-category="payment">
+            <div class="faq-question">
+                <span>What payment methods are accepted?</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                We accept M-Pesa, Visa, Mastercard, and other major credit cards. All payments are processed securely.
+            </div>
+        </div>
+        
+        <div class="faq-item" data-category="account">
+            <div class="faq-question">
+                <span>How do I reset my password?</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                Click on "Forgot Password" on the login page, enter your email, and we'll send you a link to reset your password.
+            </div>
+        </div>
+        
+        <div class="faq-item" data-category="account">
+            <div class="faq-question">
+                <span>How do I update my profile?</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                Go to your Profile page from the Account dropdown menu, then click Edit to update your personal information.
+            </div>
+        </div>
+        
+        <div class="faq-item" data-category="event">
+            <div class="faq-question">
+                <span>How do I contact the organizer?</span>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <div class="faq-answer">
+                Each event page has organizer contact information. You can also reach out to our support team for assistance.
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 2rem; text-align: center;">
+        <p style="color: var(--np-gray);">Still need help?</p>
+        <a href="/contact/" class="btn-primary" style="display: inline-block; margin-top: 0.5rem;">Contact Support</a>
     </div>
 </div>
 
-<div class="section">
-    <div class="container">
-        <div class="search-section">
-            <h3>Search for answers</h3>
-            <form class="search-form">
-                <input type="text" placeholder="Search help articles...">
-                <button type="submit">Search</button>
-            </form>
-        </div>
+<script>
+// FAQ accordion
+document.querySelectorAll('.faq-question').forEach(question => {
+    question.addEventListener('click', () => {
+        const answer = question.nextElementSibling;
+        const icon = question.querySelector('i');
+        
+        answer.classList.toggle('show');
+        question.classList.toggle('active');
+    });
+});
 
-        <div class="help-categories">
-            <div class="help-category">
-                <i class="fas fa-ticket-alt"></i>
-                <h3>Booking & Tickets</h3>
-                <ul>
-                    <li><a href="#">How to book tickets?</a></li>
-                    <li><a href="#">How to cancel a booking?</a></li>
-                    <li><a href="#">Where to find my tickets?</a></li>
-                    <li><a href="#">Ticket refund policy</a></li>
-                    <li><a href="#">How to transfer tickets?</a></li>
-                </ul>
-            </div>
-            <div class="help-category">
-                <i class="fas fa-user"></i>
-                <h3>Account & Profile</h3>
-                <ul>
-                    <li><a href="#">How to create an account?</a></li>
-                    <li><a href="#">How to reset password?</a></li>
-                    <li><a href="#">How to update profile?</a></li>
-                    <li><a href="#">Account security tips</a></li>
-                    <li><a href="#">How to delete account?</a></li>
-                </ul>
-            </div>
-            <div class="help-category">
-                <i class="fas fa-calendar-alt"></i>
-                <h3>Events & Organizers</h3>
-                <ul>
-                    <li><a href="#">How to find events?</a></li>
-                    <li><a href="#">How to become an organizer?</a></li>
-                    <li><a href="#">How to create an event?</a></li>
-                    <li><a href="#">Event promotion tips</a></li>
-                    <li><a href="#">Organizer verification process</a></li>
-                </ul>
-            </div>
-            <div class="help-category">
-                <i class="fas fa-credit-card"></i>
-                <h3>Payments & Refunds</h3>
-                <ul>
-                    <li><a href="#">Accepted payment methods</a></li>
-                    <li><a href="#">How to request a refund?</a></li>
-                    <li><a href="#">Payment security</a></li>
-                    <li><a href="#">Billing inquiries</a></li>
-                    <li><a href="#">M-Pesa payment issues</a></li>
-                </ul>
-            </div>
-        </div>
+// Search functionality
+const searchInput = document.getElementById('helpSearch');
+const faqItems = document.querySelectorAll('.faq-item');
 
-        <div class="popular-topics">
-            <h3>Popular Topics</h3>
-            <div class="topics-grid">
-                <a href="#" class="topic-tag">QR Code Tickets</a>
-                <a href="#" class="topic-tag">M-Pesa Payment</a>
-                <a href="#" class="topic-tag">Event Check-in</a>
-                <a href="#" class="topic-tag">Ticket Transfer</a>
-                <a href="#" class="topic-tag">Organizer Dashboard</a>
-                <a href="#" class="topic-tag">Refund Policy</a>
-            </div>
-        </div>
+searchInput.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    
+    faqItems.forEach(item => {
+        const question = item.querySelector('.faq-question span').textContent.toLowerCase();
+        const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+        
+        if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
 
-        <div class="contact-support">
-            <p>Still need help? Contact our support team for assistance</p>
-            <a href="/attendee/pages/contact/" class="btn-primary">Contact Support</a>
-        </div>
-    </div>
-</div>
+// Category filter
+function scrollToFaq(category) {
+    const firstFaq = document.querySelector(`.faq-item[data-category="${category}"]`);
+    if (firstFaq) {
+        firstFaq.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const question = firstFaq.querySelector('.faq-question');
+        const answer = firstFaq.querySelector('.faq-answer');
+        
+        setTimeout(() => {
+            answer.classList.add('show');
+            question.classList.add('active');
+        }, 500);
+    }
+}
+</script>
 {% endblock %}

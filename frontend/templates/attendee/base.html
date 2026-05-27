@@ -10,129 +10,38 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Kaushan+Script&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- ========== SHARED CSS ========== -->
+    <!-- Shared CSS -->
     <link rel="stylesheet" href="{% static 'css/shared/variables.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shared/utilities.css' %}">
     <link rel="stylesheet" href="{% static 'css/shared/reset.css' %}">
     <link rel="stylesheet" href="{% static 'css/shared/typography.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shared/layout.css' %}">
     <link rel="stylesheet" href="{% static 'css/shared/buttons.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shared/forms.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shared/responsive.css' %}">
     <link rel="stylesheet" href="{% static 'css/shared/animations.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shared/messages.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shared/icons.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shared/homepage.css' %}">
-    <link rel="stylesheet" href="{% static 'css/shared/auth.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shared/responsive.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shared/layout.css' %}">
+    <link rel="stylesheet" href="{% static 'css/shared/utilities.css' %}">
     
-    <!-- ========== ATTENDEE CORE CSS ========== -->
-    <link rel="stylesheet" href="{% static 'css/attendee/main.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/events.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/tickets.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/notifications.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/preferences.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/error-pages.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages.css' %}">
-    
-    <!-- ========== ATTENDEE COMPONENTS ========== -->
+    <!-- Components -->
     <link rel="stylesheet" href="{% static 'css/attendee/components/navbar.css' %}">
     <link rel="stylesheet" href="{% static 'css/attendee/components/footer.css' %}">
     
-    <!-- ========== ATTENDEE MODULES ========== -->
-    <!-- Bookings -->
-    <link rel="stylesheet" href="{% static 'css/attendee/bookings/booking-card.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/bookings/booking-detail.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/bookings/booking-filters.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/bookings/booking-pagination.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/bookings/booking-responsive.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/bookings/bookings.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/bookings/booking-status.css' %}">
-    
-    <!-- Cart -->
-    <link rel="stylesheet" href="{% static 'css/attendee/cart/cart.css' %}">
-    
-    <!-- Dashboard -->
-    <link rel="stylesheet" href="{% static 'css/attendee/dashboard/activity.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/dashboard/dashboard.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/dashboard/quick-actions.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/dashboard/recommendations.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/dashboard/stats-cards.css' %}">
-    
-    <!-- Events -->
-    <link rel="stylesheet" href="{% static 'css/attendee/event/event-card.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/event/event-detail.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/event/events.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/event/filters.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/event/responsive.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/event/reviews.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/event/ticket-selector.css' %}">
-    
-    <!-- Pages -->
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/about.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/common.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/contact.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/faq.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/help-center.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/how-it-works.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/privacy.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/profile.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/reviews.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/success-stories.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/terms.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/pages/homepage/homepage.css' %}">
-    
-    <!-- Support -->
-    <link rel="stylesheet" href="{% static 'css/attendee/support/support.css' %}">
-    
-    <!-- Tickets -->
-    <link rel="stylesheet" href="{% static 'css/attendee/tickets/ticket-card.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/tickets/ticket-detail.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/tickets/ticket-qr.css' %}">
-    <link rel="stylesheet" href="{% static 'css/attendee/tickets/tickets.css' %}">
-    
-    <!-- Wishlist -->
-    <link rel="stylesheet" href="{% static 'css/attendee/wishlist/wishlist.css' %}">
-    
     {% block extra_css %}{% endblock %}
 </head>
-<body data-role="attendee">
-    <div id="globalLoader" class="global-loader" style="display: none;">
-        <div class="loader-container">
-            <div class="loader-spinner"></div>
-            <div class="loader-text">Loading...</div>
-        </div>
-    </div>
-
-    <div class="app-wrapper">
-        {% include 'attendee/components/navbar.html' %}
-        
-        <main class="main-content">
-            {% block content %}{% endblock %}
-        </main>
-        
-        {% include 'attendee/components/footer.html' %}
-    </div>
-
-    <div id="toastContainer" class="toast-container"></div>
-
-    <script src="{% static 'js/attendee/api.config.js' %}"></script>
-    <script src="{% static 'js/attendee/api.service.js' %}"></script>
-    <script src="{% static 'js/attendee/api.endpoints.js' %}"></script>
-    <script src="{% static 'js/attendee/utils.js' %}"></script>
+<body>
+    {% include 'attendee/components/navbar.html' %}
     
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    
+    {% include 'attendee/components/footer.html' %}
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     {% block extra_js %}{% endblock %}
     
     <script>
-        function getCSRFToken() {
-            return document.cookie.match('(^|; )csrftoken=([^;]*)')?.[2] || '';
-        }
-        
         function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                localStorage.clear();
-                window.location.href = '/logout/';
-            }
+            localStorage.clear();
+            window.location.href = '/login/';
         }
     </script>
 </body>

@@ -4,213 +4,53 @@
 {% block title %}EventHub - Discover Amazing Events{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/pages/homepage/homepage.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/sections/hero.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/sections/categories.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/sections/featured-events.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/sections/how-it-works.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/sections/stats.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/sections/testimonials.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/sections/sponsors.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/sections/newsletter.css' %}">
 {% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="hero-section">
-    <div class="hero-container">
-        <div class="hero-content">
-            <h1>Discover Amazing <span class="highlight">Events</span> Near You</h1>
-            <p>Find and book tickets for the best concerts, conferences, workshops, and entertainment events in Kenya.</p>
-            <div class="hero-search">
-                <form action="/attendee/events/search/" method="GET">
-                    <i class="fas fa-search"></i>
-                    <input type="text" name="q" placeholder="Search events, categories, or venues...">
-                    <button type="submit">Search</button>
-                </form>
-            </div>
-            <div class="hero-stats">
-                <div class="stat">
-                    <span class="stat-number">500+</span>
-                    <span class="stat-label">Events</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-number">50K+</span>
-                    <span class="stat-label">Happy Attendees</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-number">200+</span>
-                    <span class="stat-label">Organizers</span>
-                </div>
-            </div>
-        </div>
-        <div class="hero-image">
-            <img src="{% static 'images/hero-illustration.svg' %}" alt="Events illustration">
-        </div>
-    </div>
-</section>
-
-<!-- Categories Section -->
-<section class="categories-section">
-    <div class="container">
-        <div class="section-header">
-            <h2>Browse by Category</h2>
-            <p>Find events that match your interests</p>
-        </div>
-        <div class="categories-carousel-wrapper">
-            <button class="carousel-nav prev" id="catPrevBtn">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <div class="categories-carousel" id="categoryCarousel">
-                <div class="loading-state">Loading categories...</div>
-            </div>
-            <button class="carousel-nav next" id="catNextBtn">
-                <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
-    </div>
-</section>
-
-<!-- Featured Events Section -->
-<section class="featured-section">
-    <div class="container">
-        <div class="section-header">
-            <h2>Featured Events</h2>
-            <p>Hand-picked events you don't want to miss</p>
-        </div>
-        <div class="featured-events-grid" id="featuredEventsGrid">
-            <div class="loading-state">Loading featured events...</div>
-        </div>
-    </div>
-</section>
-
-<!-- How It Works Section -->
-<section class="how-it-works-section">
-    <div class="container">
-        <div class="section-header">
-            <h2>How It Works</h2>
-            <p>Get started in three simple steps</p>
-        </div>
-        <div class="steps-grid">
-            <div class="step-card">
-                <div class="step-icon"><i class="fas fa-search"></i></div>
-                <h3>Discover</h3>
-                <p>Browse through hundreds of exciting events happening near you</p>
-            </div>
-            <div class="step-card">
-                <div class="step-icon"><i class="fas fa-ticket-alt"></i></div>
-                <h3>Book Tickets</h3>
-                <p>Select your tickets and complete payment securely</p>
-            </div>
-            <div class="step-card">
-                <div class="step-icon"><i class="fas fa-qrcode"></i></div>
-                <h3>Attend Event</h3>
-                <p>Show your QR code at the venue and enjoy the experience</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Stats Section -->
-<section class="stats-section">
-    <div class="container">
-        <div class="section-header">
-            <h2>Our Impact</h2>
-            <p>EventHub by the numbers</p>
-        </div>
-        <div class="analytics-grid" id="statsSection">
-            <div class="analytics-card">
-                <div class="analytics-number" id="countEvents" data-target="1248">0</div>
-                <p><i class="fas fa-calendar-check"></i> Events Hosted</p>
-            </div>
-            <div class="analytics-card">
-                <div class="analytics-number" id="countTickets" data-target="15842">0</div>
-                <p><i class="fas fa-ticket-alt"></i> Tickets Sold</p>
-            </div>
-            <div class="analytics-card">
-                <div class="analytics-number" id="countOrganizers" data-target="326">0</div>
-                <p><i class="fas fa-users"></i> Organizers</p>
-            </div>
-            <div class="analytics-card">
-                <div class="analytics-number" id="countSatisfaction" data-target="98">0</div>
-                <p><i class="fas fa-smile"></i> Satisfaction Rate</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Testimonials Section -->
-<section class="testimonials-section">
-    <div class="container">
-        <div class="section-header">
-            <h2>What Our Attendees Say</h2>
-            <p>Join thousands of happy event-goers</p>
-        </div>
-        <div class="testimonials-carousel-wrapper">
-            <div class="testimonials-carousel" id="testimonialCarousel">
-                <div class="testimonial-item">
-                    <div class="testimonial-card">
-                        <div class="testimonial-content">
-                            <i class="fas fa-quote-left"></i>
-                            <p>EventHub made it so easy to discover and book tickets for amazing events in Nairobi. The QR code check-in was seamless!</p>
-                        </div>
-                        <div class="testimonial-author">
-                            <div class="testimonial-avatar">JM</div>
-                            <div>
-                                <h4>John Mwangi</h4>
-                                <p>Tech Enthusiast</p>
-                                <div class="stars">★★★★★</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-item">
-                    <div class="testimonial-card">
-                        <div class="testimonial-content">
-                            <i class="fas fa-quote-left"></i>
-                            <p>I've attended over 20 events through EventHub. The platform is reliable, and customer support is exceptional.</p>
-                        </div>
-                        <div class="testimonial-author">
-                            <div class="testimonial-avatar">SW</div>
-                            <div>
-                                <h4>Sarah Wanjiku</h4>
-                                <p>Event Organizer</p>
-                                <div class="stars">★★★★★</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-item">
-                    <div class="testimonial-card">
-                        <div class="testimonial-content">
-                            <i class="fas fa-quote-left"></i>
-                            <p>The best event discovery platform in Kenya! Highly recommended for anyone looking for things to do.</p>
-                        </div>
-                        <div class="testimonial-author">
-                            <div class="testimonial-avatar">MO</div>
-                            <div>
-                                <h4>Michael Otieno</h4>
-                                <p>Music Lover</p>
-                                <div class="stars">★★★★★</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="testimonial-dots" id="testimonialDots"></div>
-        </div>
-    </div>
-</section>
-
-<!-- Newsletter Section -->
-<section class="newsletter-section">
-    <div class="container">
-        <div class="newsletter-content">
-            <h2>Stay Updated</h2>
-            <p>Subscribe to our newsletter for the latest events and exclusive offers</p>
-            <form class="newsletter-form" id="newsletterForm">
-                {% csrf_token %}
-                <input type="email" placeholder="Enter your email address" required>
-                <button type="submit">Subscribe</button>
-            </form>
-        </div>
-    </div>
-</section>
+{% include 'attendee/sections/hero.html' %}
+{% include 'attendee/sections/categories.html' %}
+{% include 'attendee/sections/featured_events.html' %}
+{% include 'attendee/sections/how-it-works.html' %}
+{% include 'attendee/sections/stats.html' %}
+{% include 'attendee/sections/testimonials.html' %}
+{% include 'attendee/sections/sponsors.html' %}
+{% include 'attendee/sections/newsletter.html' %}
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/attendee/pages/homepage/homepage.js' %}"></script>
-<script src="{% static 'js/attendee/sections/stats-counter.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Categories carousel
+    const catCarousel = document.getElementById('categoryCarousel');
+    const catPrev = document.getElementById('catPrevBtn');
+    const catNext = document.getElementById('catNextBtn');
+    if (catPrev && catNext && catCarousel) {
+        catPrev.onclick = () => catCarousel.scrollBy({ left: -200, behavior: 'smooth' });
+        catNext.onclick = () => catCarousel.scrollBy({ left: 200, behavior: 'smooth' });
+    }
+    
+    // Testimonials carousel
+    const testimonialCarousel = document.getElementById('testimonialCarousel');
+    const dots = document.querySelectorAll('.testimonial-dot');
+    if (testimonialCarousel && dots.length) {
+        const updateDots = () => {
+            const index = Math.round(testimonialCarousel.scrollLeft / testimonialCarousel.offsetWidth);
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        };
+        testimonialCarousel.onscroll = updateDots;
+        dots.forEach((dot, i) => {
+            dot.onclick = () => testimonialCarousel.scrollTo({ left: i * testimonialCarousel.offsetWidth, behavior: 'smooth' });
+        });
+        updateDots();
+    }
+});
+</script>
 {% endblock %}

@@ -4,46 +4,42 @@
 {% block title %}Shopping Cart - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
-<link rel="stylesheet" href="{% static 'css/attendee/cart/cart.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/cart.css' %}">
 {% endblock %}
 
-{% block attendee_content %}
-<div class="cart-container">
-    <div class="page-header">
-        <div>
-            <h1><i class="fas fa-shopping-cart"></i> Shopping Cart</h1>
-            <p class="text-muted">Review and manage your tickets</p>
+{% block content %}
+<div class="cart-page">
+    <div class="container">
+        <div class="cart-header">
+            <h1>Shopping Cart</h1>
+            <p>Review your selected events and proceed to checkout</p>
         </div>
-    </div>
 
-    <!-- Empty Cart State -->
-    <div id="emptyCart" class="empty-state" style="display: none;">
-        <i class="fas fa-shopping-cart"></i>
-        <h3>Your cart is empty</h3>
-        <p>Looks like you haven't added any tickets yet.</p>
-        <a href="/attendee/events/" class="btn-primary">Browse Events</a>
-    </div>
+        <!-- Empty Cart State -->
+        <div id="emptyCart" class="empty-cart" style="display: none;">
+            <i class="fas fa-shopping-cart"></i>
+            <h3>Your cart is empty</h3>
+            <p>Looks like you haven't added any events to your cart yet.</p>
+            <a href="/events/" class="btn-primary">Browse Events</a>
+        </div>
 
-    <!-- Cart Content -->
-    <div id="cartContent" style="display: none;">
-        <div class="cart-grid">
-            <!-- Cart Items -->
-            <div class="cart-items-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-ticket-alt"></i> Tickets (<span id="cartItemCount">0</span>)</h3>
+        <!-- Cart Content -->
+        <div id="cartContent" style="display: none;">
+            <div class="cart-layout">
+                <!-- Cart Items Section -->
+                <div class="cart-items-section">
+                    <div class="cart-items-header">
+                        <h3>Cart Items (<span id="cartItemCount">0</span>)</h3>
+                        <button class="clear-cart-btn" onclick="clearCart()">Clear Cart</button>
+                    </div>
+                    <div id="cartItems" class="cart-items-list">
+                        <!-- Cart items will be loaded here -->
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div id="cartItems" class="cart-items-list"></div>
-                </div>
-            </div>
 
-            <!-- Order Summary -->
-            <div class="order-summary-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-receipt"></i> Order Summary</h3>
-                </div>
-                <div class="card-body">
+                <!-- Order Summary Section -->
+                <div class="order-summary">
+                    <h3>Order Summary</h3>
                     <div class="summary-row">
                         <span>Subtotal:</span>
                         <span id="subtotal">KSh 0</span>
@@ -52,7 +48,7 @@
                         <span>Platform Fee:</span>
                         <span id="platformFee">KSh 0</span>
                     </div>
-                    <div class="summary-row discount" id="discountRow" style="display: none;">
+                    <div id="discountRow" class="summary-row discount" style="display: none;">
                         <span>Discount:</span>
                         <span id="discountAmount">-KSh 0</span>
                     </div>
@@ -64,10 +60,8 @@
                     <!-- Promo Code -->
                     <div class="promo-section">
                         <div id="appliedPromo" class="applied-promo" style="display: none;">
-                            <span>Promo code applied: <strong id="promoCodeDisplay"></strong></span>
-                            <button class="remove-promo" onclick="removePromoCode()">
-                                <i class="fas fa-times"></i>
-                            </button>
+                            <span>Promo code <strong id="promoCodeDisplay"></strong> applied</span>
+                            <button onclick="removePromoCode()">Remove</button>
                         </div>
                         <form id="promoForm" class="promo-form">
                             <input type="text" id="promoCode" placeholder="Enter promo code">
@@ -75,115 +69,120 @@
                         </form>
                     </div>
 
-                    <button class="btn-primary btn-block" onclick="proceedToCheckout()">
+                    <button class="checkout-btn" onclick="proceedToCheckout()">
                         Proceed to Checkout
+                    </button>
+                    <button class="continue-shopping-btn" onclick="window.location.href='/events/'">
+                        Continue Shopping
                     </button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Checkout View -->
-    <div id="checkoutView" class="checkout-view" style="display: none;">
-        <div class="checkout-grid">
-            <!-- Billing Information -->
-            <div class="billing-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-user"></i> Billing Information</h3>
-                </div>
-                <div class="card-body">
+        <!-- Checkout View -->
+        <div id="checkoutView" class="checkout-view" style="display: none;">
+            <div class="checkout-layout">
+                <!-- Billing Information -->
+                <div class="billing-section">
+                    <div class="section-header">
+                        <button class="back-btn" onclick="backToCart()">
+                            <i class="fas fa-arrow-left"></i> Back to Cart
+                        </button>
+                        <h2>Billing Information</h2>
+                    </div>
+                    
                     <form id="checkoutForm">
-                        {% csrf_token %}
                         <div class="form-group">
-                            <label>Full Name</label>
-                            <input type="text" id="billingName" class="form-control" required>
+                            <label>Full Name *</label>
+                            <input type="text" id="billingName" required>
                         </div>
                         <div class="form-group">
-                            <label>Email Address</label>
-                            <input type="email" id="billingEmail" class="form-control" required>
+                            <label>Email Address *</label>
+                            <input type="email" id="billingEmail" required>
                         </div>
                         <div class="form-group">
-                            <label>Phone Number</label>
-                            <input type="tel" id="billingPhone" class="form-control" placeholder="0712345678" required>
+                            <label>Phone Number *</label>
+                            <input type="tel" id="billingPhone" placeholder="0712345678" required>
                         </div>
                         <div class="form-group">
                             <label>Address (Optional)</label>
-                            <input type="text" id="billingAddress" class="form-control" placeholder="Street, City">
+                            <input type="text" id="billingAddress">
                         </div>
+
+                        <h3>Payment Method</h3>
+                        <div class="payment-methods">
+                            <label class="payment-method">
+                                <input type="radio" name="paymentMethod" value="mpesa" checked>
+                                <div class="payment-icon">
+                                    <i class="fas fa-mobile-alt"></i>
+                                </div>
+                                <div>
+                                    <strong>M-Pesa</strong>
+                                    <p>Pay using M-Pesa mobile money</p>
+                                </div>
+                            </label>
+                            <label class="payment-method">
+                                <input type="radio" name="paymentMethod" value="card">
+                                <div class="payment-icon">
+                                    <i class="fas fa-credit-card"></i>
+                                </div>
+                                <div>
+                                    <strong>Card Payment</strong>
+                                    <p>Visa, Mastercard, Amex</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div id="mpesaFields" class="payment-fields">
+                            <div class="info-box">
+                                <i class="fas fa-info-circle"></i>
+                                <p>You will receive an STK push on your M-Pesa registered phone number. Enter your PIN to complete payment.</p>
+                            </div>
+                        </div>
+
+                        <div id="cardFields" class="payment-fields" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Card Number</label>
+                                    <input type="text" placeholder="1234 5678 9012 3456">
+                                </div>
+                                <div class="form-row-2">
+                                    <div class="form-group">
+                                        <label>Expiry Date</label>
+                                        <input type="text" placeholder="MM/YY">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>CVV</label>
+                                        <input type="text" placeholder="123">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="order-summary-small" id="orderSummary"></div>
+
+                        <button type="submit" class="place-order-btn">Place Order</button>
                     </form>
                 </div>
-            </div>
 
-            <!-- Payment Method -->
-            <div class="payment-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-credit-card"></i> Payment Method</h3>
-                </div>
-                <div class="card-body">
-                    <div class="payment-methods">
-                        <label class="payment-option">
-                            <input type="radio" name="paymentMethod" value="mpesa" checked>
-                            <span class="payment-icon"><i class="fas fa-mobile-alt"></i></span>
-                            <span>M-Pesa</span>
-                        </label>
-                        <label class="payment-option">
-                            <input type="radio" name="paymentMethod" value="card">
-                            <span class="payment-icon"><i class="fas fa-credit-card"></i></span>
-                            <span>Card Payment</span>
-                        </label>
-                    </div>
-
-                    <div id="mpesaFields" class="payment-fields">
-                        <div class="form-group">
-                            <label>M-Pesa Phone Number</label>
-                            <input type="tel" id="mpesaPhone" class="form-control" placeholder="0712345678">
-                            <small>You will receive a prompt on your phone to enter your PIN</small>
-                        </div>
-                    </div>
-
-                    <div id="cardFields" class="payment-fields" style="display: none;">
-                        <div class="form-group">
-                            <label>Card Number</label>
-                            <input type="text" id="cardNumber" class="form-control" placeholder="1234 5678 9012 3456">
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Expiry Date</label>
-                                <input type="text" id="expiryDate" class="form-control" placeholder="MM/YY">
-                            </div>
-                            <div class="form-group">
-                                <label>CVV</label>
-                                <input type="text" id="cvv" class="form-control" placeholder="123">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Order Summary -->
-            <div class="order-summary-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-receipt"></i> Order Summary</h3>
-                </div>
-                <div class="card-body">
-                    <div id="orderSummary"></div>
-                    <div class="checkout-actions">
-                        <button type="button" class="btn-secondary" onclick="backToCart()">
-                            <i class="fas fa-arrow-left"></i> Back to Cart
-                        </button>
-                        <button type="submit" form="checkoutForm" class="btn-primary">
-                            <i class="fas fa-lock"></i> Pay Now
-                        </button>
-                    </div>
+                <!-- Order Summary Sidebar -->
+                <div class="checkout-summary">
+                    <h3>Order Summary</h3>
+                    <div id="checkoutOrderSummary"></div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Payment Processing View -->
-    <div id="paymentView" class="payment-view" style="display: none;">
-        <div class="payment-status-card">
-            <div id="paymentStatus"></div>
+        <!-- Payment View -->
+        <div id="paymentView" class="payment-view" style="display: none;">
+            <div class="payment-container">
+                <div id="paymentStatus" class="payment-status">
+                    <div class="payment-loading">
+                        <div class="spinner"></div>
+                        <p>Processing payment...</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

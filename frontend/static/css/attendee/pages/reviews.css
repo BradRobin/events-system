@@ -1,106 +1,61 @@
 /* ============================================
-   REVIEWS PAGE CSS - EventHub Style
+   REVIEWS PAGE SPECIFIC STYLES
    ============================================ */
-
-@import url('common.css');
-
-/* Reviews Summary */
-.reviews-summary {
-    display: flex;
-    gap: var(--spacing-3xl);
-    background: white;
-    border-radius: var(--radius-xl);
-    padding: var(--spacing-2xl);
-    margin-bottom: var(--spacing-3xl);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.rating-overall {
-    text-align: center;
-    flex: 1;
-}
-
-.rating-number {
-    font-size: 3rem;
-    font-weight: 800;
-    color: var(--np-gold);
-}
-
-.stars-display {
-    color: var(--np-gold);
-    margin: var(--spacing-sm) 0;
-    font-size: 1.1rem;
-}
-
-.rating-count {
-    font-size: 0.85rem;
-    color: var(--np-gray);
-}
-
-.rating-breakdown {
-    flex: 2;
-}
-
-.rating-bar {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
-}
-
-.rating-bar span:first-child {
-    width: 40px;
-    font-size: 0.85rem;
-}
-
-.rating-bar .bar {
-    flex: 1;
-    height: 8px;
-    background: var(--np-bg);
-    border-radius: var(--radius-full);
-    overflow: hidden;
-}
-
-.rating-bar .fill {
-    height: 100%;
-    background: var(--np-gold);
-    border-radius: var(--radius-full);
-}
-
-.rating-bar span:last-child {
-    width: 45px;
-    font-size: 0.85rem;
-    color: var(--np-gray);
-}
 
 /* Reviews Grid */
 .reviews-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-xl);
+    margin: var(--spacing-3xl) 0;
 }
 
 .review-card {
-    background: white;
+    background: var(--np-white);
     border-radius: var(--radius-xl);
     padding: var(--spacing-xl);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--np-border);
     transition: all var(--transition-normal);
 }
 
 .review-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-md);
+    border-color: rgba(245, 158, 11, 0.2);
 }
 
-.review-header {
+.review-rating {
     display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
+    gap: 4px;
     margin-bottom: var(--spacing-md);
 }
 
-.reviewer-avatar {
+.review-rating i {
+    color: #fbbf24;
+    font-size: 1rem;
+}
+
+.review-rating i.empty {
+    color: var(--np-border);
+}
+
+.review-text {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--np-gray);
+    margin-bottom: var(--spacing-lg);
+    font-style: italic;
+}
+
+.review-author {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--np-border);
+}
+
+.review-avatar {
     width: 50px;
     height: 50px;
     background: var(--np-gradient);
@@ -108,62 +63,92 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--np-white);
     font-weight: bold;
     font-size: 1.2rem;
 }
 
-.reviewer-info h4 {
+.review-author h4 {
     font-size: 1rem;
     font-weight: 700;
+    margin-bottom: 2px;
+    color: var(--np-dark);
+}
+
+.review-author p {
+    font-size: 0.8rem;
+    color: var(--np-gray);
+    margin: 0;
+}
+
+/* Rating Summary */
+.rating-summary {
+    background: var(--np-bg);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    text-align: center;
+    margin-bottom: var(--spacing-3xl);
+    border: 1px solid var(--np-border);
+}
+
+.rating-summary h2 {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-md);
+    color: var(--np-dark);
+}
+
+.average-rating {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--np-gold);
     margin-bottom: var(--spacing-xs);
 }
 
-.reviewer-info .stars-display {
-    font-size: 0.8rem;
-    margin: var(--spacing-xs) 0;
-}
-
-.review-date {
-    font-size: 0.7rem;
+.total-reviews {
+    font-size: 0.9rem;
     color: var(--np-gray);
 }
 
-.review-text {
-    font-size: 0.9rem;
-    line-height: 1.6;
-    color: var(--np-dark);
-    margin-bottom: var(--spacing-md);
-}
-
-.review-event {
-    font-size: 0.8rem;
-    color: var(--np-gold);
-    padding-top: var(--spacing-md);
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-/* Write Review Section */
-.write-review {
-    text-align: center;
-    margin-top: var(--spacing-3xl);
-    padding: var(--spacing-2xl);
-    background: var(--np-bg);
+/* Submit Review Form */
+.submit-review {
+    background: var(--np-white);
     border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    border: 1px solid var(--np-border);
+    margin-top: var(--spacing-3xl);
 }
 
-.write-review h3 {
-    margin-bottom: var(--spacing-sm);
+.submit-review h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xl);
+    color: var(--np-dark);
 }
 
-.write-review p {
+/* Star Rating Input */
+.star-rating {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 8px;
     margin-bottom: var(--spacing-lg);
 }
 
-/* Load More */
-.load-more {
-    text-align: center;
-    margin-top: var(--spacing-2xl);
+.star-rating input {
+    display: none;
+}
+
+.star-rating label {
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: var(--np-border);
+    transition: color var(--transition-fast);
+}
+
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input:checked ~ label {
+    color: #fbbf24;
 }
 
 /* Responsive */
@@ -175,22 +160,29 @@
 }
 
 @media (max-width: 768px) {
-    .reviews-summary {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .rating-bar {
-        justify-content: center;
-    }
-    
     .reviews-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .rating-summary {
+        padding: var(--spacing-xl);
+    }
+    
+    .average-rating {
+        font-size: 3rem;
+    }
+    
+    .submit-review {
+        padding: var(--spacing-xl);
     }
 }
 
 @media (max-width: 480px) {
     .review-card {
         padding: var(--spacing-lg);
+    }
+    
+    .submit-review h3 {
+        font-size: 1.2rem;
     }
 }

@@ -1,14 +1,13 @@
 /* ============================================
-   PRIVACY POLICY CSS - EventHub Style
+   PRIVACY POLICY PAGE SPECIFIC STYLES
    ============================================ */
 
-@import url('common.css');
-
 .privacy-content {
-    background: white;
+    background: var(--np-white);
     border-radius: var(--radius-xl);
     padding: var(--spacing-2xl);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--np-border);
+    box-shadow: var(--shadow-sm);
 }
 
 .privacy-section {
@@ -20,59 +19,87 @@
 }
 
 .privacy-section h2 {
-    font-size: 1.3rem;
+    font-size: 1.5rem;
     font-weight: 700;
     margin-bottom: var(--spacing-md);
     color: var(--np-dark);
     padding-bottom: var(--spacing-sm);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 2px solid var(--np-border);
+    position: relative;
+}
+
+.privacy-section h2::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: var(--np-gradient);
 }
 
 .privacy-section h3 {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 600;
-    margin-bottom: var(--spacing-sm);
+    margin: var(--spacing-lg) 0 var(--spacing-sm);
     color: var(--np-dark);
 }
 
+.privacy-section h3:first-of-type {
+    margin-top: 0;
+}
+
 .privacy-section p {
-    font-size: 0.9rem;
-    line-height: 1.7;
+    font-size: 0.95rem;
+    line-height: 1.8;
     color: var(--np-gray);
     margin-bottom: var(--spacing-md);
 }
 
-.privacy-section ul {
+.privacy-section ul,
+.privacy-section ol {
     padding-left: var(--spacing-xl);
     margin-bottom: var(--spacing-md);
 }
 
 .privacy-section li {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: var(--np-gray);
     margin-bottom: var(--spacing-xs);
+    line-height: 1.7;
 }
 
 .last-updated {
     margin-top: var(--spacing-2xl);
     padding-top: var(--spacing-lg);
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: 1px solid var(--np-border);
     text-align: right;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--np-gray);
+    font-style: italic;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
     .privacy-content {
+        padding: var(--spacing-xl);
+    }
+    
+    .privacy-section h2 {
+        font-size: 1.3rem;
+    }
+    
+    .privacy-section h3 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .privacy-content {
         padding: var(--spacing-lg);
     }
     
     .privacy-section h2 {
-        font-size: 1.1rem;
-    }
-    
-    .privacy-section h3 {
-        font-size: 1rem;
+        font-size: 1.2rem;
     }
 }

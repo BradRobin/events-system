@@ -5,8 +5,271 @@
             <h2>Featured Events</h2>
             <p>Hand-picked events you don't want to miss</p>
         </div>
-        <div class="featured-events-grid" id="featuredEventsGrid">
-            <div class="loading-state">Loading featured events...</div>
+        
+        <div class="featured-carousel-wrapper">
+            <div class="featured-carousel" id="featuredCarousel">
+                <!-- Featured events will be loaded dynamically -->
+                <div class="loading-state">Loading featured events...</div>
+            </div>
+            
+            <!-- Navigation Dots -->
+            <div class="featured-dots" id="featuredDots"></div>
         </div>
     </div>
 </section>
+
+<script>
+let featuredEvents = [];
+let currentIndex = 0;
+let autoScrollInterval;
+let isHovering = false;
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadFeaturedEvents();
+    setupAutoScroll();
+    setupResizeHandler();
+});
+
+async function loadFeaturedEvents() {
+    const carousel = document.getElementById('featuredCarousel');
+    const dotsContainer = document.getElementById('featuredDots');
+    
+    try {
+        // API endpoint to get featured events
+        const response = await fetch('/api/attendee/events/featured/');
+        const data = await response.json();
+        
+        featuredEvents = data.events || [];
+        
+        if (featuredEvents.length === 0) {
+            carousel.innerHTML = '<div class="empty-state">No featured events available</div>';
+            return;
+        }
+        
+        // Render events
+        carousel.innerHTML = featuredEvents.map(event => `
+            <div class="featured-item" data-event-id="${event.id}">
+                <div class="premium-card">
+                    <div class="card-image-container">
+                        <img src="${event.banner_image || event.image}" alt="${event.title}" class="card-bg-image" loading="lazy">
+                        <div class="card-gradient-overlay"></div>
+                    </div>
+                    <div class="card-content">
+                        <span class="card-category">${escapeHtml(event.category_name || event.category)}</span>
+                        <h3 class="card-title">${escapeHtml(event.title)}</h3>
+                        <div class="card-meta">
+                            <span><i class="fas fa-calendar"></i> ${formatDate(event.start_date || event.date)}</span>
+                            <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(event.location)}</span>
+                        </div>
+                        <div class="card-price">
+                            KES ${formatPrice(event.price)}
+                            ${event.original_price ? `<span class="original-price">KES ${formatPrice(event.original_price)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="card-hover-info">
+                        <h4>${escapeHtml(event.title)}</h4>
+                        <p>${event.description ? escapeHtml(event.description.substring(0, 100)) + '...' : 'Experience this amazing event!'}</p>
+                        <div class="hover-stats">
+                            <span><i class="fas fa-users"></i> ${formatNumber(event.attendees_count || 0)} attending</span>
+                            <span><i class="fas fa-ticket-alt"></i> ${event.tickets_left || 0} tickets left</span>
+                        </div>
+                        <button class="btn-outline-light" onclick="event.stopPropagation(); bookEvent(${event.id})">Book Now</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Create dots
+        dotsContainer.innerHTML = '';
+        featuredEvents.forEach((_, index) => {
+            const dot = document.createElement('div');
+            dot.classList.add('featured-dot');
+            if (index === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => {
+                scrollToIndex(index);
+                resetAutoScroll();
+            });
+            dotsContainer.appendChild(dot);
+        });
+        
+        // Add click handlers to cards
+        document.querySelectorAll('.featured-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                const eventId = item.dataset.eventId;
+                window.location.href = `/events/detail/?id=${eventId}`;
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error loading featured events:', error);
+        carousel.innerHTML = '<div class="error-state">Failed to load featured events. Please refresh.</div>';
+    }
+}
+
+function scrollToIndex(index) {
+    const carousel = document.getElementById('featuredCarousel');
+    const items = document.querySelectorAll('.featured-item');
+    
+    if (carousel && items[index]) {
+        currentIndex = index;
+        const itemWidth = items[0].offsetWidth;
+        const gap = 24;
+        const scrollPosition = index * (itemWidth + gap);
+        carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+        updateDots();
+    }
+}
+
+function updateDots() {
+    const carousel = document.getElementById('featuredCarousel');
+    const dots = document.querySelectorAll('.featured-dot');
+    
+    if (!carousel || !dots.length) return;
+    
+    const scrollPosition = carousel.scrollLeft;
+    const items = document.querySelectorAll('.featured-item');
+    const itemWidth = items[0]?.offsetWidth || 0;
+    const gap = 24;
+    const activeIndex = Math.round(scrollPosition / (itemWidth + gap));
+    
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === activeIndex);
+    });
+    currentIndex = activeIndex;
+}
+
+function autoScroll() {
+    if (!isHovering && featuredEvents.length > 0) {
+        const nextIndex = (currentIndex + 1) % featuredEvents.length;
+        scrollToIndex(nextIndex);
+    }
+}
+
+function setupAutoScroll() {
+    const carousel = document.getElementById('featuredCarousel');
+    
+    if (!carousel) return;
+    
+    // Scroll event listener
+    carousel.addEventListener('scroll', updateDots);
+    
+    // Hover pause
+    carousel.addEventListener('mouseenter', () => {
+        isHovering = true;
+    });
+    
+    carousel.addEventListener('mouseleave', () => {
+        isHovering = false;
+        resetAutoScroll();
+    });
+    
+    // Touch events for mobile
+    let touchStartX = 0;
+    carousel.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        isHovering = true;
+    });
+    
+    carousel.addEventListener('touchend', (e) => {
+        const touchEndX = e.changedTouches[0].clientX;
+        if (Math.abs(touchEndX - touchStartX) < 50) {
+            isHovering = false;
+            resetAutoScroll();
+        }
+    });
+    
+    startAutoScroll();
+    
+    // Visibility change
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (autoScrollInterval) clearInterval(autoScrollInterval);
+        } else {
+            startAutoScroll();
+        }
+    });
+}
+
+function startAutoScroll() {
+    if (autoScrollInterval) clearInterval(autoScrollInterval);
+    autoScrollInterval = setInterval(autoScroll, 4000);
+}
+
+function resetAutoScroll() {
+    if (autoScrollInterval) {
+        clearInterval(autoScrollInterval);
+        startAutoScroll();
+    }
+}
+
+function setupResizeHandler() {
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            scrollToIndex(currentIndex);
+        }, 250);
+    });
+}
+
+function bookEvent(eventId) {
+    const token = localStorage.getItem('attendee_access_token');
+    
+    if (token) {
+        // Add to cart instead of direct checkout
+        const cartItem = {
+            id: eventId,
+            quantity: 1
+        };
+        
+        // Dispatch custom event for cart
+        window.dispatchEvent(new CustomEvent('add-to-cart', { detail: cartItem }));
+        showToast('Added to cart!', 'success');
+        
+        setTimeout(() => {
+            window.location.href = '/cart/';
+        }, 1000);
+    } else {
+        showToast('Please login to book tickets', 'info');
+        setTimeout(() => {
+            localStorage.setItem('redirect_after_login', window.location.pathname);
+            window.location.href = '/login/';
+        }, 1500);
+    }
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'TBD';
+    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatPrice(price) {
+    return Number(price).toLocaleString();
+}
+
+function formatNumber(num) {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Make functions global
+window.bookEvent = bookEvent;
+window.showToast = showToast;
+</script>

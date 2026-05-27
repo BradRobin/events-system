@@ -1,7 +1,13 @@
+/* ============================================
+   FORMS - EventHub Form Styles
+   ============================================ */
+
+/* Form Group */
 .form-group {
     margin-bottom: var(--spacing-lg);
 }
 
+/* Label */
 .np-label {
     font-weight: 600;
     font-size: 0.875rem;
@@ -15,6 +21,7 @@
     margin-left: 0.25rem;
 }
 
+/* Input Fields */
 .np-input {
     width: 100%;
     padding: 0.75rem var(--spacing-md);
@@ -37,20 +44,59 @@
     background: rgba(248, 29, 29, 0.02);
 }
 
-.error-message {
-    color: var(--np-red);
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-    display: block;
+/* Textarea */
+.np-textarea {
+    width: 100%;
+    padding: 0.75rem var(--spacing-md);
+    border: 2px solid #eef2f0;
+    border-radius: var(--radius-md);
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9375rem;
+    resize: vertical;
+    min-height: 100px;
 }
 
-.success-message {
-    color: #10b981;
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-    display: block;
+.np-textarea:focus {
+    outline: none;
+    border-color: var(--np-red);
+    box-shadow: 0 0 0 3px rgba(248, 29, 29, 0.1);
 }
 
+/* Select */
+.np-select {
+    width: 100%;
+    padding: 0.75rem var(--spacing-md);
+    border: 2px solid #eef2f0;
+    border-radius: var(--radius-md);
+    background: white;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9375rem;
+    cursor: pointer;
+}
+
+.np-select:focus {
+    outline: none;
+    border-color: var(--np-red);
+}
+
+/* Checkbox & Radio */
+.np-checkbox,
+.np-radio {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+}
+
+.np-checkbox input,
+.np-radio input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--np-red);
+}
+
+/* Search Bar */
 .search-bar {
     max-width: 700px;
     margin: var(--spacing-2xl) auto 0;
@@ -60,13 +106,6 @@
     padding: var(--spacing-sm);
     display: flex;
     gap: var(--spacing-sm);
-}
-
-@media (max-width: 640px) {
-    .search-bar {
-        flex-direction: column;
-        border-radius: var(--radius-lg);
-    }
 }
 
 .search-input {
@@ -84,4 +123,33 @@
 
 .search-btn {
     border-radius: var(--radius-full);
+}
+
+/* Messages */
+.error-message {
+    color: var(--np-red);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.success-message {
+    color: #10b981;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .search-bar {
+        flex-direction: column;
+        border-radius: var(--radius-lg);
+    }
+    
+    .np-input,
+    .np-textarea,
+    .np-select {
+        font-size: 0.875rem;
+    }
 }

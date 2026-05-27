@@ -1,338 +1,352 @@
-// ============================================
-// ATTENDEE EVENTS LIST - Complete Functionality
-// ============================================
 
-let currentPage = 1;
-let totalPages = 1;
-let isLoading = false;
-let currentFilters = {
-    category: '',
-    city: '',
-    date: 'upcoming',
-    search: '',
-    sort: 'date',
-    price_min: '',
-    price_max: ''
-};
-
-// DOM Elements
-const eventsGrid = document.getElementById('eventsGrid');
-const resultsCount = document.getElementById('resultsCount');
-const loadMoreBtn = document.getElementById('loadMoreBtn');
-const searchInput = document.getElementById('searchEvents');
-const categoryFilter = document.getElementById('categoryFilter');
-const cityFilter = document.getElementById('cityFilter');
-const dateFilter = document.getElementById('dateFilter');
-const sortSelect = document.getElementById('sortBy');
-const priceMin = document.getElementById('priceMin');
-const priceMax = document.getElementById('priceMax');
-const filtersPanel = document.getElementById('filtersPanel');
-
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
-    loadEvents();
-    loadCategories();
-    loadCities();
-    setupEventListeners();
-    setupInfiniteScroll();
-});
-
-function setupEventListeners() {
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce(() => {
-            currentFilters.search = searchInput.value;
-            currentPage = 1;
-            loadEvents();
-        }, 500));
+// Events Module - Ready for Django API Integration
+const EventsModule = (function() {
+    // API endpoints (to be replaced with actual Django URLs)
+    const API = {
+        events: '/api/attendee/events/',
+        categories: '/api/attendee/categories/',
+        wishlist: '/api/attendee/wishlist/',
+        cart: '/api/attendee/cart/'
+    };
+    
+    // State
+    let currentEvents = [];
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentFilters = {
+        category: '',
+        search: '',
+        sort: 'date'
+    };
+    
+    const eventsPerPage = 6;
+    
+    // DOM Elements
+    let eventsGrid, paginationDiv, categoryFilter, sortFilter, searchInput;
+    
+    // Initialize
+    function init() {
+        eventsGrid = document.getElementById('eventsGrid');
+        paginationDiv = document.getElementById('pagination');
+        categoryFilter = document.getElementById('categoryFilter');
+        sortFilter = document.getElementById('sortFilter');
+        searchInput = document.getElementById('searchInput');
+        
+        if (!eventsGrid) return;
+        
+        loadCategories();
+        loadEvents();
+        attachEventListeners();
     }
     
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', () => {
-            currentFilters.category = categoryFilter.value;
-            currentPage = 1;
-            loadEvents();
-        });
-    }
-    
-    if (cityFilter) {
-        cityFilter.addEventListener('change', () => {
-            currentFilters.city = cityFilter.value;
-            currentPage = 1;
-            loadEvents();
-        });
-    }
-    
-    if (dateFilter) {
-        dateFilter.addEventListener('change', () => {
-            currentFilters.date = dateFilter.value;
-            currentPage = 1;
-            loadEvents();
-        });
-    }
-    
-    if (sortSelect) {
-        sortSelect.addEventListener('change', () => {
-            currentFilters.sort = sortSelect.value;
-            currentPage = 1;
-            loadEvents();
-        });
-    }
-    
-    if (priceMin && priceMax) {
-        const applyPrice = debounce(() => {
-            currentFilters.price_min = priceMin.value;
-            currentFilters.price_max = priceMax.value;
-            currentPage = 1;
-            loadEvents();
-        }, 500);
-        priceMin.addEventListener('input', applyPrice);
-        priceMax.addEventListener('input', applyPrice);
-    }
-}
-
-async function loadCategories() {
-    try {
-        const categories = await window.AttendeeAPIEndpoints.events.getCategories();
-        if (categoryFilter && categories && categories.length) {
-            categoryFilter.innerHTML = '<option value="">All Categories</option>' + 
-                categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+    // Load categories from API
+    async function loadCategories() {
+        try {
+            const response = await fetch(API.categories);
+            const data = await response.json();
+            
+            if (data.categories && categoryFilter) {
+                data.categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    option.textContent = cat.name;
+                    categoryFilter.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading categories:', error);
         }
-    } catch (error) {
-        console.error('Error loading categories:', error);
-    }
-}
-
-function loadCities() {
-    const cities = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika', 'Machakos', 'Kitale'];
-    if (cityFilter) {
-        cityFilter.innerHTML = '<option value="">All Cities</option>' + 
-            cities.map(c => `<option value="${c}">${c}</option>`).join('');
-    }
-}
-
-async function loadEvents() {
-    if (isLoading) return;
-    isLoading = true;
-    
-    if (currentPage === 1) {
-        if (window.Loader) window.Loader.show('Loading events...');
-    } else {
-        showSkeletonLoader();
     }
     
-    try {
-        const result = await window.AttendeeAPIEndpoints.events.getAll(
-            currentPage, 
-            12, 
-            currentFilters
-        );
+    // Load events from API
+    async function loadEvents() {
+        showLoading();
         
-        const events = result.results || result;
-        const total = result.count || events.length;
-        totalPages = result.total_pages || Math.ceil(total / 12);
+        try {
+            const params = new URLSearchParams({
+                page: currentPage,
+                limit: eventsPerPage,
+                category: currentFilters.category,
+                search: currentFilters.search,
+                ordering: currentFilters.sort
+            });
+            
+            const response = await fetch(`${API.events}?${params}`);
+            const data = await response.json();
+            
+            currentEvents = data.results || [];
+            totalPages = Math.ceil(data.count / eventsPerPage) || 1;
+            
+            renderEvents();
+            renderPagination();
+        } catch (error) {
+            console.error('Error loading events:', error);
+            showError('Failed to load events. Please try again.');
+        }
+    }
+    
+    // Render events grid
+    function renderEvents() {
+        if (!eventsGrid) return;
         
-        if (currentPage === 1) {
-            displayEvents(events);
-        } else {
-            appendEvents(events);
+        if (currentEvents.length === 0) {
+            eventsGrid.innerHTML = '<div class="empty-state">No events found</div>';
+            return;
         }
         
-        updateLoadMoreButton();
-        
-        if (resultsCount) {
-            const start = (currentPage - 1) * 12 + 1;
-            const end = Math.min(start + events.length - 1, total);
-            resultsCount.textContent = `Showing ${start}-${end} of ${total} events`;
-        }
-        
-    } catch (error) {
-        console.error('Error loading events:', error);
-        if (currentPage === 1 && eventsGrid) {
-            eventsGrid.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <h3>Failed to Load Events</h3>
-                    <p>${error.message || 'Please try again later.'}</p>
-                    <button class="btn-primary" onclick="location.reload()">Retry</button>
+        eventsGrid.innerHTML = currentEvents.map(event => `
+            <div class="premium-card" data-event-id="${event.id}">
+                <div class="card-image-container">
+                    <img src="${event.image || '/static/images/placeholder.jpg'}" alt="${event.title}" class="card-bg-image" loading="lazy">
+                    <div class="card-gradient-overlay"></div>
+                    ${event.is_featured ? '<span class="featured-badge">Featured</span>' : ''}
+                    <button class="wishlist-btn ${event.in_wishlist ? 'active' : ''}" data-event-id="${event.id}">
+                        <i class="${event.in_wishlist ? 'fas' : 'far'} fa-heart"></i>
+                        <span>${event.in_wishlist ? 'Saved' : 'Save'}</span>
+                    </button>
                 </div>
-            `;
-        }
-    } finally {
-        isLoading = false;
-        if (window.Loader) window.Loader.hide();
-        hideSkeletonLoader();
-    }
-}
-
-function displayEvents(events) {
-    if (!eventsGrid) return;
-    
-    if (!events || events.length === 0) {
-        eventsGrid.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-calendar-times"></i>
-                <h3>No events found</h3>
-                <p>Try adjusting your filters or search term.</p>
-                <button class="btn-primary" onclick="resetFilters()">Reset Filters</button>
-            </div>
-        `;
-        return;
-    }
-    
-    eventsGrid.innerHTML = events.map(event => createEventCard(event)).join('');
-}
-
-function appendEvents(events) {
-    if (eventsGrid && events && events.length) {
-        eventsGrid.insertAdjacentHTML('beforeend', events.map(event => createEventCard(event)).join(''));
-    }
-}
-
-function createEventCard(event) {
-    const fillRate = event.total_capacity > 0 ? ((event.total_capacity - (event.available_tickets || 0)) / event.total_capacity) * 100 : 0;
-    const isLowStock = event.available_tickets > 0 && event.available_tickets <= 20;
-    const isSoldOut = event.available_tickets === 0;
-    
-    return `
-        <div class="event-card" onclick="window.location.href='/attendee/events/detail/?id=${event.id}'">
-            <div class="event-banner" style="background-image: url('${event.banner_image || '/static/images/placeholder.jpg'}')">
-                ${event.is_featured ? '<span class="featured-badge">Featured</span>' : ''}
-                ${isLowStock ? '<span class="low-stock-badge">Low Stock!</span>' : ''}
-                ${isSoldOut ? '<span class="sold-out-badge">Sold Out</span>' : ''}
-                <span class="event-category">${escapeHtml(event.category_name || 'Event')}</span>
-            </div>
-            <div class="event-content">
-                <h3 class="event-title">${escapeHtml(event.title)}</h3>
-                <div class="event-meta">
-                    <span><i class="fas fa-calendar"></i> ${formatDate(event.start_date)}</span>
-                    <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(event.city)}</span>
-                </div>
-                <div class="event-footer">
-                    <div class="event-price">${formatCurrency(event.min_price)}</div>
-                    <div class="event-availability">
-                        ${!isSoldOut ? 
-                            `<div class="availability-bar">
-                                <div class="availability-fill" style="width: ${fillRate}%"></div>
-                            </div>
-                            <span>${event.available_tickets} left</span>` : 
-                            '<span class="sold-out">Sold Out</span>'}
+                <div class="card-content" data-event-id="${event.id}">
+                    <span class="card-category">${event.category_name || event.category}</span>
+                    <h3 class="card-title">${event.title}</h3>
+                    <div class="card-meta">
+                        <span><i class="fas fa-calendar"></i> ${formatDate(event.date)}</span>
+                        <span><i class="fas fa-map-marker-alt"></i> ${event.location}</span>
+                    </div>
+                    <div class="card-price">
+                        KES ${formatPrice(event.price)}
+                        ${event.original_price ? `<span class="original-price">KES ${formatPrice(event.original_price)}</span>` : ''}
                     </div>
                 </div>
-            </div>
-        </div>
-    `;
-}
-
-function showSkeletonLoader() {
-    if (eventsGrid && currentPage > 1) {
-        const skeletonCards = Array(4).fill(0).map(() => `
-            <div class="skeleton-card">
-                <div class="skeleton-banner"></div>
-                <div class="skeleton-content">
-                    <div class="skeleton-line title"></div>
-                    <div class="skeleton-line meta"></div>
-                    <div class="skeleton-line price"></div>
+                <div class="card-actions">
+                    <button class="card-action-btn view-details-btn" data-event-id="${event.id}">
+                        <i class="fas fa-info-circle"></i> Details
+                    </button>
+                    <button class="card-action-btn add-to-cart-btn" data-event-id="${event.id}">
+                        <i class="fas fa-cart-plus"></i> Add to Cart
+                    </button>
                 </div>
             </div>
         `).join('');
-        eventsGrid.insertAdjacentHTML('beforeend', skeletonCards);
+        
+        // Attach event listeners to dynamically created buttons
+        document.querySelectorAll('.view-details-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const eventId = btn.dataset.eventId;
+                window.location.href = `/events/detail/?id=${eventId}`;
+            });
+        });
+        
+        document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const eventId = btn.dataset.eventId;
+                await addToCart(eventId);
+            });
+        });
+        
+        document.querySelectorAll('.wishlist-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const eventId = btn.dataset.eventId;
+                await toggleWishlist(eventId, btn);
+            });
+        });
+        
+        document.querySelectorAll('.card-content').forEach(card => {
+            card.addEventListener('click', () => {
+                const eventId = card.dataset.eventId;
+                window.location.href = `/events/detail/?id=${eventId}`;
+            });
+        });
     }
-}
-
-function hideSkeletonLoader() {
-    const skeletons = document.querySelectorAll('.skeleton-card');
-    skeletons.forEach(skeleton => skeleton.remove());
-}
-
-function updateLoadMoreButton() {
-    if (loadMoreBtn) {
-        if (currentPage < totalPages) {
-            loadMoreBtn.style.display = 'block';
-        } else {
-            loadMoreBtn.style.display = 'none';
+    
+    // Add to cart
+    async function addToCart(eventId) {
+        const token = localStorage.getItem('attendee_access_token');
+        
+        if (!token) {
+            showToast('Please login to add to cart', 'info');
+            setTimeout(() => {
+                localStorage.setItem('redirect_after_login', '/cart/');
+                window.location.href = '/login/';
+            }, 1500);
+            return;
+        }
+        
+        try {
+            const response = await fetch(API.cart, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ event_id: eventId, quantity: 1 })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('Added to cart!', 'success');
+                updateCartBadge(data.cart_count);
+            } else {
+                showToast(data.message || 'Failed to add to cart', 'error');
+            }
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            showToast('Failed to add to cart', 'error');
         }
     }
-}
-
-function loadMore() {
-    if (!isLoading && currentPage < totalPages) {
-        currentPage++;
-        loadEvents();
-    }
-}
-
-function setupInfiniteScroll() {
-    window.addEventListener('scroll', () => {
-        if (isLoading) return;
+    
+    // Toggle wishlist
+    async function toggleWishlist(eventId, btnElement) {
+        const token = localStorage.getItem('attendee_access_token');
         
-        const scrollPosition = window.innerHeight + window.scrollY;
-        const bottom = document.documentElement.scrollHeight - 500;
-        
-        if (scrollPosition >= bottom && currentPage < totalPages) {
-            loadMore();
+        if (!token) {
+            showToast('Please login to save to wishlist', 'info');
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 1500);
+            return;
         }
-    });
-}
-
-function resetFilters() {
-    currentFilters = {
-        category: '',
-        city: '',
-        date: 'upcoming',
-        search: '',
-        sort: 'date',
-        price_min: '',
-        price_max: ''
-    };
-    currentPage = 1;
-    
-    if (searchInput) searchInput.value = '';
-    if (categoryFilter) categoryFilter.value = '';
-    if (cityFilter) cityFilter.value = '';
-    if (dateFilter) dateFilter.value = 'upcoming';
-    if (sortSelect) sortSelect.value = 'date';
-    if (priceMin) priceMin.value = '';
-    if (priceMax) priceMax.value = '';
-    
-    loadEvents();
-}
-
-function toggleFilters() {
-    if (filtersPanel) {
-        filtersPanel.classList.toggle('open');
+        
+        try {
+            const response = await fetch(`${API.wishlist}${eventId}/toggle/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                const isActive = data.in_wishlist;
+                btnElement.classList.toggle('active', isActive);
+                btnElement.innerHTML = `<i class="${isActive ? 'fas' : 'far'} fa-heart"></i><span>${isActive ? 'Saved' : 'Save'}</span>`;
+                showToast(isActive ? 'Added to wishlist!' : 'Removed from wishlist', 'success');
+            }
+        } catch (error) {
+            console.error('Error toggling wishlist:', error);
+        }
     }
-}
-
-// Helper functions
-function formatDate(dateString) {
-    if (!dateString) return 'TBD';
-    return new Date(dateString).toLocaleDateString('en-KE');
-}
-
-function formatCurrency(amount) {
-    return `KSh ${Number(amount).toLocaleString('en-KE')}`;
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+    
+    // Render pagination
+    function renderPagination() {
+        if (!paginationDiv) return;
+        
+        if (totalPages <= 1) {
+            paginationDiv.innerHTML = '';
+            return;
+        }
+        
+        let html = '<div class="pagination-wrapper">';
+        html += `<button class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>&laquo; Previous</button>`;
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+            } else if (i === currentPage - 3 || i === currentPage + 3) {
+                html += '<span class="page-dots">...</span>';
+            }
+        }
+        
+        html += `<button class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>Next &raquo;</button>`;
+        html += '</div>';
+        
+        paginationDiv.innerHTML = html;
+        
+        document.querySelectorAll('.page-btn[data-page]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const page = parseInt(btn.dataset.page);
+                if (page && page !== currentPage && page >= 1 && page <= totalPages) {
+                    currentPage = page;
+                    loadEvents();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        });
+    }
+    
+    // Attach event listeners
+    function attachEventListeners() {
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', () => {
+                currentFilters.category = categoryFilter.value;
+                currentPage = 1;
+                loadEvents();
+            });
+        }
+        
+        if (sortFilter) {
+            sortFilter.addEventListener('change', () => {
+                currentFilters.sort = sortFilter.value;
+                currentPage = 1;
+                loadEvents();
+            });
+        }
+        
+        if (searchInput) {
+            let debounceTimer;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    currentFilters.search = searchInput.value;
+                    currentPage = 1;
+                    loadEvents();
+                }, 500);
+            });
+        }
+    }
+    
+    // Helper functions
+    function formatDate(dateString) {
+        if (!dateString) return 'TBA';
+        return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    
+    function formatPrice(price) {
+        return price ? price.toLocaleString() : '0';
+    }
+    
+    function showLoading() {
+        if (eventsGrid) {
+            eventsGrid.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Loading events...</p></div>';
+        }
+    }
+    
+    function showError(message) {
+        if (eventsGrid) {
+            eventsGrid.innerHTML = `<div class="empty-state">${message}</div>`;
+        }
+    }
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i> ${message}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    
+    function updateCartBadge(count) {
+        const badges = document.querySelectorAll('.cart-count, .cart-count-mobile');
+        badges.forEach(badge => {
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
+            }
+        });
+    }
+    
+    // Public API
+    return {
+        init: init,
+        refresh: loadEvents
     };
-}
+})();
 
-// Make functions global
-window.loadMore = loadMore;
-window.resetFilters = resetFilters;
-window.toggleFilters = toggleFilters;
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    EventsModule.init();
+});

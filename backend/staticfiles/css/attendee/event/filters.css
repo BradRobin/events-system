@@ -1,125 +1,85 @@
 /* ============================================
-   FILTERS PANEL CSS - EventHub Style
+   EVENTS FILTERS
    ============================================ */
 
-.filters-panel {
-    background: white;
-    border-radius: var(--radius-xl);
-    padding: var(--spacing-xl);
-    margin-bottom: var(--spacing-2xl);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-normal);
+.filters-section {
+    margin-bottom: 2rem;
 }
 
-.filters-panel.open {
-    display: block;
-}
-
-.filters-row {
+.filters-wrapper {
     display: flex;
+    gap: 1rem;
     flex-wrap: wrap;
-    gap: var(--spacing-md);
-    align-items: flex-end;
+    justify-content: center;
 }
 
 .filter-group {
-    flex: 1;
-    min-width: 160px;
+    position: relative;
 }
 
-.filter-group label {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: var(--np-gray);
-    margin-bottom: var(--spacing-xs);
-    letter-spacing: 0.5px;
-}
-
-.filter-group .search-group {
-    display: flex;
-    align-items: center;
-    background: var(--np-bg);
-    border-radius: var(--radius-md);
-    padding: 0 var(--spacing-md);
-    gap: var(--spacing-sm);
-    border: 1px solid transparent;
-    transition: all var(--transition-fast);
-}
-
-.filter-group .search-group:focus-within {
-    border-color: var(--np-gold);
+.filter-select {
+    padding: 0.7rem 2rem 0.7rem 1rem;
     background: white;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-}
-
-.filter-group .search-group i {
-    color: var(--np-gray);
-}
-
-.filter-group .search-group input {
-    flex: 1;
-    padding: 0.7rem 0;
-    background: none;
-    border: none;
-    outline: none;
-    font-size: 0.875rem;
-}
-
-.filter-group select {
-    width: 100%;
-    padding: 0.7rem var(--spacing-md);
-    background: var(--np-bg);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    color: #1e293b;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    outline: none;
+    transition: all 0.2s ease;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right var(--spacing-md) center;
-    background-size: 14px;
+    background-position: right 1rem center;
 }
 
-.filter-group select:focus {
-    outline: none;
-    border-color: var(--np-gold);
+.filter-select:hover {
+    border-color: #f59e0b;
+}
+
+.filter-select:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
+}
+
+.search-group {
+    position: relative;
+}
+
+.search-group i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.85rem;
+    z-index: 1;
+}
+
+.search-group input {
+    padding: 0.7rem 1rem 0.7rem 2.5rem;
     background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    color: #1e293b;
+    width: 250px;
+    outline: none;
+    transition: all 0.2s ease;
 }
 
-.price-range-inputs {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
+.search-group input:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
 }
 
-.price-range-inputs input {
-    width: 100%;
-    padding: 0.6rem var(--spacing-md);
-    background: var(--np-bg);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-}
-
-.price-range-inputs span {
-    color: var(--np-gray);
-}
-
-.btn-secondary {
-    background: var(--np-bg);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    padding: 0.6rem 1.25rem;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.btn-secondary:hover {
-    background: var(--np-gradient);
-    color: white;
-    border-color: transparent;
+@media (max-width: 768px) {
+    .filters-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-select, .search-group input {
+        width: 100%;
+    }
 }

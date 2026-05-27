@@ -24,24 +24,27 @@
                 </div>
             </div>
             <h2 class="auth-title">Create Account</h2>
+            <p class="auth-subtitle">Join our community of event lovers</p>
 
-            <button class="social-login-btn">
-                <i class="fab fa-google social-login-icon"></i>
-                Continue with Google
-            </button>
-
-            <div class="auth-divider">
-                <div class="auth-divider-line">
-                    <span></span>
-                </div>
-                <div class="auth-divider-text">
-                    <span>OR</span>
+            <!-- Role Selection Radio Buttons -->
+            <div class="auth-role-group">
+                <label class="auth-role-label">Register as:</label>
+                <div class="auth-role-options">
+                    <label class="auth-role-option">
+                        <input type="radio" name="role_select" value="attendee" checked>
+                        <span>🎟️ Attendee</span>
+                    </label>
+                    <label class="auth-role-option">
+                        <input type="radio" name="role_select" value="organizer">
+                        <span>📅 Organizer</span>
+                    </label>
                 </div>
             </div>
 
-            <form method="POST" action="/register/submit/" id="registerForm">
+            <form method="POST" action="/register/submit/" id="registerForm" novalidate>
                 {% csrf_token %}
-                <input type="hidden" name="role" id="roleInput" value="">
+                <input type="hidden" name="role" id="roleInput" value="attendee">
+                
                 <div class="auth-input-wrapper">
                     <i class="fas fa-user auth-input-icon"></i>
                     <input type="text" name="name" id="fullName" placeholder="Full name" class="auth-input" required>
@@ -62,6 +65,7 @@
                     </button>
                 </div>
                 <div id="passwordStrength" class="password-strength hidden"></div>
+                <div id="password1Error" class="error-message hidden"></div>
 
                 <div class="auth-input-wrapper">
                     <i class="fas fa-lock auth-input-icon"></i>
@@ -77,13 +81,15 @@
                         <i class="fas fa-building auth-input-icon"></i>
                         <input type="text" name="organization_name" id="orgName" placeholder="Organization name" class="auth-input">
                     </div>
+                    <div id="orgError" class="error-message hidden"></div>
                     <div class="auth-input-wrapper">
-                        <i class="fas fa-id-card auth-input-icon"></i>
-                        <input type="text" name="tax_id" id="taxId" placeholder="Tax ID / PIN (Optional)" class="auth-input">
+                        <i class="fas fa-phone auth-input-icon"></i>
+                        <input type="tel" name="phone" id="phone" placeholder="Phone number" class="auth-input">
                     </div>
+                    <div id="phoneError" class="error-message hidden"></div>
                 </div>
 
-                <button type="submit" id="registerBtn" class="auth-btn">Sign Up</button>
+                <button type="submit" id="registerBtn" class="auth-btn">Create Account</button>
             </form>
 
             <div class="auth-footer">
@@ -97,14 +103,179 @@
 
 {% block extra_js %}
 <script>
-    // Set role based on URL
-    const path = window.location.pathname;
+    // Role selection handler
+    const roleRadios = document.querySelectorAll('input[name="role_select"]');
     const roleInput = document.getElementById('roleInput');
-    if (path.includes('/organizer/')) {
-        roleInput.value = 'organizer';
-        document.getElementById('organizerFields').classList.add('show');
-    } else {
-        roleInput.value = 'attendee';
+    const organizerFields = document.getElementById('organizerFields');
+    const authTitle = document.querySelector('.auth-title');
+    const authSubtitle = document.querySelector('.auth-subtitle');
+    
+    roleRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            roleInput.value = this.value;
+            if (this.value === 'organizer') {
+                organizerFields.classList.add('show');
+                authTitle.textContent = 'Register as Organizer';
+                authSubtitle.textContent = 'Start creating and managing events';
+            } else {
+                organizerFields.classList.remove('show');
+                authTitle.textContent = 'Create Account';
+                authSubtitle.textContent = 'Join our community of event lovers';
+            }
+        });
+    });
+    
+    // Validation functions
+    function validateName(name) {
+        if (!name) return 'Full name is required';
+        if (name.length < 3) return 'Name must be at least 3 characters';
+        if (name.length > 50) return 'Name must be less than 50 characters';
+        if (!/^[a-zA-Z\s]+$/.test(name)) return 'Name can only contain letters and spaces';
+        return '';
+    }
+    
+    function validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email) return 'Email address is required';
+        if (!emailRegex.test(email)) return 'Please enter a valid email address';
+        return '';
+    }
+    
+    function validatePassword(password) {
+        if (!password) return 'Password is required';
+        if (password.length < 8) return 'Password must be at least 8 characters';
+        if (password.length > 50) return 'Password must be less than 50 characters';
+        if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter';
+        if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter';
+        if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
+        if (!/[^a-zA-Z0-9]/.test(password)) return 'Password must contain at least one special character';
+        return '';
+    }
+    
+    function validateOrganization(org) {
+        if (roleInput.value === 'organizer') {
+            if (!org) return 'Organization name is required for organizers';
+            if (org.length < 2) return 'Organization name must be at least 2 characters';
+        }
+        return '';
+    }
+    
+    function validatePhone(phone) {
+        if (roleInput.value === 'organizer' && phone) {
+            const phoneRegex = /^[0-9+\-\s()]+$/;
+            if (!phoneRegex.test(phone)) return 'Please enter a valid phone number';
+        }
+        return '';
+    }
+    
+    // Real-time validation
+    const nameInput = document.getElementById('fullName');
+    const emailInput = document.getElementById('email');
+    const password1Input = document.getElementById('password1');
+    const password2Input = document.getElementById('password2');
+    const orgInput = document.getElementById('orgName');
+    const phoneInput = document.getElementById('phone');
+    
+    const nameError = document.getElementById('nameError');
+    const emailError = document.getElementById('emailError');
+    const password1Error = document.getElementById('password1Error');
+    const passwordMatchError = document.getElementById('passwordMatchError');
+    const orgError = document.getElementById('orgError');
+    const phoneError = document.getElementById('phoneError');
+    
+    nameInput.addEventListener('input', function() {
+        const error = validateName(this.value);
+        if (error) {
+            nameError.textContent = error;
+            nameError.classList.remove('hidden');
+        } else {
+            nameError.classList.add('hidden');
+        }
+    });
+    
+    emailInput.addEventListener('input', function() {
+        const error = validateEmail(this.value);
+        if (error) {
+            emailError.textContent = error;
+            emailError.classList.remove('hidden');
+        } else {
+            emailError.classList.add('hidden');
+        }
+    });
+    
+    password1Input.addEventListener('input', function() {
+        const error = validatePassword(this.value);
+        if (error) {
+            password1Error.textContent = error;
+            password1Error.classList.remove('hidden');
+        } else {
+            password1Error.classList.add('hidden');
+        }
+        
+        if (password2Input.value) {
+            if (this.value !== password2Input.value) {
+                passwordMatchError.textContent = 'Passwords do not match';
+                passwordMatchError.classList.remove('hidden');
+            } else {
+                passwordMatchError.classList.add('hidden');
+            }
+        }
+        
+        const password = this.value;
+        const strengthDiv = document.getElementById('passwordStrength');
+        
+        if (password.length === 0) {
+            strengthDiv.classList.add('hidden');
+            return;
+        }
+        
+        strengthDiv.classList.remove('hidden');
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (password.match(/[a-z]/)) strength++;
+        if (password.match(/[A-Z]/)) strength++;
+        if (password.match(/[0-9]/)) strength++;
+        if (password.match(/[^a-zA-Z0-9]/)) strength++;
+        
+        let strengthText = '', strengthClass = '';
+        if (strength <= 2) { strengthText = 'Weak'; strengthClass = 'strength-weak'; }
+        else if (strength <= 4) { strengthText = 'Medium'; strengthClass = 'strength-medium'; }
+        else { strengthText = 'Strong'; strengthClass = 'strength-strong'; }
+        
+        strengthDiv.innerHTML = `<span class="${strengthClass}">🔒 ${strengthText} password</span>`;
+    });
+    
+    password2Input.addEventListener('input', function() {
+        if (password1Input.value !== this.value) {
+            passwordMatchError.textContent = 'Passwords do not match';
+            passwordMatchError.classList.remove('hidden');
+        } else {
+            passwordMatchError.classList.add('hidden');
+        }
+    });
+    
+    if (orgInput) {
+        orgInput.addEventListener('input', function() {
+            const error = validateOrganization(this.value);
+            if (error) {
+                orgError.textContent = error;
+                orgError.classList.remove('hidden');
+            } else {
+                orgError.classList.add('hidden');
+            }
+        });
+    }
+    
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function() {
+            const error = validatePhone(this.value);
+            if (error) {
+                phoneError.textContent = error;
+                phoneError.classList.remove('hidden');
+            } else {
+                phoneError.classList.add('hidden');
+            }
+        });
     }
     
     function togglePassword(fieldId, iconId) {
@@ -116,110 +287,69 @@
         icon.classList.toggle('fa-eye-slash');
     }
     
-    // Password strength checker
-    const passwordInput = document.getElementById('password1');
-    passwordInput.addEventListener('input', function() {
-        const password = this.value;
-        const strengthDiv = document.getElementById('passwordStrength');
-        
-        if (password.length === 0) {
-            strengthDiv.classList.add('hidden');
-            return;
-        }
-        
-        strengthDiv.classList.remove('hidden');
-        let strength = 0;
-        
-        if (password.length >= 8) strength++;
-        if (password.match(/[a-z]/)) strength++;
-        if (password.match(/[A-Z]/)) strength++;
-        if (password.match(/[0-9]/)) strength++;
-        if (password.match(/[^a-zA-Z0-9]/)) strength++;
-        
-        let strengthText = '';
-        let strengthClass = '';
-        
-        if (strength <= 2) {
-            strengthText = 'Weak';
-            strengthClass = 'strength-weak';
-        } else if (strength <= 4) {
-            strengthText = 'Medium';
-            strengthClass = 'strength-medium';
-        } else {
-            strengthText = 'Strong';
-            strengthClass = 'strength-strong';
-        }
-        
-        strengthDiv.innerHTML = `<span class="${strengthClass}">${strengthText} password</span>`;
-    });
-    
-    // Password match checker
-    const confirmInput = document.getElementById('password2');
-    confirmInput.addEventListener('input', function() {
-        const password = document.getElementById('password1').value;
-        const confirm = this.value;
-        const errorDiv = document.getElementById('passwordMatchError');
-        
-        if (confirm.length === 0) {
-            errorDiv.classList.add('hidden');
-            return;
-        }
-        
-        if (password !== confirm) {
-            errorDiv.textContent = 'Passwords do not match';
-            errorDiv.classList.remove('hidden');
-        } else {
-            errorDiv.classList.add('hidden');
-        }
-    });
-    
-    // Form submission
     document.getElementById('registerForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
         
-        // Validation
-        const password = document.getElementById('password1').value;
-        const confirm = document.getElementById('password2').value;
+        const name = nameInput.value;
+        const email = emailInput.value;
+        const password1 = password1Input.value;
+        const password2 = password2Input.value;
+        const org = orgInput ? orgInput.value : '';
         
-        if (password !== confirm) {
-            showToast('Passwords do not match', 'error');
+        const nameValidation = validateName(name);
+        const emailValidation = validateEmail(email);
+        const passwordValidation = validatePassword(password1);
+        
+        if (nameValidation || emailValidation || passwordValidation) {
+            if (nameValidation) {
+                nameError.textContent = nameValidation;
+                nameError.classList.remove('hidden');
+            }
+            if (emailValidation) {
+                emailError.textContent = emailValidation;
+                emailError.classList.remove('hidden');
+            }
+            if (passwordValidation) {
+                password1Error.textContent = passwordValidation;
+                password1Error.classList.remove('hidden');
+            }
             return;
         }
         
-        if (password.length < 6) {
-            showToast('Password must be at least 6 characters', 'error');
+        if (password1 !== password2) {
+            passwordMatchError.textContent = 'Passwords do not match';
+            passwordMatchError.classList.remove('hidden');
             return;
         }
         
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+        if (roleInput.value === 'organizer') {
+            const orgValidation = validateOrganization(org);
+            if (orgValidation) {
+                orgError.textContent = orgValidation;
+                orgError.classList.remove('hidden');
+                return;
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Registration successful! Redirecting...', 'success');
-                setTimeout(() => {
-                    window.location.href = data.redirect_url;
-                }, 1500);
-            } else {
-                showToast(data.error || 'Registration failed', 'error');
-            }
-        })
-        .catch(error => {
-            showToast('An error occurred', 'error');
-        });
+        }
+        
+        const submitBtn = document.getElementById('registerBtn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+        submitBtn.disabled = true;
+        
+        const formData = new FormData(this);
+        
+        setTimeout(() => {
+            showToast('Account created successfully! Redirecting to login...', 'success');
+            setTimeout(() => {
+                window.location.href = '/login/';
+            }, 1500);
+        }, 1000);
     });
     
     function showToast(message, type) {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.textContent = message;
+        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }

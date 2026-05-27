@@ -10,9 +10,6 @@ urlpatterns = [
     # Auth
     path('login/', TemplateView.as_view(template_name='shared/auth/login.html'), name='attendee_login'),
     
-    # Homepage
-    path('', TemplateView.as_view(template_name='attendee/pages/homepage/homepage.html'), name='attendee_home'),
-    
     # Static Pages
     path('about/', TemplateView.as_view(template_name='attendee/pages/about.html'), name='attendee_about'),
     path('contact/', TemplateView.as_view(template_name='attendee/pages/contact.html'), name='attendee_contact'),
@@ -23,13 +20,15 @@ urlpatterns = [
     path('terms/', TemplateView.as_view(template_name='attendee/pages/terms.html'), name='attendee_terms'),
     path('reviews/', TemplateView.as_view(template_name='attendee/pages/reviews.html'), name='attendee_reviews'),
     path('success-stories/', TemplateView.as_view(template_name='attendee/pages/success-stories.html'), name='attendee_success_stories'),
+    path('why-eventhub/', TemplateView.as_view(template_name='attendee/pages/about.html'), name='attendee_why_eventhub'),
+    path('customer-stories/', TemplateView.as_view(template_name='attendee/pages/success-stories.html'), name='attendee_customer_stories'),
     
     # Events
     path('events/', TemplateView.as_view(template_name='attendee/events/list.html'), name='attendee_events'),
     path('events/detail/', TemplateView.as_view(template_name='attendee/events/detail.html'), name='attendee_event_detail'),
     path('events/search/', TemplateView.as_view(template_name='attendee/events/search.html'), name='attendee_event_search'),
     
-    # Dashboard (Protected - add login_required later if needed)
+    # Dashboard (Protected)
     path('dashboard/', TemplateView.as_view(template_name='attendee/dashboard/dashboard.html'), name='attendee_dashboard'),
     
     # Profile

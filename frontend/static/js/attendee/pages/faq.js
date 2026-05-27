@@ -1,97 +1,209 @@
 // ============================================
-// FAQ PAGE - Accordion and Category Filter
+// FAQ PAGE - Interactive Accordion & Search
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize FAQ accordion
-    initFaqAccordion();
+    // Get all FAQ items
+    const faqItems = document.querySelectorAll('.faq-item');
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    const categoryBtns = document.querySelectorAll('.category-btn');
+    const searchInput = document.getElementById('faqSearch');
+    const clearSearchBtn = document.getElementById('clearSearch');
     
-    // Initialize category filtering
-    initCategoryFilter();
+    let currentCategory = 'all';
+    let searchTerm = '';
     
-    // Load dynamic FAQ data if needed
-    loadFAQs();
+    // Accordion functionality
+    faqQuestions.forEach(question => {
+        question.addEventListener('click', function() {
+            const faqItem = this.parentElement;
+            const isActive = faqItem.classList.contains('active');
+            
+            // Optional: Close other open FAQs (uncomment if you want only one open at a time)
+            // if (!isActive) {
+            //     faqItems.forEach(item => {
+            //         if (item !== faqItem && item.classList.contains('active')) {
+            //             item.classList.remove('active');
+            //         }
+            //     });
+            // }
+            
+            // Toggle current FAQ
+            faqItem.classList.toggle('active');
+            
+            // Rotate icon
+            const icon = this.querySelector('i');
+            if (faqItem.classList.contains('active')) {
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                icon.style.transform = 'rotate(0deg)';
+            }
+        });
+    });
+    
+    // Category filtering
+    categoryBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Update active button
+            categoryBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Get selected category
+            currentCategory = this.dataset.category;
+            
+            // Apply filters
+            filterFAQs();
+        });
+    });
+    
+    // Search functionality
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            searchTerm = this.value.toLowerCase().trim();
+            
+            // Show/hide clear button
+            if (clearSearchBtn) {
+                clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
+            }
+            
+            filterFAQs();
+        });
+    }
+    
+    // Clear search
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (searchInput) {
+                searchInput.value = '';
+                searchTerm = '';
+                clearSearchBtn.style.display = 'none';
+                filterFAQs();
+            }
+        });
+    }
+    
+    // Filter FAQs by category and search term
+    function filterFAQs() {
+        let visibleCount = 0;
+        
+        faqItems.forEach(item => {
+            const itemCategory = item.dataset.category;
+            const question = item.querySelector('.faq-question span')?.innerText || '';
+            const answer = item.querySelector('.faq-answer')?.innerText || '';
+            const text = `${question} ${answer}`.toLowerCase();
+            
+            const matchesCategory = (currentCategory === 'all' || itemCategory === currentCategory);
+            const matchesSearch = !searchTerm || text.includes(searchTerm);
+            
+            if (matchesCategory && matchesSearch) {
+                item.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+        
+        // Show no results message if needed
+        showNoResultsMessage(visibleCount === 0);
+    }
+    
+    // Show/hide no results message
+    function showNoResultsMessage(show) {
+        const existingMessage = document.querySelector('.no-results');
+        const faqGrid = document.querySelector('.faq-grid');
+        
+        if (show && !existingMessage) {
+            const noResultsDiv = document.createElement('div');
+            noResultsDiv.className = 'no-results';
+            noResultsDiv.innerHTML = `
+                <i class="fas fa-search"></i>
+                <h3>No results found</h3>
+                <p>Try adjusting your search or filter to find what you're looking for.</p>
+            `;
+            if (faqGrid) faqGrid.appendChild(noResultsDiv);
+        } else if (!show && existingMessage) {
+            existingMessage.remove();
+        }
+    }
+    
+    // Smooth scroll to FAQ when clicking hash links
+    if (window.location.hash) {
+        const targetId = window.location.hash.substring(1);
+        const targetElement = document.getElementById(targetId);
+        if (targetElement) {
+            setTimeout(() => {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetElement.classList.add('active');
+            }, 100);
+        }
+    }
+    
+    // Track FAQ clicks for analytics
+    faqQuestions.forEach(question => {
+        question.addEventListener('click', function() {
+            const faqText = this.querySelector('span')?.innerText || '';
+            console.log('FAQ clicked:', faqText);
+            // You can send this to your analytics service
+        });
+    });
+    
+    // Add keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        // Focus search with Ctrl+K or Cmd+K
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }
+        
+        // Close all FAQs with Escape
+        if (e.key === 'Escape') {
+            faqItems.forEach(item => {
+                if (item.classList.contains('active')) {
+                    item.classList.remove('active');
+                    const icon = item.querySelector('.faq-question i');
+                    if (icon) icon.style.transform = 'rotate(0deg)';
+                }
+            });
+        }
+    });
+    
+    // Optional: Save FAQ state to localStorage
+    function saveOpenState() {
+        const openFaqs = Array.from(faqItems)
+            .filter(item => item.classList.contains('active'))
+            .map(item => item.querySelector('.faq-question span')?.innerText);
+        localStorage.setItem('openFaqs', JSON.stringify(openFaqs));
+    }
+    
+    function restoreOpenState() {
+        const savedOpenFaqs = JSON.parse(localStorage.getItem('openFaqs') || '[]');
+        faqItems.forEach(item => {
+            const questionText = item.querySelector('.faq-question span')?.innerText;
+            if (savedOpenFaqs.includes(questionText)) {
+                item.classList.add('active');
+                const icon = item.querySelector('.faq-question i');
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            }
+        });
+    }
+    
+    // Optional: Uncomment to save/restore state
+    // restoreOpenState();
+    // faqQuestions.forEach(q => q.addEventListener('click', saveOpenState));
 });
 
-function initFaqAccordion() {
-    const faqQuestions = document.querySelectorAll('.faq-question');
-    
-    faqQuestions.forEach(question => {
-        question.addEventListener('click', () => {
-            const faqItem = question.parentElement;
-            faqItem.classList.toggle('active');
-        });
-    });
-}
-
-function initCategoryFilter() {
-    const categoryBtns = document.querySelectorAll('.category-btn');
-    
-    categoryBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const category = btn.dataset.category;
-            
-            // Update active state
-            categoryBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Filter FAQ items
-            filterFaqByCategory(category);
-        });
-    });
-}
-
-function filterFaqByCategory(category) {
-    const faqItems = document.querySelectorAll('.faq-item');
-    
-    faqItems.forEach(item => {
-        if (category === 'general') {
-            item.style.display = 'block';
-        } else {
-            // In a real implementation, you would have data-category on each FAQ item
-            // For now, show all
-            item.style.display = 'block';
-        }
-    });
-}
-
-async function loadFAQs() {
-    try {
-        // Try to fetch FAQs from API if endpoint exists
-        const faqs = await window.AttendeeAPIEndpoints.support.getFAQ();
-        
-        if (faqs && faqs.length > 0) {
-            displayFAQs(faqs);
-        }
-    } catch (error) {
-        console.error('Error loading FAQs:', error);
-        // Use static content if API fails
+// Helper function to scroll to specific FAQ
+function scrollToFAQ(faqId) {
+    const element = document.getElementById(faqId);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('active');
+        const icon = element.querySelector('.faq-question i');
+        if (icon) icon.style.transform = 'rotate(180deg)';
     }
 }
 
-function displayFAQs(faqs) {
-    const faqGrid = document.querySelector('.faq-grid');
-    if (!faqGrid) return;
-    
-    faqGrid.innerHTML = faqs.map(faq => `
-        <div class="faq-item" data-category="${faq.category || 'general'}">
-            <div class="faq-question">
-                ${escapeHtml(faq.question)}
-                <i class="fas fa-chevron-down"></i>
-            </div>
-            <div class="faq-answer">
-                ${escapeHtml(faq.answer)}
-            </div>
-        </div>
-    `).join('');
-    
-    // Reinitialize accordion for new items
-    initFaqAccordion();
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+// Make function global for external use
+window.scrollToFAQ = scrollToFAQ;

@@ -24,28 +24,44 @@
                 </div>
             </div>
             <h2 class="auth-title">Welcome Back</h2>
+            <p class="auth-subtitle">Sign in to continue to your account</p>
 
-            <button class="social-login-btn">
+            <!-- Role Selection -->
+            <div class="auth-role-group">
+                <label class="auth-role-label">Login as:</label>
+                <div class="auth-role-options">
+                    <label class="auth-role-option">
+                        <input type="radio" name="role_select" value="attendee" checked>
+                        <span>🎟️ Attendee</span>
+                    </label>
+                    <label class="auth-role-option">
+                        <input type="radio" name="role_select" value="organizer">
+                        <span>📅 Organizer</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Google Sign In -->
+            <button class="social-login-btn" id="googleSignInBtn">
                 <i class="fab fa-google social-login-icon"></i>
                 Continue with Google
             </button>
 
             <div class="auth-divider">
-                <div class="auth-divider-line">
-                    <span></span>
-                </div>
-                <div class="auth-divider-text">
-                    <span>OR</span>
-                </div>
+                <div class="auth-divider-line"><span></span></div>
+                <div class="auth-divider-text"><span>OR</span></div>
             </div>
 
-            <form method="POST" action="/api/auth/login/" id="loginForm">
+            <form method="POST" action="/api/auth/login/" id="loginForm" novalidate>
                 {% csrf_token %}
-                <input type="hidden" name="role" id="roleInput" value="">
+                <input type="hidden" name="role" id="roleInput" value="attendee">
+                
                 <div class="auth-input-wrapper">
                     <i class="fas fa-envelope auth-input-icon"></i>
                     <input type="email" name="email" id="loginEmail" placeholder="Email address" class="auth-input" required>
                 </div>
+                <div id="emailError" class="error-message hidden"></div>
+
                 <div class="auth-input-wrapper">
                     <i class="fas fa-lock auth-input-icon"></i>
                     <input type="password" name="password" id="password" placeholder="Password" class="auth-input" required>
@@ -53,6 +69,8 @@
                         <i class="fas fa-eye-slash" id="toggleIcon"></i>
                     </button>
                 </div>
+                <div id="passwordError" class="error-message hidden"></div>
+
                 <div class="checkbox-container">
                     <label class="auth-checkbox">
                         <input type="checkbox" name="remember">
@@ -67,11 +85,6 @@
                 Don't have an account?
                 <a href="/register/">Sign Up</a>
             </div>
-            
-            <div class="auth-footer" style="margin-top: 10px;">
-                <a href="/organizer/login/">Login as Organizer</a> | 
-                <a href="/attendee/login/">Login as Attendee</a>
-            </div>
         </div>
     </div>
 </div>
@@ -79,23 +92,117 @@
 
 {% block extra_js %}
 <script>
-    // Set role based on URL path
-    const path = window.location.pathname;
+    const roleRadios = document.querySelectorAll('input[name="role_select"]');
     const roleInput = document.getElementById('roleInput');
-    if (path.includes('/organizer/')) {
-        roleInput.value = 'organizer';
-    } else if (path.includes('/attendee/')) {
-        roleInput.value = 'attendee';
+    const authTitle = document.querySelector('.auth-title');
+    const authSubtitle = document.querySelector('.auth-subtitle');
+    
+    roleRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            roleInput.value = this.value;
+            if (this.value === 'organizer') {
+                authTitle.textContent = 'Organizer Login';
+                authSubtitle.textContent = 'Sign in to manage your events';
+            } else {
+                authTitle.textContent = 'Welcome Back';
+                authSubtitle.textContent = 'Sign in to continue to your account';
+            }
+        });
+    });
+    
+    // Google Sign In
+    const googleBtn = document.getElementById('googleSignInBtn');
+    if (googleBtn) {
+        googleBtn.addEventListener('click', function() {
+            const selectedRole = roleInput.value;
+            localStorage.setItem('pending_google_role', selectedRole);
+            googleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting...';
+            googleBtn.disabled = true;
+            showToast('Google Sign In is being configured. Please use email/password for now.', 'info');
+            setTimeout(() => {
+                googleBtn.innerHTML = '<i class="fab fa-google social-login-icon"></i> Continue with Google';
+                googleBtn.disabled = false;
+            }, 2000);
+        });
     }
     
-    // Add form submission handler
+    function validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email) return 'Email is required';
+        if (!emailRegex.test(email)) return 'Please enter a valid email address';
+        return '';
+    }
+    
+    function validatePassword(password) {
+        if (!password) return 'Password is required';
+        if (password.length < 6) return 'Password must be at least 6 characters';
+        return '';
+    }
+    
+    const emailInput = document.getElementById('loginEmail');
+    const passwordInput = document.getElementById('password');
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    
+    emailInput.addEventListener('input', function() {
+        const error = validateEmail(this.value);
+        if (error) {
+            emailError.textContent = error;
+            emailError.classList.remove('hidden');
+        } else {
+            emailError.classList.add('hidden');
+        }
+    });
+    
+    passwordInput.addEventListener('input', function() {
+        const error = validatePassword(this.value);
+        if (error) {
+            passwordError.textContent = error;
+            passwordError.classList.remove('hidden');
+        } else {
+            passwordError.classList.add('hidden');
+        }
+    });
+    
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+        const type = passwordInput.type === 'password' ? 'text' : 'password';
+        passwordInput.type = type;
+        toggleIcon.classList.toggle('fa-eye');
+        toggleIcon.classList.toggle('fa-eye-slash');
+    }
+    
     document.getElementById('loginForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
+        
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        
+        const emailValidation = validateEmail(email);
+        const passwordValidation = validatePassword(password);
+        
+        if (emailValidation || passwordValidation) {
+            if (emailValidation) {
+                emailError.textContent = emailValidation;
+                emailError.classList.remove('hidden');
+            }
+            if (passwordValidation) {
+                passwordError.textContent = passwordValidation;
+                passwordError.classList.remove('hidden');
+            }
+            return;
+        }
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+        submitBtn.disabled = true;
+        
+        const formData = new FormData(this);
         const data = Object.fromEntries(formData.entries());
         
-        fetch(form.action, {
+        fetch(this.action, {
             method: 'POST',
             body: JSON.stringify(data),
             headers: {
@@ -106,44 +213,39 @@
         .then(response => response.json().then(data => ({status: response.status, body: data})))
         .then(({status, body}) => {
             if (status === 200 || status === 201) {
-                // Determine prefix based on role returned from the server
-                const prefix = body.user.role === 'organizer' ? 'organizer' : 'attendee';
+                const userRole = body.user.role;
+                const prefix = userRole === 'organizer' ? 'organizer' : 'attendee';
                 
-                // Store tokens and user profile
                 localStorage.setItem(`${prefix}_access_token`, body.access);
                 localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
                 localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
                 
-                // Redirect user based on their role
-                if (body.user.role === 'organizer') {
-                    window.location.href = '/organizer/';
-                } else if (body.user.role === 'attendee') {
-                    window.location.href = '/attendee/';
-                } else {
-                    window.location.href = '/';
-                }
+                showToast(`Welcome back! Redirecting...`, 'success');
+                
+                setTimeout(() => {
+                    if (userRole === 'organizer') {
+                        window.location.href = '/organizer/dashboard/';
+                    } else {
+                        window.location.href = '/attendee/dashboard/';
+                    }
+                }, 1000);
             } else {
-                showToast(body.error || 'Invalid credentials', 'error');
+                showToast(body.error || 'Invalid email or password', 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
             }
         })
         .catch(error => {
-            showToast('An error occurred', 'error');
+            showToast('Network error. Please try again.', 'error');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         });
     });
-    
-    function togglePassword() {
-        const passwordInput = document.getElementById('password');
-        const toggleIcon = document.getElementById('toggleIcon');
-        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordInput.setAttribute('type', type);
-        toggleIcon.classList.toggle('fa-eye');
-        toggleIcon.classList.toggle('fa-eye-slash');
-    }
     
     function showToast(message, type) {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.textContent = message;
+        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }

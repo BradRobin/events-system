@@ -1,14 +1,17 @@
 /* ============================================
-   NOTIFICATIONS MODULE CSS - EventHub Style
+   NOTIFICATIONS PAGE CSS
    ============================================ */
 
-@import url('typography.css');
+.notifications-page {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    min-height: 100vh;
+    padding: 2rem 0 4rem;
+}
 
-/* Notifications Container */
-.notifications-container {
-    max-width: 1000px;
+.container {
+    max-width: 900px;
     margin: 0 auto;
-    padding: 0 var(--spacing-xl);
+    padding: 0 2rem;
 }
 
 /* Page Header */
@@ -17,108 +20,95 @@
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--spacing-lg);
-    margin-bottom: var(--spacing-2xl);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .page-header h1 {
-    font-size: 1.75rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    margin-bottom: 0;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.page-header h1 i {
-    color: var(--np-gold);
-    margin-right: var(--spacing-sm);
+.page-header p {
+    color: #64748b;
 }
 
-.page-header .text-muted {
-    color: var(--np-gray);
-    font-size: 0.875rem;
-    margin-top: var(--spacing-xs);
-}
-
-/* Tabs Container */
+/* Tabs */
 .tabs-container {
     display: flex;
-    gap: var(--spacing-sm);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    margin-bottom: var(--spacing-xl);
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .tab-btn {
+    padding: 0.75rem 1.5rem;
     background: none;
     border: none;
-    padding: var(--spacing-md) var(--spacing-xl);
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--np-gray);
     cursor: pointer;
-    transition: all var(--transition-fast);
-    position: relative;
+    font-weight: 500;
+    color: #64748b;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .tab-btn:hover {
-    color: var(--np-gold);
+    color: #f59e0b;
 }
 
 .tab-btn.active {
-    color: var(--np-gold);
+    color: #f59e0b;
+    border-bottom: 2px solid #f59e0b;
 }
 
-.tab-btn.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--np-gradient);
-    border-radius: 2px;
-}
-
-/* Tab Content */
 .tab-content {
-    display: block;
+    animation: fadeIn 0.3s ease;
 }
 
-.tab-content.active {
-    display: block;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Notifications List */
 .notifications-list {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm);
+    gap: 0.75rem;
 }
 
-/* Notification Item */
 .notification-item {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-md);
-    padding: var(--spacing-lg);
     background: white;
-    border-radius: var(--radius-lg);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    transition: all var(--transition-fast);
-}
-
-.notification-item:hover {
-    background: var(--np-bg);
-    transform: translateX(5px);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #e2e8f0;
+    position: relative;
 }
 
 .notification-item.unread {
-    background: rgba(245, 158, 11, 0.05);
-    border-left: 3px solid var(--np-gold);
+    background: #fef3c7;
+    border-left: 3px solid #f59e0b;
 }
 
-/* Notification Icon */
+.notification-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
 .notification-icon {
     width: 48px;
     height: 48px;
+    background: rgba(245, 158, 11, 0.1);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -126,117 +116,191 @@
     flex-shrink: 0;
 }
 
-.notification-icon.booking {
-    background: #d1fae5;
-    color: #10b981;
-}
-
-.notification-icon.payment {
-    background: #dbeafe;
-    color: #3b82f6;
-}
-
-.notification-icon.reminder {
-    background: #fef3c7;
+.notification-icon i {
+    font-size: 1.2rem;
     color: #f59e0b;
 }
 
-.notification-icon.promotion {
-    background: #fce7f3;
-    color: #ec489a;
-}
-
-.notification-icon.system {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-.notification-icon.event {
-    background: #d1fae5;
-    color: #10b981;
-}
-
-.notification-icon.refund {
-    background: #fee2e2;
-    color: #ef4444;
-}
-
-/* Notification Content */
 .notification-content {
     flex: 1;
 }
 
 .notification-title {
-    font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: var(--spacing-xs);
-    color: var(--np-dark);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: #1e293b;
 }
 
 .notification-message {
-    font-size: 0.85rem;
-    color: var(--np-gray);
-    margin-bottom: var(--spacing-xs);
-    line-height: 1.5;
+    font-size: 0.8rem;
+    color: #475569;
+    margin-bottom: 0.25rem;
 }
 
 .notification-time {
     font-size: 0.7rem;
-    color: var(--np-light-gray);
-}
-
-/* Notification Actions */
-.notification-actions {
+    color: #94a3b8;
     display: flex;
-    gap: var(--spacing-xs);
     align-items: center;
+    gap: 0.25rem;
 }
 
-.mark-read-btn,
-.delete-btn,
-.view-btn {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: var(--np-bg);
-    border-radius: var(--radius-md);
+.notification-badge {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #f59e0b;
+    border-radius: 50%;
+    margin-left: 0.5rem;
+}
+
+/* Cards */
+.card {
+    background: white;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.card-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-header h3 i {
+    color: #f59e0b;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Preferences */
+.preference-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
     cursor: pointer;
-    transition: all var(--transition-fast);
-    display: flex;
+    font-size: 0.9rem;
+    color: #1e293b;
+}
+
+.checkbox-label input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: #f59e0b;
+}
+
+.preference-desc {
+    display: block;
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+    margin-left: 1.75rem;
+}
+
+.form-actions {
+    margin-top: 1.5rem;
+    text-align: right;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    color: white;
+    border: none;
+    padding: 0.7rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
     align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-outline:hover {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
     justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
 }
 
-.mark-read-btn:hover {
-    background: #d1fae5;
-    color: #10b981;
+.page-btn {
+    padding: 0.4rem 0.8rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
-.delete-btn:hover {
-    background: #fee2e2;
-    color: #ef4444;
+.page-btn:hover {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: white;
 }
 
-.view-btn:hover {
-    background: #dbeafe;
-    color: #3b82f6;
+.page-btn.active {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: white;
 }
 
 /* Loading State */
 .loading-state {
     text-align: center;
-    padding: var(--spacing-4xl);
-    color: var(--np-gray);
+    padding: 3rem;
 }
 
-.loading-state .loading-spinner {
+.loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid rgba(245, 158, 11, 0.2);
-    border-top-color: var(--np-gold);
+    border: 3px solid #e2e8f0;
+    border-top-color: #f59e0b;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-    margin: 0 auto var(--spacing-md);
+    margin: 0 auto 1rem;
 }
 
 @keyframes spin {
@@ -246,153 +310,32 @@
 /* Empty State */
 .empty-state {
     text-align: center;
-    padding: var(--spacing-4xl);
-    color: var(--np-gray);
+    padding: 3rem;
+    background: white;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
 }
 
 .empty-state i {
     font-size: 3rem;
-    margin-bottom: var(--spacing-lg);
-    opacity: 0.5;
-    color: var(--np-gold);
+    color: #cbd5e1;
+    margin-bottom: 1rem;
 }
 
-.empty-state h3 {
-    margin-bottom: var(--spacing-sm);
-    font-size: 1.2rem;
+.empty-state h4 {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
 }
 
 .empty-state p {
-    margin-bottom: var(--spacing-lg);
-}
-
-/* Notifications Count */
-.notifications-count {
-    text-align: center;
-    margin-top: var(--spacing-lg);
+    color: #64748b;
     font-size: 0.8rem;
-    color: var(--np-gray);
-}
-
-/* Pagination */
-.pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: var(--spacing-sm);
-    margin-top: var(--spacing-2xl);
-    flex-wrap: wrap;
-}
-
-.pagination button {
-    padding: 0.5rem 1rem;
-    min-width: 40px;
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    font-size: 0.85rem;
-}
-
-.pagination button:hover:not(:disabled) {
-    background: var(--np-gradient);
-    color: white;
-    border-color: transparent;
-}
-
-.pagination button.active {
-    background: var(--np-gradient);
-    color: white;
-    border-color: transparent;
-}
-
-.pagination button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Card Styles for Preferences */
-.card {
-    background: white;
-    border-radius: var(--radius-xl);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    overflow: hidden;
-    margin-bottom: var(--spacing-xl);
-}
-
-.card-header {
-    padding: var(--spacing-lg) var(--spacing-xl);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    background: linear-gradient(135deg, var(--np-bg), white);
-}
-
-.card-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-.card-header h3 i {
-    color: var(--np-gold);
-    margin-right: var(--spacing-sm);
-}
-
-.card-body {
-    padding: var(--spacing-xl);
-}
-
-/* Preference Group */
-.preference-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-}
-
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: var(--np-dark);
-}
-
-.checkbox-label input {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: var(--np-gold);
-}
-
-/* Form Actions */
-.form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-xl);
-}
-
-.btn-primary {
-    background: var(--np-gradient);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .notifications-container {
-        padding: 0 var(--spacing-lg);
+    .container {
+        padding: 0 1rem;
     }
     
     .page-header {
@@ -400,48 +343,12 @@
         align-items: flex-start;
     }
     
-    .tabs-container {
-        gap: var(--spacing-xs);
-    }
-    
-    .tab-btn {
-        padding: var(--spacing-sm) var(--spacing-lg);
-        font-size: 0.8rem;
+    .page-header h1 {
+        font-size: 1.5rem;
     }
     
     .notification-item {
-        flex-direction: column;
-    }
-    
-    .notification-actions {
-        margin-left: auto;
-    }
-    
-    .preference-group {
-        gap: var(--spacing-sm);
-    }
-    
-    .form-actions {
-        justify-content: stretch;
-    }
-    
-    .form-actions button {
-        width: 100%;
-    }
-}
-
-@media (max-width: 480px) {
-    .notifications-container {
-        padding: 0 var(--spacing-md);
-    }
-    
-    .page-header h1 {
-        font-size: 1.3rem;
-    }
-    
-    .tab-btn {
-        padding: var(--spacing-xs) var(--spacing-md);
-        font-size: 0.75rem;
+        padding: 0.75rem;
     }
     
     .notification-icon {
@@ -449,11 +356,26 @@
         height: 40px;
     }
     
-    .notification-title {
-        font-size: 0.9rem;
+    .notification-icon i {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .tabs-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     
-    .notification-message {
-        font-size: 0.8rem;
+    .tab-btn {
+        white-space: nowrap;
+    }
+    
+    .card-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
     }
 }

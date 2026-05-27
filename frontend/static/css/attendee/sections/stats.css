@@ -1,0 +1,339 @@
+/* ============================================
+   STATS SECTION - Glowing Cards with Modern Effects
+   ============================================ */
+
+.stats-section {
+    padding: 5rem 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated background particles */
+.stats-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    animation: float 20s ease-in-out infinite;
+}
+
+.stats-section::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    animation: float 15s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, 20px); }
+}
+
+.container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* Section Header */
+.section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.section-header h2 {
+    font-family: 'Kaushan Script', cursive;
+    font-size: 2.5rem;
+    font-weight: 400;
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+}
+
+.section-header p {
+    font-size: 1rem;
+    color: #64748b;
+}
+
+/* Analytics Grid */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+/* Analytics Card - Enhanced Border Effects */
+.analytics-card {
+    background: #ffffff;
+    border-radius: 1.5rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+    
+    /* Border styling */
+    border: 2px solid #e2e8f0;
+}
+
+/* Different border colors for each card */
+.analytics-card:nth-child(1) {
+    border-top: 4px solid #f59e0b;
+}
+
+.analytics-card:nth-child(2) {
+    border-top: 4px solid #ec6408;
+}
+
+.analytics-card:nth-child(3) {
+    border-top: 4px solid #f97316;
+}
+
+.analytics-card:nth-child(4) {
+    border-top: 4px solid #fbbf24;
+}
+
+/* Glowing border effect on hover */
+.analytics-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408, #f97316, #f59e0b);
+    border-radius: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+}
+
+.analytics-card::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: #ffffff;
+    border-radius: calc(1.5rem - 2px);
+    z-index: -1;
+}
+
+.analytics-card:hover::before {
+    opacity: 1;
+}
+
+/* Card shadow on hover */
+.analytics-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 30px -10px rgba(245, 158, 11, 0.2);
+    border-color: #f59e0b;
+}
+
+/* Top accent line animation */
+.analytics-card .card-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    transform: scaleX(0);
+    transition: transform 0.5s ease;
+}
+
+.analytics-card:hover .card-accent {
+    transform: scaleX(1);
+}
+
+/* Icon Wrapper with Glow */
+.analytics-icon-wrapper {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 1.25rem;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(236, 100, 8, 0.05));
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    position: relative;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* Icon glow effect */
+.analytics-icon-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.analytics-card:hover .analytics-icon-wrapper::before {
+    opacity: 0.3;
+}
+
+.analytics-card:hover .analytics-icon-wrapper {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    transform: scale(1.05);
+    border-color: transparent;
+}
+
+.analytics-icon-wrapper i {
+    font-size: 2rem;
+    color: #f59e0b;
+    transition: all 0.3s ease;
+}
+
+.analytics-card:hover .analytics-icon-wrapper i {
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Analytics Number */
+.analytics-number {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+    font-family: 'Manrope', 'Inter', sans-serif;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.analytics-number .suffix {
+    font-size: 1.5rem;
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+/* Analytics Label */
+.analytics-card p {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Different icon colors on hover for variety */
+.analytics-card:nth-child(1):hover .analytics-icon-wrapper {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+}
+
+.analytics-card:nth-child(2):hover .analytics-icon-wrapper {
+    background: linear-gradient(135deg, #ec6408, #f97316);
+}
+
+.analytics-card:nth-child(3):hover .analytics-icon-wrapper {
+    background: linear-gradient(135deg, #f97316, #fbbf24);
+}
+
+.analytics-card:nth-child(4):hover .analytics-icon-wrapper {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .analytics-grid {
+        gap: 1rem;
+    }
+    
+    .analytics-card {
+        padding: 1.5rem 1rem;
+    }
+    
+    .analytics-number {
+        font-size: 2.2rem;
+    }
+    
+    .analytics-number .suffix {
+        font-size: 1.2rem;
+    }
+    
+    .analytics-icon-wrapper {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .analytics-icon-wrapper i {
+        font-size: 1.6rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-section {
+        padding: 3rem 0;
+    }
+    
+    .container {
+        padding: 0 1rem;
+    }
+    
+    .analytics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    
+    .analytics-card {
+        padding: 1.25rem;
+    }
+    
+    .analytics-number {
+        font-size: 1.8rem;
+    }
+    
+    .analytics-number .suffix {
+        font-size: 1rem;
+    }
+    
+    .analytics-icon-wrapper {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 1rem;
+    }
+    
+    .analytics-icon-wrapper i {
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .analytics-card {
+        padding: 1rem;
+    }
+    
+    .analytics-number {
+        font-size: 2rem;
+    }
+    
+    .analytics-card {
+        border-width: 1px;
+    }
+    
+    .analytics-card:nth-child(1),
+    .analytics-card:nth-child(2),
+    .analytics-card:nth-child(3),
+    .analytics-card:nth-child(4) {
+        border-top: 3px solid #f59e0b;
+    }
+}

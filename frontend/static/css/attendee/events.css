@@ -1,11 +1,216 @@
 /* ============================================
-   EVENTS MAIN CSS - Import all partials
+   EVENTS PAGE - Layout Styles
+   Card styles come from shared/card.css
    ============================================ */
 
-@import url('event/events.css');
-@import url('event/event-card.css');
-@import url('event/event-detail.css');
-@import url('event/filters.css');
-@import url('event/reviews.css');
-@import url('event/ticket-selector.css');
-@import url('event/responsive.css');
+.events-page {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    min-height: 100vh;
+    padding: 2rem 0 4rem;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+/* Page Header */
+.events-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.events-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    color: #1e293b;
+}
+
+.events-header p {
+    font-size: 1rem;
+    color: #64748b;
+}
+
+/* Filters Section */
+.filters-section {
+    margin-bottom: 2.5rem;
+}
+
+.filters-wrapper {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.filter-group {
+    position: relative;
+}
+
+.filter-select {
+    padding: 0.7rem 2rem 0.7rem 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    color: #1e293b;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+}
+
+.filter-select:hover,
+.filter-select:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
+}
+
+.search-group {
+    position: relative;
+}
+
+.search-group i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.85rem;
+    z-index: 1;
+}
+
+.search-group input {
+    padding: 0.7rem 1rem 0.7rem 2.5rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 40px;
+    font-size: 0.85rem;
+    width: 250px;
+    outline: none;
+}
+
+.search-group input:focus {
+    border-color: #f59e0b;
+}
+
+/* Events Grid */
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.8rem;
+    margin-top: 2rem;
+}
+
+/* Pagination */
+.pagination {
+    margin-top: 3rem;
+    text-align: center;
+}
+
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.page-btn {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #1e293b;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: white;
+}
+
+.page-btn.active {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: white;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Loading State */
+.loading-state {
+    text-align: center;
+    padding: 4rem;
+    color: #64748b;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem;
+    color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .events-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .events-header h1 {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 1rem;
+    }
+    
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .events-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .filters-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-select,
+    .search-group input {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .events-header h1 {
+        font-size: 1.3rem;
+    }
+}

@@ -1,0 +1,332 @@
+/* ============================================
+   SPONSORS SECTION - Complete CSS
+   Auto-scroll Carousel with Play/Pause Button
+   ============================================ */
+
+.sponsors-section {
+    padding: 5rem 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Animated background decoration */
+.sponsors-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 20s ease-in-out infinite;
+}
+
+.sponsors-section::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 15s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, 20px); }
+}
+
+.container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* Section Header */
+.section-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.section-header h2 {
+    font-family: 'Kaushan Script', cursive;
+    font-size: 2.5rem;
+    font-weight: 400;
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+}
+
+.section-header p {
+    font-size: 1rem;
+    color: #64748b;
+}
+
+/* Carousel Wrapper */
+.sponsors-carousel-wrapper {
+    position: relative;
+    overflow: hidden;
+    margin: 2rem 0;
+}
+
+/* Carousel Container - No user scrolling */
+.sponsors-carousel {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    scroll-behavior: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0.5rem 0;
+    pointer-events: none;
+    scroll-snap-type: none;
+}
+
+.sponsors-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+/* Sponsor Item Cards */
+.sponsor-item {
+    flex: 0 0 auto;
+    width: 160px;
+    background: #ffffff;
+    border-radius: 1rem;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-top: 4px solid #f59e0b;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Glowing border effect on hover */
+.sponsor-item::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408, #f97316, #f59e0b);
+    border-radius: 1rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+}
+
+.sponsor-item::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: #ffffff;
+    border-radius: calc(1rem - 2px);
+    z-index: -1;
+}
+
+.sponsor-item:hover::before {
+    opacity: 1;
+}
+
+/* Different top border colors for variety */
+.sponsor-item:nth-child(1) { border-top-color: #f59e0b; }
+.sponsor-item:nth-child(2) { border-top-color: #ec6408; }
+.sponsor-item:nth-child(3) { border-top-color: #f97316; }
+.sponsor-item:nth-child(4) { border-top-color: #fbbf24; }
+.sponsor-item:nth-child(5) { border-top-color: #f59e0b; }
+.sponsor-item:nth-child(6) { border-top-color: #ec6408; }
+.sponsor-item:nth-child(7) { border-top-color: #f97316; }
+.sponsor-item:nth-child(8) { border-top-color: #fbbf24; }
+.sponsor-item:nth-child(9) { border-top-color: #f59e0b; }
+.sponsor-item:nth-child(10) { border-top-color: #ec6408; }
+.sponsor-item:nth-child(11) { border-top-color: #f97316; }
+.sponsor-item:nth-child(12) { border-top-color: #fbbf24; }
+.sponsor-item:nth-child(13) { border-top-color: #f59e0b; }
+.sponsor-item:nth-child(14) { border-top-color: #ec6408; }
+.sponsor-item:nth-child(15) { border-top-color: #f97316; }
+
+/* Sponsor Logo Images */
+.sponsor-logo {
+    width: 100%;
+    height: 60px;
+    object-fit: contain;
+    filter: none;
+    opacity: 1;
+    transition: transform 0.3s ease;
+}
+
+/* For screenshot images - make them fit better */
+.sponsor-item img[alt="Partner"] {
+    object-fit: cover;
+    border-radius: 0.5rem;
+}
+
+.sponsor-item:hover .sponsor-logo {
+    transform: scale(1.02);
+}
+
+/* Play/Pause Button Control */
+.sponsor-control {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.play-pause-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #1e293b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Glowing effect for button */
+.play-pause-btn::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408, #f97316, #f59e0b);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.play-pause-btn::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: #ffffff;
+    border-radius: 50%;
+    z-index: -1;
+}
+
+.play-pause-btn:hover::before {
+    opacity: 1;
+}
+
+.play-pause-btn:hover {
+    border-color: transparent;
+    color: white;
+    transform: scale(1.05);
+}
+
+.play-pause-btn i {
+    font-size: 1.1rem;
+    transition: transform 0.2s ease;
+}
+
+.play-pause-btn:hover i {
+    transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .sponsor-item {
+        width: 140px;
+        padding: 0.75rem;
+    }
+    
+    .sponsor-logo {
+        height: 50px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sponsors-section {
+        padding: 3rem 0;
+    }
+    
+    .container {
+        padding: 0 1rem;
+    }
+    
+    .sponsor-item {
+        width: 120px;
+        padding: 0.75rem;
+    }
+    
+    .sponsor-logo {
+        height: 45px;
+    }
+    
+    .section-header h2 {
+        font-size: 2rem;
+    }
+    
+    .play-pause-btn {
+        width: 42px;
+        height: 42px;
+    }
+    
+    .play-pause-btn i {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .sponsor-item {
+        width: 100px;
+        padding: 0.5rem;
+    }
+    
+    .sponsor-logo {
+        height: 40px;
+    }
+    
+    .section-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .section-header p {
+        font-size: 0.85rem;
+    }
+    
+    .play-pause-btn {
+        width: 38px;
+        height: 38px;
+    }
+    
+    .play-pause-btn i {
+        font-size: 0.8rem;
+    }
+}
+
+/* Animation for subtle pulse on the button when playing */
+@keyframes subtlePulse {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    50% {
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
+    }
+}
+
+.play-pause-btn {
+    animation: subtlePulse 2s ease-in-out infinite;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .sponsors-section::before,
+    .sponsors-section::after,
+    .sponsor-item,
+    .sponsor-logo,
+    .play-pause-btn {
+        animation: none;
+        transition: none;
+    }
+}

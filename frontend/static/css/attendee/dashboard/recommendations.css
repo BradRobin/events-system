@@ -1,96 +1,218 @@
 /* ============================================
-   RECOMMENDATIONS CSS - EventHub Style
+   RECOMMENDATIONS CSS - Dashboard Recommendations
    ============================================ */
 
 .recommendations-list {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
+    gap: 1rem;
 }
 
-.recommendation-card {
+.recommendation-item {
     display: flex;
-    gap: var(--spacing-md);
-    padding: var(--spacing-md);
-    border-radius: var(--radius-lg);
-    background: var(--np-bg);
-    transition: all var(--transition-fast);
+    gap: 1rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 0.75rem;
     cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid #e2e8f0;
 }
 
-.recommendation-card:hover {
+.recommendation-item:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
     transform: translateX(5px);
-    background: linear-gradient(135deg, var(--np-bg), white);
-    box-shadow: var(--shadow-sm);
 }
 
 .recommendation-image {
-    width: 80px;
-    height: 80px;
-    border-radius: var(--radius-md);
+    width: 70px;
+    height: 70px;
+    border-radius: 0.5rem;
     background-size: cover;
     background-position: center;
     flex-shrink: 0;
+    transition: transform 0.3s ease;
 }
 
-.recommendation-content {
+.recommendation-item:hover .recommendation-image {
+    transform: scale(1.05);
+}
+
+.recommendation-info {
     flex: 1;
 }
 
-.recommendation-content h4 {
-    font-size: 1rem;
+.recommendation-info h4 {
+    font-size: 0.9rem;
     font-weight: 700;
-    margin-bottom: var(--spacing-xs);
-    color: var(--np-dark);
+    margin-bottom: 0.25rem;
+    color: #1e293b;
 }
 
 .recommendation-meta {
     display: flex;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
-    font-size: 0.7rem;
-    color: var(--np-gray);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
 }
 
 .recommendation-meta span {
+    font-size: 0.7rem;
+    color: #64748b;
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
+    gap: 0.25rem;
+}
+
+.recommendation-meta i {
+    font-size: 0.65rem;
+    color: #f59e0b;
 }
 
 .recommendation-price {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    color: var(--np-gold);
-    margin-bottom: var(--spacing-xs);
+    color: #f59e0b;
+    margin-top: 0.25rem;
 }
 
-.recommendation-reason {
-    font-size: 0.7rem;
-    color: var(--np-gray);
+.recommendation-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: #d1fae5;
+    color: #10b981;
+    margin-top: 0.25rem;
+}
+
+.recommendation-badge.trending {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.recommendation-badge.new {
+    background: #dbeafe;
+    color: #3b82f6;
+}
+
+/* Recommendation with Rating */
+.recommendation-rating {
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
+    gap: 0.25rem;
+    margin-top: 0.25rem;
 }
 
-.recommendation-reason i {
-    color: var(--np-gold);
-    font-size: 0.6rem;
+.recommendation-rating i {
+    font-size: 0.7rem;
+    color: #fbbf24;
 }
 
-@media (max-width: 480px) {
-    .recommendation-card {
-        flex-direction: column;
-        text-align: center;
+.recommendation-rating span {
+    font-size: 0.65rem;
+    color: #64748b;
+    margin-left: 0.25rem;
+}
+
+/* Loading Recommendations */
+.recommendation-skeleton {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 0.75rem;
+}
+
+.skeleton-img {
+    width: 70px;
+    height: 70px;
+    background: #e2e8f0;
+    border-radius: 0.5rem;
+    animation: pulse 1.5s infinite;
+}
+
+.skeleton-text {
+    flex: 1;
+}
+
+.skeleton-title {
+    width: 70%;
+    height: 14px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    animation: pulse 1.5s infinite;
+}
+
+.skeleton-meta {
+    width: 50%;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    animation: pulse 1.5s infinite;
+}
+
+.skeleton-price {
+    width: 30%;
+    height: 12px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* No Recommendations */
+.no-recommendations {
+    text-align: center;
+    padding: 2rem;
+}
+
+.no-recommendations i {
+    font-size: 2rem;
+    color: #cbd5e1;
+    margin-bottom: 0.5rem;
+}
+
+.no-recommendations p {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .recommendation-item {
+        padding: 0.5rem;
     }
     
     .recommendation-image {
-        width: 100%;
-        height: 120px;
-        margin: 0 auto;
+        width: 60px;
+        height: 60px;
     }
     
+    .recommendation-info h4 {
+        font-size: 0.85rem;
+    }
+    
+    .recommendation-meta span {
+        font-size: 0.65rem;
+    }
+    
+    .recommendation-price {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
     .recommendation-meta {
-        justify-content: center;
+        flex-direction: column;
+        gap: 0.25rem;
     }
 }

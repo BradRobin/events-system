@@ -10,6 +10,7 @@
                 <i class="fas fa-chevron-left"></i>
             </button>
             <div class="categories-carousel" id="categoryCarousel">
+                <!-- Categories will be loaded dynamically -->
                 <div class="loading-state">Loading categories...</div>
             </div>
             <button class="carousel-nav next" id="catNextBtn">
@@ -18,3 +19,143 @@
         </div>
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadCategories();
+    setupCarousel();
+});
+
+async function loadCategories() {
+    const carousel = document.getElementById('categoryCarousel');
+    
+    try {
+        // API endpoint to get categories with event counts
+        const response = await fetch('/api/attendee/categories/');
+        const data = await response.json();
+        
+        const categories = data.categories || [];
+        
+        if (categories.length === 0) {
+            carousel.innerHTML = '<div class="empty-state">No categories available</div>';
+            return;
+        }
+        
+        carousel.innerHTML = categories.map(cat => `
+            <div class="category-card" data-category-id="${cat.id}" data-category-name="${cat.name}">
+                <div class="category-icon-wrapper">
+                    <i class="fas ${getCategoryIcon(cat.name)}"></i>
+                </div>
+                <div class="category-card-content">
+                    <h3>${escapeHtml(cat.name)}</h3>
+                    <p>${escapeHtml(cat.description || getCategoryDescription(cat.name))}</p>
+                    <div class="category-stats">
+                        <span><i class="fas fa-calendar-week"></i> ${cat.event_count || 0} events</span>
+                        <span><i class="fas fa-users"></i> ${formatNumber(cat.total_attendees || 0)} attendees</span>
+                    </div>
+                    <div class="category-featured">
+                        <span>${getFeaturedText(cat.name)}</span>
+                    </div>
+                    <span class="category-count">Explore ${cat.name} →</span>
+                </div>
+            </div>
+        `).join('');
+        
+        // Add click handlers
+        document.querySelectorAll('.category-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const categoryName = card.dataset.categoryName;
+                window.location.href = `/events/?category=${encodeURIComponent(categoryName)}`;
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        carousel.innerHTML = '<div class="error-state">Failed to load categories. Please refresh.</div>';
+    }
+}
+
+function setupCarousel() {
+    const carousel = document.getElementById('categoryCarousel');
+    const prevBtn = document.getElementById('catPrevBtn');
+    const nextBtn = document.getElementById('catNextBtn');
+    
+    if (prevBtn && nextBtn && carousel) {
+        const getScrollAmount = () => {
+            const card = carousel.querySelector('.category-card');
+            if (card) {
+                const cardWidth = card.offsetWidth;
+                const gap = 24;
+                return cardWidth + gap;
+            }
+            return 320;
+        };
+        
+        prevBtn.addEventListener('click', () => {
+            const amount = getScrollAmount();
+            carousel.scrollBy({ left: -amount, behavior: 'smooth' });
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            const amount = getScrollAmount();
+            carousel.scrollBy({ left: amount, behavior: 'smooth' });
+        });
+    }
+}
+
+function getCategoryIcon(categoryName) {
+    const icons = {
+        'Music': 'fa-music',
+        'Technology': 'fa-microchip',
+        'Business': 'fa-briefcase',
+        'Sports': 'fa-futbol',
+        'Arts': 'fa-palette',
+        'Food': 'fa-utensils',
+        'Education': 'fa-chalkboard-user',
+        'Health': 'fa-heartbeat',
+        'Entertainment': 'fa-film'
+    };
+    return icons[categoryName] || 'fa-tag';
+}
+
+function getCategoryDescription(categoryName) {
+    const descriptions = {
+        'Music': 'Concerts, festivals, and live performances',
+        'Technology': 'Conferences, workshops, and meetups',
+        'Business': 'Networking, seminars, and forums',
+        'Sports': 'Tournaments, marathons, and training',
+        'Arts': 'Exhibitions, galleries, and performances',
+        'Food': 'Festivals, tastings, and workshops',
+        'Education': 'Workshops, courses, and training',
+        'Health': 'Wellness, fitness, and meditation',
+        'Entertainment': 'Movies, comedy, and shows'
+    };
+    return descriptions[categoryName] || 'Discover amazing events';
+}
+
+function getFeaturedText(categoryName) {
+    const featured = {
+        'Music': 'Featured: Summer Music Festival',
+        'Technology': 'Featured: Tech Innovation Summit',
+        'Business': 'Featured: Entrepreneurship Forum',
+        'Sports': 'Featured: Marathon Kenya',
+        'Arts': 'Featured: Art Exhibition',
+        'Food': 'Featured: Food & Wine Expo'
+    };
+    return featured[categoryName] || `Popular ${categoryName} Events`;
+}
+
+function formatNumber(num) {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>

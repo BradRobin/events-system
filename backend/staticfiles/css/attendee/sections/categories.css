@@ -1,0 +1,400 @@
+/* ============================================
+   CATEGORIES SECTION - Cards with Borders (Styled like Newsletter)
+   ============================================ */
+
+.categories-section {
+    padding: 5rem 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated background decoration */
+.categories-section::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    animation: float 20s ease-in-out infinite;
+}
+
+.categories-section::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%);
+    border-radius: 50%;
+    z-index: 0;
+    animation: float 15s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, 20px); }
+}
+
+.container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* Section Header */
+.section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.section-header h2 {
+    font-family: 'Kaushan Script', cursive;
+    font-size: 2.5rem;
+    font-weight: 400;
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+}
+
+.section-header p {
+    font-size: 1rem;
+    color: #64748b;
+}
+
+/* Carousel Wrapper */
+.categories-carousel-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Carousel Container */
+.categories-carousel {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 0.5rem 0;
+    scroll-snap-type: x mandatory;
+}
+
+.categories-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+/* Category Card - Styled like Newsletter Card */
+.category-card {
+    flex: 0 0 calc(33.333% - 1rem);
+    min-width: calc(33.333% - 1rem);
+    background: #ffffff;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    scroll-snap-align: start;
+    box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1);
+    
+    /* Border Styling - Same as Newsletter */
+    border: 2px solid #e2e8f0;
+    position: relative;
+}
+
+/* Top accent border */
+.category-card {
+    border-top: 4px solid #f59e0b;
+}
+
+/* Glowing border effect on hover */
+.category-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408, #f97316, #f59e0b);
+    border-radius: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+}
+
+.category-card::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: #ffffff;
+    border-radius: calc(1.5rem - 2px);
+    z-index: -1;
+}
+
+.category-card:hover {
+    transform: translateY(-5px);
+    border-color: #f59e0b;
+    box-shadow: 0 25px 40px -12px rgba(245, 158, 11, 0.2);
+}
+
+.category-card:hover::before {
+    opacity: 1;
+}
+
+/* Icon Wrapper */
+.category-icon-wrapper {
+    padding-top: 2rem;
+    text-align: center;
+}
+
+.category-icon-wrapper i {
+    font-size: 2.5rem;
+    color: #f59e0b;
+    transition: all 0.3s ease;
+}
+
+.category-card:hover .category-icon-wrapper i {
+    transform: scale(1.1);
+}
+
+/* Card Content */
+.category-card-content {
+    padding: 1rem 1.5rem 1.5rem;
+    text-align: center;
+}
+
+.category-card-content h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1e293b;
+    font-family: 'Manrope', 'Inter', sans-serif;
+}
+
+.category-card-content p {
+    font-size: 0.8rem;
+    color: #475569;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+/* Category Stats */
+.category-stats {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.category-stats span {
+    font-size: 0.7rem;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.category-stats i {
+    color: #f59e0b;
+    font-size: 0.65rem;
+}
+
+/* Featured Event */
+.category-featured {
+    background: rgba(245, 158, 11, 0.08);
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.category-card:hover .category-featured {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.25);
+}
+
+.category-featured span {
+    font-size: 0.7rem;
+    color: #f59e0b;
+    font-weight: 500;
+}
+
+/* Category Count Link */
+.category-count {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: #f59e0b;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.category-card:hover .category-count {
+    transform: translateX(5px);
+    background: rgba(245, 158, 11, 0.15);
+}
+
+/* Carousel Navigation - Rounded Arrows */
+.carousel-nav {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    color: #1e293b;
+    position: relative;
+    z-index: 10;
+}
+
+/* Glowing effect for navigation arrows */
+.carousel-nav::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408, #f97316, #f59e0b);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.carousel-nav::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: #ffffff;
+    border-radius: 50%;
+    z-index: -1;
+}
+
+.carousel-nav:hover {
+    border-color: transparent;
+    color: white;
+    transform: scale(1.05);
+}
+
+.carousel-nav:hover::before {
+    opacity: 1;
+}
+
+.carousel-nav:hover i {
+    color: white;
+    position: relative;
+    z-index: 1;
+}
+
+.carousel-nav i {
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    color: #1e293b;
+}
+
+/* Responsive Breakpoints */
+@media (min-width: 1280px) {
+    .category-card {
+        flex: 0 0 calc(33.333% - 1rem);
+        min-width: calc(33.333% - 1rem);
+    }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+    .category-card {
+        flex: 0 0 calc(33.333% - 1rem);
+        min-width: calc(33.333% - 1rem);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    .category-card {
+        flex: 0 0 calc(50% - 0.75rem);
+        min-width: calc(50% - 0.75rem);
+    }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+    .category-card {
+        flex: 0 0 calc(70% - 0.5rem);
+        min-width: calc(70% - 0.5rem);
+    }
+}
+
+@media (min-width: 480px) and (max-width: 639px) {
+    .category-card {
+        flex: 0 0 calc(85% - 0.5rem);
+        min-width: calc(85% - 0.5rem);
+    }
+}
+
+@media (max-width: 479px) {
+    .category-card {
+        flex: 0 0 calc(100% - 0rem);
+        min-width: calc(100% - 0rem);
+    }
+}
+
+@media (max-width: 768px) {
+    .carousel-nav {
+        display: none;
+    }
+    
+    .categories-carousel {
+        gap: 1rem;
+    }
+    
+    .category-icon-wrapper i {
+        font-size: 2rem;
+    }
+    
+    .category-card-content {
+        padding: 0.75rem 1rem 1.25rem;
+    }
+    
+    .category-card-content h3 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .category-icon-wrapper {
+        padding-top: 1.25rem;
+    }
+    
+    .category-icon-wrapper i {
+        font-size: 1.8rem;
+    }
+    
+    .category-card-content h3 {
+        font-size: 1rem;
+    }
+    
+    .category-card-content p {
+        font-size: 0.7rem;
+    }
+    
+    .category-stats span {
+        font-size: 0.6rem;
+    }
+    
+    .category-featured span {
+        font-size: 0.6rem;
+    }
+    
+    .category-count {
+        font-size: 0.65rem;
+    }
+}

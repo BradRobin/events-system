@@ -1,15 +1,31 @@
 {% load static %}
 <section class="hero-section">
+    <!-- Background Image -->
+    <div class="hero-bg-image">
+        <img src="{% static 'images/hero/hero.jpg' %}" alt="EventHub Hero Background" class="hero-background-img">
+        <div class="hero-gradient-overlay"></div>
+        <div class="hero-overlay"></div>
+    </div>
+    
     <div class="hero-container">
         <div class="hero-content">
-            <h1>Discover Amazing <span class="highlight">Events</span> Near You</h1>
-            <p>Find and book tickets for the best concerts, conferences, workshops, and entertainment events in Kenya.</p>
-            <div class="hero-search">
-                <form action="/attendee/events/search/" method="GET">
-                    <i class="fas fa-search"></i>
-                    <input type="text" name="q" placeholder="Search events, categories, or venues...">
-                    <button type="submit">Search</button>
-                </form>
+            <h1>
+                Discover Amazing 
+                <span class="highlight">
+                    <span class="typed-text" id="typedText"></span>
+                    <span class="cursor"></span>
+                </span>
+            </h1>
+            <p class="hero-description">Find and book tickets for the best concerts, conferences, workshops, and entertainment events in Kenya.</p>
+            <div class="hero-buttons">
+                <a href="/events/" class="hero-btn hero-btn-primary">
+                    <i class="fas fa-calendar-alt"></i>
+                    Browse Events
+                </a>
+                <a href="/register/" class="hero-btn hero-btn-secondary">
+                    <i class="fas fa-user-plus"></i>
+                    Get Started
+                </a>
             </div>
             <div class="hero-stats">
                 <div class="stat">
@@ -26,8 +42,55 @@
                 </div>
             </div>
         </div>
-        <div class="hero-image">
-            <img src="{% static 'images/hero-illustration.svg' %}" alt="Events illustration">
-        </div>
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Typewriter Effect
+    const words = ['Events', 'Experiences', 'Moments', 'Adventures'];
+    let wordIndex = 0;
+    let charIndex = 0;
+    let isDeleting = false;
+    const typedTextElement = document.getElementById('typedText');
+    const cursorElement = document.querySelector('.cursor');
+    
+    if (typedTextElement) {
+        function typeEffect() {
+            const currentWord = words[wordIndex];
+            
+            if (isDeleting) {
+                typedTextElement.textContent = currentWord.substring(0, charIndex - 1);
+                charIndex--;
+            } else {
+                typedTextElement.textContent = currentWord.substring(0, charIndex + 1);
+                charIndex++;
+            }
+            
+            if (!isDeleting && charIndex === currentWord.length) {
+                isDeleting = true;
+                setTimeout(typeEffect, 2000);
+                return;
+            }
+            
+            if (isDeleting && charIndex === 0) {
+                isDeleting = false;
+                wordIndex = (wordIndex + 1) % words.length;
+                setTimeout(typeEffect, 500);
+                return;
+            }
+            
+            const speed = isDeleting ? 50 : 100;
+            setTimeout(typeEffect, speed);
+        }
+        
+        typeEffect();
+    }
+    
+    if (cursorElement) {
+        setInterval(() => {
+            cursorElement.style.opacity = cursorElement.style.opacity === '0' ? '1' : '0';
+        }, 500);
+    }
+});
+</script>

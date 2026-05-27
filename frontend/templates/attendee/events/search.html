@@ -1,75 +1,101 @@
 {% extends 'attendee/base.html' %}
 {% load static %}
 
-{% block title %}Search Results - EventHub{% endblock %}
+{% block title %}Search Events - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
-<link rel="stylesheet" href="{% static 'css/attendee/events.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/event/events.css' %}">
 {% endblock %}
 
-{% block attendee_content %}
-<div class="search-results-container">
-    <div class="page-header">
-        <div>
-            <h1><i class="fas fa-search"></i> Search Results</h1>
-            <p class="text-muted" id="searchQueryInfo"></p>
+{% block content %}
+<div class="events-page">
+    <div class="container">
+        <div class="events-header">
+            <h1>Search Results</h1>
+            <p>Showing results for: <strong id="searchTerm"></strong></p>
         </div>
-        <a href="/attendee/events/" class="btn-outline">
-            <i class="fas fa-arrow-left"></i> Browse All Events
-        </a>
-    </div>
-
-    <!-- Filters -->
-    <div class="filters-panel">
-        <div class="filters-row">
-            <div class="filter-group">
-                <label>Category</label>
-                <select id="categoryFilter">
-                    <option value="">All Categories</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>City</label>
-                <select id="cityFilter">
-                    <option value="">All Cities</option>
-                    <option value="Nairobi">Nairobi</option>
-                    <option value="Mombasa">Mombasa</option>
-                    <option value="Kisumu">Kisumu</option>
-                    <option value="Nakuru">Nakuru</option>
-                    <option value="Eldoret">Eldoret</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Sort By</label>
-                <select id="sortBy">
-                    <option value="relevance">Relevance</option>
-                    <option value="date">Date (Newest)</option>
-                    <option value="price_low">Price (Low to High)</option>
-                    <option value="price_high">Price (High to Low)</option>
-                </select>
-            </div>
+        
+        <div class="events-grid" id="searchResults">
+            <div class="loading-state">Searching for events...</div>
         </div>
     </div>
-
-    <!-- Results Info -->
-    <div class="results-info">
-        <span id="resultsCount">Searching...</span>
-    </div>
-
-    <!-- Events Grid -->
-    <div class="events-grid" id="searchResultsGrid">
-        <div class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>Searching for events...</p>
-        </div>
-    </div>
-
-    <!-- Pagination -->
-    <div id="pagination" class="pagination"></div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/attendee/events/search.js' %}"></script>
+<script>
+// Get search query from URL
+const urlParams = new URLSearchParams(window.location.search);
+const query = urlParams.get('q');
+
+document.getElementById('searchTerm').textContent = query || 'All events';
+
+// All events data
+const allEvents = [
+    { id: 1, title: "Summer Music Festival 2026", category: "music", date: "2026-06-15", location: "Nairobi, Kenya", price: 2500, image: "https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=600", description: "Experience the biggest music festival of the year..." },
+    { id: 2, title: "Tech Innovation Summit 2026", category: "technology", date: "2026-07-20", location: "Mombasa, Kenya", price: 5000, image: "https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=600", description: "Join industry leaders for inspiring talks..." },
+    { id: 3, title: "Marathon Kenya 2026", category: "sports", date: "2026-08-10", location: "Eldoret, Kenya", price: 1500, image: "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=600", description: "Run through scenic landscapes..." },
+    { id: 4, title: "Food & Wine Expo 2026", category: "food", date: "2026-09-05", location: "Kisumu, Kenya", price: 3000, image: "https://images.pexels.com/photos/1884574/pexels-photo-1884574.jpeg?auto=compress&cs=tinysrgb&w=600", description: "Sample delicious cuisines from top chefs..." }
+];
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function searchEvents() {
+    if (!query) {
+        displayEvents(allEvents);
+        return;
+    }
+    
+    const filtered = allEvents.filter(event => 
+        event.title.toLowerCase().includes(query.toLowerCase()) ||
+        event.category.toLowerCase().includes(query.toLowerCase()) ||
+        event.location.toLowerCase().includes(query.toLowerCase()) ||
+        event.description.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    displayEvents(filtered);
+}
+
+function displayEvents(events) {
+    const grid = document.getElementById('searchResults');
+    
+    if (events.length === 0) {
+        grid.innerHTML = '<div class="empty-state">No events found matching your search.</div>';
+        return;
+    }
+    
+    grid.innerHTML = events.map(event => `
+        <div class="premium-card" onclick="viewEvent(${event.id})">
+            <div class="card-image-container">
+                <img src="${event.image}" alt="${event.title}" class="card-bg-image">
+                <div class="card-gradient-overlay"></div>
+            </div>
+            <div class="card-content">
+                <span class="card-category">${event.category}</span>
+                <h3 class="card-title">${event.title}</h3>
+                <div class="card-meta">
+                    <span><i class="fas fa-calendar"></i> ${formatDate(event.date)}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${event.location}</span>
+                </div>
+                <div class="card-price">KES ${event.price.toLocaleString()}</div>
+            </div>
+            <div class="card-hover-info">
+                <h4>${event.title}</h4>
+                <p>${event.description.substring(0, 80)}...</p>
+                <button class="btn-outline-light" onclick="event.stopPropagation(); bookEvent(${event.id})">View Details</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function viewEvent(eventId) {
+    window.location.href = `/events/detail/?id=${eventId}`;
+}
+
+function bookEvent(eventId) {
+    window.location.href = `/events/detail/?id=${eventId}`;
+}
+
+searchEvents();
+</script>
 {% endblock %}

@@ -4,89 +4,281 @@
 {% block title %}Success Stories - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
 <link rel="stylesheet" href="{% static 'css/attendee/pages/success-stories.css' %}">
 {% endblock %}
 
-{% block attendee_content %}
-<div class="page-container">
-    <div class="page-header">
-        <h1>Success <span class="highlight">Stories</span></h1>
-        <p>Read inspiring stories from our community</p>
-    </div>
-
-    <div class="stories-grid">
-        <div class="story-card">
-            <div class="story-image" style="background-image: url('{% static 'images/stories/music-festival.jpg' %}')">
-                <span class="story-category">Music</span>
+{% block content %}
+<div class="success-stories-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>Success Stories</h1>
+            <p>Real stories from our amazing community</p>
+        </div>
+        
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-number">10,000+</div>
+                <div class="stat-label">Happy Attendees</div>
             </div>
-            <div class="story-content">
-                <h3>From Small Venue to Sold-Out Arena</h3>
-                <div class="story-meta">
-                    <span><i class="fas fa-user"></i> John Mwangi, Organizer</span>
-                    <span><i class="fas fa-calendar"></i> March 2024</span>
-                </div>
-                <p class="story-excerpt">How one organizer used EventHub to grow their audience from 200 to 5,000 attendees in just 6 months.</p>
-                <a href="#" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+            <div class="stat-item">
+                <div class="stat-number">500+</div>
+                <div class="stat-label">Events Hosted</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">98%</div>
+                <div class="stat-label">Satisfaction Rate</div>
             </div>
         </div>
-
-        <div class="story-card">
-            <div class="story-image" style="background-image: url('{% static 'images/stories/tech-summit.jpg' %}')">
-                <span class="story-category">Tech</span>
-            </div>
-            <div class="story-content">
-                <h3>Building Africa's Largest Tech Community</h3>
-                <div class="story-meta">
-                    <span><i class="fas fa-user"></i> Sarah Kimani, Organizer</span>
-                    <span><i class="fas fa-calendar"></i> February 2024</span>
+        
+        <!-- Featured Story -->
+        <div class="featured-story">
+            <div class="featured-story-content">
+                <div class="featured-badge">
+                    <i class="fas fa-star"></i> Featured Story
                 </div>
-                <p class="story-excerpt">The story of how the Africa Tech Summit grew from a meetup to a continent-wide conference.</p>
-                <a href="#" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+                <i class="fas fa-quote-left quote-icon"></i>
+                <p class="featured-quote">
+                    EventHub transformed how I discover events in Kenya. The platform is intuitive, secure, and the customer support is outstanding. I've attended over 50 events and counting!
+                </p>
+                <div class="featured-author">
+                    <div class="author-avatar">
+                        <img src="{% static 'images/avatars/john-doe.jpg' %}" alt="John Mwangi" onerror="this.src='https://ui-avatars.com/api/?name=John+Mwangi&background=f59e0b&color=fff'">
+                    </div>
+                    <div class="author-info">
+                        <h4>John Mwangi</h4>
+                        <p>Tech Enthusiast • 50+ Events Attended</p>
+                        <div class="rating">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="story-card">
-            <div class="story-image" style="background-image: url('{% static 'images/stories/food-festival.jpg' %}')">
-                <span class="story-category">Food</span>
-            </div>
-            <div class="story-content">
-                <h3>Celebrating Kenyan Cuisine Worldwide</h3>
-                <div class="story-meta">
-                    <span><i class="fas fa-user"></i> Michael Otieno, Organizer</span>
-                    <span><i class="fas fa-calendar"></i> January 2024</span>
+        
+        <!-- Testimonials Grid -->
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <div class="rating">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
                 </div>
-                <p class="story-excerpt">How the Nairobi Food Festival became an international sensation through EventHub.</p>
-                <a href="#" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
+                <p class="testimonial-text">
+                    EventHub made it so easy to discover and book tickets for amazing events in Nairobi. The QR code check-in was seamless and hassle-free!
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="{% static 'images/avatars/sarah-wanjiku.jpg' %}" alt="Sarah Wanjiku" onerror="this.src='https://ui-avatars.com/api/?name=Sarah+Wanjiku&background=f59e0b&color=fff'">
+                    </div>
+                    <div class="author-info">
+                        <h4>Sarah Wanjiku</h4>
+                        <p>Event Enthusiast</p>
+                        <p class="event-attended">Attended: Music Festival 2024</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <div class="rating">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                <p class="testimonial-text">
+                    I've attended over 20 events through EventHub. The platform is reliable, and customer support is exceptional. Highly recommend!
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="{% static 'images/avatars/michael-otieno.jpg' %}" alt="Michael Otieno" onerror="this.src='https://ui-avatars.com/api/?name=Michael+Otieno&background=f59e0b&color=fff'">
+                    </div>
+                    <div class="author-info">
+                        <h4>Michael Otieno</h4>
+                        <p>Regular Attendee</p>
+                        <p class="event-attended">Attended: 20+ Events</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <div class="rating">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                <p class="testimonial-text">
+                    Best event discovery platform in Kenya! The variety of events and ease of booking is unmatched. I've found so many hidden gems through EventHub.
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="{% static 'images/avatars/jane-kamau.jpg' %}" alt="Jane Kamau" onerror="this.src='https://ui-avatars.com/api/?name=Jane+Kamau&background=f59e0b&color=fff'">
+                    </div>
+                    <div class="author-info">
+                        <h4>Jane Kamau</h4>
+                        <p>Adventure Seeker</p>
+                        <p class="event-attended">Attended: Cultural Fest 2024</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <div class="rating">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                <p class="testimonial-text">
+                    As an event organizer, EventHub has been a game-changer. The platform helped us sell out our event in record time. The support team is amazing!
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="{% static 'images/avatars/peter-ndungu.jpg' %}" alt="Peter Ndungu" onerror="this.src='https://ui-avatars.com/api/?name=Peter+Ndungu&background=f59e0b&color=fff'">
+                    </div>
+                    <div class="author-info">
+                        <h4>Peter Ndungu</h4>
+                        <p>Event Organizer</p>
+                        <p class="event-attended">Organized: Tech Summit 2024</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <div class="rating">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                <p class="testimonial-text">
+                    The mobile app is fantastic! I can browse events, book tickets, and even check-in using my phone. No more carrying paper tickets!
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="{% static 'images/avatars/lucy-mueni.jpg' %}" alt="Lucy Mueni" onerror="this.src='https://ui-avatars.com/api/?name=Lucy+Mueni&background=f59e0b&color=fff'">
+                    </div>
+                    <div class="author-info">
+                        <h4>Lucy Mueni</h4>
+                        <p>Mobile User</p>
+                        <p class="event-attended">Attended: Food Festival 2024</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonial-card">
+                <div class="testimonial-header">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <div class="rating">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+                <p class="testimonial-text">
+                    The customer service team went above and beyond to help me with a booking issue. Truly exceptional service from a local company!
+                </p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        <img src="{% static 'images/avatars/david-okello.jpg' %}" alt="David Okello" onerror="this.src='https://ui-avatars.com/api/?name=David+Okello&background=f59e0b&color=fff'">
+                    </div>
+                    <div class="author-info">
+                        <h4>David Okello</h4>
+                        <p>First-time User</p>
+                        <p class="event-attended">Attended: Business Forum</p>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="story-card">
-            <div class="story-image" style="background-image: url('{% static 'images/stories/art-exhibition.jpg' %}')">
-                <span class="story-category">Art</span>
-            </div>
-            <div class="story-content">
-                <h3>Empowering Local Artists</h3>
-                <div class="story-meta">
-                    <span><i class="fas fa-user"></i> Grace Wanjiku, Organizer</span>
-                    <span><i class="fas fa-calendar"></i> December 2023</span>
+        
+        <!-- Submit Your Story CTA -->
+        <div class="submit-story-section">
+            <div class="submit-story-card">
+                <h3>Have a success story to share?</h3>
+                <p>We'd love to hear about your experience with EventHub</p>
+                <div class="story-buttons">
+                    <button class="btn btn-primary" id="shareStoryBtn">
+                        <i class="fas fa-pen"></i>
+                        Share Your Story
+                    </button>
+                    <button class="btn btn-outline" id="leaveReviewBtn">
+                        <i class="fas fa-star"></i>
+                        Leave a Review
+                    </button>
                 </div>
-                <p class="story-excerpt">The journey of an art collective using EventHub to showcase Kenyan talent.</p>
-                <a href="#" class="read-more">Read More <i class="fas fa-arrow-right"></i></a>
             </div>
-        </div>
-    </div>
-
-    <div class="load-more">
-        <button class="btn-outline">Load More Stories</button>
-    </div>
-
-    <div class="share-story">
-        <div class="share-story-content">
-            <h3>Have a Success Story to Share?</h3>
-            <p>We'd love to hear how EventHub has helped you!</p>
-            <a href="/attendee/pages/contact/" class="btn-primary">Share Your Story</a>
         </div>
     </div>
 </div>
+
+<!-- Share Story Modal -->
+<div class="story-modal" id="storyModal">
+    <div class="modal-content">
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+        <h3>Share Your Success Story</h3>
+        <form id="storyForm">
+            <div class="form-group">
+                <label for="storyName">Your Name *</label>
+                <input type="text" id="storyName" required placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label for="storyEmail">Email Address *</label>
+                <input type="email" id="storyEmail" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="storyEvent">Event You Attended</label>
+                <input type="text" id="storyEvent" placeholder="Which event did you attend?">
+            </div>
+            <div class="form-group">
+                <label for="storyRating">Your Rating *</label>
+                <div class="rating-input">
+                    <i class="far fa-star" data-rating="1"></i>
+                    <i class="far fa-star" data-rating="2"></i>
+                    <i class="far fa-star" data-rating="3"></i>
+                    <i class="far fa-star" data-rating="4"></i>
+                    <i class="far fa-star" data-rating="5"></i>
+                </div>
+                <input type="hidden" id="storyRating" value="0">
+            </div>
+            <div class="form-group">
+                <label for="storyMessage">Your Story *</label>
+                <textarea id="storyMessage" rows="5" required placeholder="Tell us about your experience..."></textarea>
+            </div>
+            <button type="submit" class="btn-submit">Submit Your Story</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/attendee/pages/success-stories.js' %}"></script>
 {% endblock %}

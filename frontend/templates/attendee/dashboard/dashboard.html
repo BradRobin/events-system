@@ -4,11 +4,12 @@
 {% block title %}Dashboard - EventHub{% endblock %}
 
 {% block extra_css %}
+<!-- Dashboard CSS -->
 <link rel="stylesheet" href="{% static 'css/attendee/dashboard/dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'css/attendee/dashboard/stats-cards.css' %}">
 <link rel="stylesheet" href="{% static 'css/attendee/dashboard/activity.css' %}">
-<link rel="stylesheet" href="{% static 'css/attendee/dashboard/recommendations.css' %}">
 <link rel="stylesheet" href="{% static 'css/attendee/dashboard/quick-actions.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/dashboard/recommendations.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -17,7 +18,7 @@
     <div class="welcome-section">
         <div class="welcome-content">
             <h1>Welcome back, <span id="userName">Attendee</span>!</h1>
-            <p class="text-muted">Here's what's happening with your events</p>
+            <p>Here's what's happening with your events</p>
         </div>
         <div class="welcome-date">
             <i class="fas fa-calendar-alt"></i>
@@ -106,7 +107,7 @@
             <div class="card">
                 <div class="card-header">
                     <h3><i class="fas fa-lightbulb"></i> Recommended For You</h3>
-                    <a href="/attendee/events/" class="btn-sm btn-outline">Browse More</a>
+                    <a href="/events/" class="btn-sm btn-outline">Browse More</a>
                 </div>
                 <div class="card-body">
                     <div id="recommendationsList" class="recommendations-list">
@@ -125,7 +126,7 @@
                 </div>
                 <div class="card-body">
                     <div class="quick-actions-grid">
-                        <button class="quick-action-btn" onclick="window.location.href='/attendee/events/'">
+                        <button class="quick-action-btn" onclick="window.location.href='/events/'">
                             <i class="fas fa-calendar"></i>
                             <span>Browse Events</span>
                         </button>
@@ -133,11 +134,11 @@
                             <i class="fas fa-ticket-alt"></i>
                             <span>My Tickets</span>
                         </button>
-                        <button class="quick-action-btn" onclick="window.location.href='/attendee/wishlist/'">
+                        <button class="quick-action-btn" onclick="window.location.href='/wishlist/'">
                             <i class="fas fa-heart"></i>
                             <span>Wishlist</span>
                         </button>
-                        <button class="quick-action-btn" onclick="window.location.href='/attendee/support/'">
+                        <button class="quick-action-btn" onclick="window.location.href='/support/'">
                             <i class="fas fa-headset"></i>
                             <span>Get Support</span>
                         </button>
@@ -148,25 +149,21 @@
             <!-- Stats Overview -->
             <div class="card">
                 <div class="card-header">
-                    <h3><i class="fas fa-chart-line"></i> Your Stats Overview</h3>
+                    <h3><i class="fas fa-chart-line"></i> Your Stats</h3>
                 </div>
                 <div class="card-body">
                     <div class="stats-overview">
                         <div class="overview-item">
-                            <div class="overview-label">Most Active Month</div>
-                            <div class="overview-value" id="mostActiveMonth">-</div>
+                            <div class="overview-label">Member Since</div>
+                            <div class="overview-value" id="memberSince">-</div>
                         </div>
                         <div class="overview-item">
                             <div class="overview-label">Favorite Category</div>
                             <div class="overview-value" id="favoriteCategory">-</div>
                         </div>
                         <div class="overview-item">
-                            <div class="overview-label">Total Events Attended</div>
-                            <div class="overview-value" id="totalAttended">0</div>
-                        </div>
-                        <div class="overview-item">
-                            <div class="overview-label">Member Since</div>
-                            <div class="overview-value" id="memberSince">-</div>
+                            <div class="overview-label">Events Attended</div>
+                            <div class="overview-value" id="eventsAttended">0</div>
                         </div>
                     </div>
                 </div>

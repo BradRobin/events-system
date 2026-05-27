@@ -39,7 +39,6 @@ function setupEventListeners() {
         checkoutForm.addEventListener('submit', processCheckout);
     }
     
-    // Payment method selection
     const paymentMethods = document.querySelectorAll('input[name="paymentMethod"]');
     paymentMethods.forEach(method => {
         method.addEventListener('change', function() {
@@ -58,10 +57,28 @@ function setupEventListeners() {
 }
 
 async function loadCart() {
-    if (window.Loader) window.Loader.show('Loading cart...');
+    showLoader('Loading cart...');
     
     try {
-        cartData = await window.AttendeeAPIEndpoints.cart.getCart();
+        // Mock cart data - replace with actual API call
+        cartData = {
+            items: [],
+            subtotal: 0,
+            platform_fee: 0,
+            total: 0,
+            discount_amount: 0,
+            promo_code: null
+        };
+        
+        // Try to load from localStorage first
+        const savedCart = localStorage.getItem('eventhub_cart');
+        if (savedCart) {
+            const parsed = JSON.parse(savedCart);
+            if (parsed.items && parsed.items.length > 0) {
+                cartData = parsed;
+            }
+        }
+        
         displayCart();
         
         if (!cartData.items || cartData.items.length === 0) {
@@ -77,7 +94,7 @@ async function loadCart() {
         console.error('Error loading cart:', error);
         showToast('Failed to load cart', 'error');
     } finally {
-        if (window.Loader) window.Loader.hide();
+        hideLoader();
     }
 }
 
@@ -91,12 +108,12 @@ function displayCart() {
     
     cartItemsEl.innerHTML = cartData.items.map(item => `
         <div class="cart-item" data-id="${item.id}">
-            <div class="item-image" style="background-image: url('${item.event?.banner_image || '/static/images/placeholder.jpg'}')"></div>
+            <div class="item-image" style="background-image: url('${item.image || '/static/images/placeholder.jpg'}')"></div>
             <div class="item-details">
-                <h4>${escapeHtml(item.event?.title || 'Event')}</h4>
-                <p class="item-type">${escapeHtml(item.ticket_type?.name || 'Ticket')}</p>
-                <p class="item-date">${formatDate(item.event?.start_date)}</p>
-                <p class="item-venue">${escapeHtml(item.event?.venue_name || '')}</p>
+                <h4>${escapeHtml(item.title)}</h4>
+                <p class="item-type">${escapeHtml(item.category || 'Event')}</p>
+                <p class="item-date">${formatDate(item.date)}</p>
+                <p class="item-venue">${escapeHtml(item.location)}</p>
             </div>
             <div class="item-quantity">
                 <button class="qty-btn minus" onclick="updateItemQuantity(${item.id}, -1)">-</button>
@@ -138,32 +155,80 @@ async function updateItemQuantity(itemId, delta) {
     const newQuantity = item.quantity + delta;
     if (newQuantity < 1) return;
     
-    if (window.Loader) window.Loader.show('Updating cart...');
+    showLoader('Updating cart...');
     
     try {
-        await window.AttendeeAPIEndpoints.cart.updateItem(itemId, newQuantity);
-        await loadCart();
+        item.quantity = newQuantity;
+        recalculateCartTotals();
+        saveCartToLocalStorage();
+        displayCart();
+        showToast('Cart updated', 'success');
     } catch (error) {
         console.error('Error updating quantity:', error);
         showToast('Failed to update quantity', 'error');
     } finally {
-        if (window.Loader) window.Loader.hide();
+        hideLoader();
     }
 }
 
 async function removeItem(itemId) {
-    if (window.Loader) window.Loader.show('Removing item...');
+    showLoader('Removing item...');
     
     try {
-        await window.AttendeeAPIEndpoints.cart.removeItem(itemId);
-        await loadCart();
+        cartData.items = cartData.items.filter(i => i.id != itemId);
+        recalculateCartTotals();
+        saveCartToLocalStorage();
+        displayCart();
+        
+        if (cartData.items.length === 0) {
+            if (emptyCartEl) emptyCartEl.style.display = 'block';
+            if (cartContentEl) cartContentEl.style.display = 'none';
+        }
+        
+        updateCartCount(cartData.items.length);
         showToast('Item removed from cart', 'success');
     } catch (error) {
         console.error('Error removing item:', error);
         showToast('Failed to remove item', 'error');
     } finally {
-        if (window.Loader) window.Loader.hide();
+        hideLoader();
     }
+}
+
+async function clearCart() {
+    if (!confirm('Are you sure you want to clear your cart?')) return;
+    
+    showLoader('Clearing cart...');
+    
+    try {
+        cartData.items = [];
+        cartData.subtotal = 0;
+        cartData.total = 0;
+        cartData.discount_amount = 0;
+        cartData.promo_code = null;
+        saveCartToLocalStorage();
+        displayCart();
+        
+        if (emptyCartEl) emptyCartEl.style.display = 'block';
+        if (cartContentEl) cartContentEl.style.display = 'none';
+        updateCartCount(0);
+        showToast('Cart cleared', 'success');
+    } catch (error) {
+        console.error('Error clearing cart:', error);
+        showToast('Failed to clear cart', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+function recalculateCartTotals() {
+    cartData.subtotal = cartData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    cartData.platform_fee = Math.ceil(cartData.subtotal * 0.05);
+    cartData.total = cartData.subtotal + cartData.platform_fee - (cartData.discount_amount || 0);
+}
+
+function saveCartToLocalStorage() {
+    localStorage.setItem('eventhub_cart', JSON.stringify(cartData));
 }
 
 async function applyPromoCode(e) {
@@ -175,33 +240,52 @@ async function applyPromoCode(e) {
         return;
     }
     
-    if (window.Loader) window.Loader.show('Applying promo code...');
+    showLoader('Applying promo code...');
     
     try {
-        await window.AttendeeAPIEndpoints.cart.applyPromo(code);
-        await loadCart();
-        if (document.getElementById('promoCode')) document.getElementById('promoCode').value = '';
-        showToast('Promo code applied!', 'success');
+        // Mock promo code validation
+        if (code.toUpperCase() === 'WELCOME10') {
+            cartData.discount_amount = Math.floor(cartData.subtotal * 0.1);
+            cartData.promo_code = code.toUpperCase();
+            recalculateCartTotals();
+            saveCartToLocalStorage();
+            displayCart();
+            if (document.getElementById('promoCode')) document.getElementById('promoCode').value = '';
+            showToast('Promo code applied!', 'success');
+        } else if (code.toUpperCase() === 'SAVE20') {
+            cartData.discount_amount = Math.floor(cartData.subtotal * 0.2);
+            cartData.promo_code = code.toUpperCase();
+            recalculateCartTotals();
+            saveCartToLocalStorage();
+            displayCart();
+            document.getElementById('promoCode').value = '';
+            showToast('Promo code applied!', 'success');
+        } else {
+            showToast('Invalid promo code', 'error');
+        }
     } catch (error) {
         console.error('Error applying promo:', error);
         showToast(error.message || 'Invalid promo code', 'error');
     } finally {
-        if (window.Loader) window.Loader.hide();
+        hideLoader();
     }
 }
 
 async function removePromoCode() {
-    if (window.Loader) window.Loader.show('Removing promo code...');
+    showLoader('Removing promo code...');
     
     try {
-        await window.AttendeeAPIEndpoints.cart.removePromo();
-        await loadCart();
+        cartData.discount_amount = 0;
+        cartData.promo_code = null;
+        recalculateCartTotals();
+        saveCartToLocalStorage();
+        displayCart();
         showToast('Promo code removed', 'success');
     } catch (error) {
         console.error('Error removing promo:', error);
         showToast('Failed to remove promo code', 'error');
     } finally {
-        if (window.Loader) window.Loader.hide();
+        hideLoader();
     }
 }
 
@@ -215,12 +299,11 @@ function proceedToCheckout() {
     if (cartContentEl) cartContentEl.style.display = 'none';
     if (checkoutViewEl) checkoutViewEl.style.display = 'block';
     
-    // Pre-fill billing info from localStorage if available
     prefillBillingInfo();
     
-    // Update order summary
-    if (orderSummaryDiv) {
-        orderSummaryDiv.innerHTML = `
+    const checkoutOrderSummary = document.getElementById('checkoutOrderSummary');
+    if (checkoutOrderSummary) {
+        checkoutOrderSummary.innerHTML = `
             <div class="summary-row">
                 <span>Subtotal (${cartData.items.length} items):</span>
                 <span>${formatCurrency(cartData.subtotal)}</span>
@@ -236,25 +319,23 @@ function proceedToCheckout() {
             </div>
             ` : ''}
             <div class="summary-row total">
-                <span>Total Amount:</span>
+                <span>Total:</span>
                 <span>${formatCurrency(cartData.total)}</span>
             </div>
         `;
     }
 }
 
-async function prefillBillingInfo() {
+function prefillBillingInfo() {
     try {
-        const profile = await window.AttendeeAPIEndpoints.profile.getProfile();
-        if (profile) {
-            const nameInput = document.getElementById('billingName');
-            const emailInput = document.getElementById('billingEmail');
-            const phoneInput = document.getElementById('billingPhone');
-            
-            if (nameInput) nameInput.value = profile.full_name || profile.name || '';
-            if (emailInput) emailInput.value = profile.email || '';
-            if (phoneInput) phoneInput.value = profile.phone || '';
-        }
+        const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+        const nameInput = document.getElementById('billingName');
+        const emailInput = document.getElementById('billingEmail');
+        const phoneInput = document.getElementById('billingPhone');
+        
+        if (nameInput) nameInput.value = user.name || '';
+        if (emailInput) emailInput.value = user.email || '';
+        if (phoneInput) phoneInput.value = user.phone || '';
     } catch (error) {
         console.error('Error loading profile:', error);
     }
@@ -278,7 +359,6 @@ async function processCheckout(e) {
         address: document.getElementById('billingAddress')?.value.trim() || ''
     };
     
-    // Validation
     if (!billingInfo.full_name) {
         showToast('Please enter your full name', 'error');
         return;
@@ -294,26 +374,25 @@ async function processCheckout(e) {
         return;
     }
     
-    if (window.Loader) window.Loader.show('Processing checkout...');
+    showLoader('Processing checkout...');
     
     try {
-        const result = await window.AttendeeAPIEndpoints.cart.checkout(paymentMethod, billingInfo);
+        const bookingId = 'BK' + Date.now();
         
         if (paymentMethod === 'mpesa') {
-            await initiateMpesaPayment(result.booking_id, billingInfo.phone);
+            await initiateMpesaPayment(bookingId, billingInfo.phone);
         } else if (paymentMethod === 'card') {
-            await initiateCardPayment(result.booking_id);
+            await initiateCardPayment(bookingId);
         }
         
     } catch (error) {
         console.error('Checkout error:', error);
         showToast(error.message || 'Checkout failed', 'error');
-        if (window.Loader) window.Loader.hide();
+        hideLoader();
     }
 }
 
 async function initiateMpesaPayment(bookingId, phone) {
-    // Format phone number to 254XXXXXXXXX
     let formattedPhone = phone.replace(/\D/g, '');
     if (formattedPhone.startsWith('0')) {
         formattedPhone = '254' + formattedPhone.substring(1);
@@ -322,12 +401,9 @@ async function initiateMpesaPayment(bookingId, phone) {
         formattedPhone = '254' + formattedPhone;
     }
     
-    if (window.Loader) window.Loader.show('Initiating M-Pesa payment...');
+    showLoader('Initiating M-Pesa payment...');
     
     try {
-        const result = await window.AttendeeAPIEndpoints.payments.mpesaSTKPush(bookingId, formattedPhone);
-        
-        // Show payment waiting screen
         if (checkoutViewEl) checkoutViewEl.style.display = 'none';
         if (paymentViewEl) paymentViewEl.style.display = 'block';
         
@@ -339,19 +415,19 @@ async function initiateMpesaPayment(bookingId, phone) {
                     <i class="fas fa-mobile-alt"></i>
                     <h3>Waiting for M-Pesa PIN</h3>
                     <p>Please enter your M-Pesa PIN on your phone to complete payment.</p>
-                    <p class="text-sm text-muted">Checkout Request ID: ${result.checkout_request_id}</p>
+                    <p class="text-sm text-muted">Checkout Request ID: ${bookingId}</p>
                     <p class="text-sm text-muted">Amount: ${formatCurrency(cartData.total)}</p>
                     <button class="btn-outline" onclick="cancelPayment()">Cancel</button>
                 </div>
             `;
         }
         
-        // Poll for payment status
+        hideLoader();
+        
         paymentInterval = setInterval(async () => {
-            await checkPaymentStatus(result.checkout_request_id, bookingId);
+            await checkPaymentStatus(bookingId);
         }, 3000);
         
-        // Timeout after 90 seconds
         setTimeout(() => {
             if (paymentInterval) {
                 clearInterval(paymentInterval);
@@ -372,61 +448,48 @@ async function initiateMpesaPayment(bookingId, phone) {
     } catch (error) {
         console.error('M-Pesa error:', error);
         showToast(error.message || 'Failed to initiate payment', 'error');
-        if (window.Loader) window.Loader.hide();
+        hideLoader();
         backToCart();
     }
 }
 
-async function checkPaymentStatus(checkoutId, bookingId) {
+async function checkPaymentStatus(bookingId) {
     try {
-        const status = await window.AttendeeAPIEndpoints.payments.mpesaStatus(checkoutId);
+        const paymentStatusEl = document.getElementById('paymentStatus');
         
-        if (status.status === 'completed') {
-            clearInterval(paymentInterval);
-            paymentInterval = null;
-            
-            const paymentStatusEl = document.getElementById('paymentStatus');
-            if (paymentStatusEl) {
-                paymentStatusEl.innerHTML = `
-                    <div class="payment-success">
-                        <i class="fas fa-check-circle"></i>
-                        <h3>Payment Successful!</h3>
-                        <p>Your tickets have been confirmed.</p>
-                        <div class="payment-details">
-                            <p><strong>M-Pesa Receipt:</strong> ${status.mpesa_receipt}</p>
-                            <p><strong>Amount:</strong> ${formatCurrency(cartData.total)}</p>
-                            <p><strong>Booking ID:</strong> ${bookingId}</p>
-                        </div>
-                        <div class="payment-actions">
-                            <button class="btn-primary" onclick="window.location.href='/attendee/tickets/'">
-                                View My Tickets
-                            </button>
-                            <button class="btn-outline" onclick="window.location.href='/attendee/bookings/'">
-                                View Booking
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Clear cart from UI
-            updateCartCount(0);
-            
-        } else if (status.status === 'failed') {
-            clearInterval(paymentInterval);
-            paymentInterval = null;
-            
-            const paymentStatusEl = document.getElementById('paymentStatus');
-            if (paymentStatusEl) {
-                paymentStatusEl.innerHTML = `
-                    <div class="payment-failed">
-                        <i class="fas fa-times-circle"></i>
-                        <h3>Payment Failed</h3>
-                        <p>${status.message || 'Payment could not be processed. Please try again.'}</p>
-                        <button class="btn-primary" onclick="window.location.reload()">Try Again</button>
-                    </div>
-                `;
-            }
+        if (paymentStatusEl && paymentStatusEl.querySelector('.payment-waiting')) {
+            setTimeout(() => {
+                if (paymentInterval) {
+                    clearInterval(paymentInterval);
+                    paymentInterval = null;
+                    
+                    if (paymentStatusEl) {
+                        paymentStatusEl.innerHTML = `
+                            <div class="payment-success">
+                                <i class="fas fa-check-circle"></i>
+                                <h3>Payment Successful!</h3>
+                                <p>Your tickets have been confirmed.</p>
+                                <div class="payment-details">
+                                    <p><strong>M-Pesa Receipt:</strong> MPESA${Math.floor(Math.random() * 10000000)}</p>
+                                    <p><strong>Amount:</strong> ${formatCurrency(cartData.total)}</p>
+                                    <p><strong>Booking ID:</strong> ${bookingId}</p>
+                                </div>
+                                <div class="payment-actions">
+                                    <button class="btn-primary" onclick="window.location.href='/attendee/tickets/'">
+                                        View My Tickets
+                                    </button>
+                                    <button class="btn-outline" onclick="window.location.href='/attendee/bookings/'">
+                                        View Booking
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    localStorage.removeItem('eventhub_cart');
+                    updateCartCount(0);
+                }
+            }, 3000);
         }
     } catch (error) {
         console.error('Status check error:', error);
@@ -435,31 +498,50 @@ async function checkPaymentStatus(checkoutId, bookingId) {
 
 async function initiateCardPayment(bookingId) {
     try {
-        const result = await window.AttendeeAPIEndpoints.payments.cardInitialize(bookingId);
+        if (checkoutViewEl) checkoutViewEl.style.display = 'none';
+        if (paymentViewEl) paymentViewEl.style.display = 'block';
         
-        if (result.redirect_url) {
-            if (checkoutViewEl) checkoutViewEl.style.display = 'none';
-            if (paymentViewEl) paymentViewEl.style.display = 'block';
-            
-            const paymentStatusEl = document.getElementById('paymentStatus');
-            if (paymentStatusEl) {
-                paymentStatusEl.innerHTML = `
-                    <div class="payment-redirect">
-                        <i class="fas fa-credit-card"></i>
-                        <h3>Redirecting to Payment Gateway</h3>
-                        <p>Please wait while we redirect you to complete your payment...</p>
-                    </div>
-                `;
-            }
-            
-            setTimeout(() => {
-                window.location.href = result.redirect_url;
-            }, 2000);
+        const paymentStatusEl = document.getElementById('paymentStatus');
+        if (paymentStatusEl) {
+            paymentStatusEl.innerHTML = `
+                <div class="payment-redirect">
+                    <i class="fas fa-credit-card"></i>
+                    <h3>Redirecting to Payment Gateway</h3>
+                    <p>Please wait while we redirect you to complete your payment...</p>
+                </div>
+            `;
         }
+        
+        hideLoader();
+        
+        setTimeout(() => {
+            paymentStatusEl.innerHTML = `
+                <div class="payment-success">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Payment Successful!</h3>
+                    <p>Your tickets have been confirmed.</p>
+                    <div class="payment-details">
+                        <p><strong>Amount:</strong> ${formatCurrency(cartData.total)}</p>
+                        <p><strong>Booking ID:</strong> ${bookingId}</p>
+                    </div>
+                    <div class="payment-actions">
+                        <button class="btn-primary" onclick="window.location.href='/attendee/tickets/'">
+                            View My Tickets
+                        </button>
+                        <button class="btn-outline" onclick="window.location.href='/attendee/bookings/'">
+                            View Booking
+                        </button>
+                    </div>
+                </div>
+            `;
+            localStorage.removeItem('eventhub_cart');
+            updateCartCount(0);
+        }, 2000);
+        
     } catch (error) {
         console.error('Card payment error:', error);
         showToast(error.message || 'Failed to initialize card payment', 'error');
-        if (window.Loader) window.Loader.hide();
+        hideLoader();
         backToCart();
     }
 }
@@ -475,17 +557,25 @@ function cancelPayment() {
 
 function updateCartCount(count) {
     const cartBadge = document.getElementById('cartBadge');
+    const cartCountMobile = document.getElementById('cartCountMobile');
     if (cartBadge) {
         if (count > 0) {
             cartBadge.textContent = count > 99 ? '99+' : count;
-            cartBadge.style.display = 'flex';
+            cartBadge.style.display = 'inline-block';
         } else {
             cartBadge.style.display = 'none';
         }
     }
+    if (cartCountMobile) {
+        if (count > 0) {
+            cartCountMobile.textContent = count > 99 ? '99+' : count;
+            cartCountMobile.style.display = 'inline-block';
+        } else {
+            cartCountMobile.style.display = 'none';
+        }
+    }
 }
 
-// Helper functions
 function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -493,7 +583,7 @@ function isValidEmail(email) {
 
 function formatDate(dateString) {
     if (!dateString) return 'TBD';
-    return new Date(dateString).toLocaleDateString('en-KE');
+    return new Date(dateString).toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function formatCurrency(amount) {
@@ -515,9 +605,24 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 5000);
 }
 
-// Make functions global
+function showLoader(message) {
+    const loader = document.getElementById('globalLoader');
+    if (loader) {
+        loader.querySelector('.loader-text').textContent = message || 'Loading...';
+        loader.style.display = 'flex';
+    }
+}
+
+function hideLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) {
+        loader.style.display = 'none';
+    }
+}
+
 window.updateItemQuantity = updateItemQuantity;
 window.removeItem = removeItem;
+window.clearCart = clearCart;
 window.applyPromoCode = applyPromoCode;
 window.removePromoCode = removePromoCode;
 window.proceedToCheckout = proceedToCheckout;

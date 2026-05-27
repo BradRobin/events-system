@@ -1,3 +1,16 @@
+/* ============================================
+   RESPONSIVE CSS - EventHub Breakpoints
+   ============================================ */
+
+/* Breakpoint Variables */
+/* 2XL: 1536px */
+/* XL: 1280px */
+/* LG: 1024px */
+/* MD: 768px */
+/* SM: 640px */
+/* XS: 480px */
+
+/* Responsive Container */
 @media (min-width: 640px) and (max-width: 767px) {
     .container {
         padding: 0 var(--spacing-lg);
@@ -14,6 +27,16 @@
     .hero-section {
         padding: var(--spacing-3xl) 0;
     }
+    
+    .section {
+        padding: var(--spacing-3xl) 0;
+    }
+    
+    /* Events Grid - Larger Cards */
+    .events-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+    }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -24,11 +47,27 @@
     .hero-section {
         padding: var(--spacing-4xl) 0;
     }
+    
+    /* Events Grid - 2 columns for tablet */
+    .events-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .card-image-container {
+        height: 240px;
+    }
 }
 
 @media (min-width: 1024px) and (max-width: 1279px) {
     .container {
         padding: 0 var(--spacing-2xl);
+    }
+    
+    /* Events Grid - 3 columns for desktop */
+    .events-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.75rem;
     }
 }
 
@@ -36,8 +75,15 @@
     .container {
         max-width: var(--container-2xl);
     }
+    
+    /* Events Grid - 4 columns for large desktop */
+    .events-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2rem;
+    }
 }
 
+/* Mobile Portrait */
 @media (max-width: 480px) {
     :root {
         --spacing-lg: 1rem;
@@ -56,6 +102,10 @@
     
     h2 {
         font-size: 28px;
+    }
+    
+    h3 {
+        font-size: 22px;
     }
     
     .btn-primary,
@@ -79,8 +129,127 @@
         max-width: none;
         top: 70px;
     }
+    
+    .section-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .section-header p {
+        font-size: 0.875rem;
+    }
+    
+    /* Events Grid - 1 column for mobile */
+    .events-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .card-image-container {
+        height: 200px;
+    }
 }
 
+/* Mobile Landscape */
+@media (min-width: 481px) and (max-width: 768px) {
+    .grid-cols-2, .grid-cols-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .hero-content h1 {
+        font-size: 2rem;
+    }
+    
+    /* Events Grid - 2 columns for landscape */
+    .events-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    
+    .card-image-container {
+        height: 220px;
+    }
+}
+
+/* Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .grid-cols-3, .grid-cols-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .hero-content h1 {
+        font-size: 2.5rem;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    .container {
+        max-width: 1200px;
+    }
+}
+
+/* Large Desktop */
+@media (min-width: 1441px) {
+    .container {
+        max-width: 1400px;
+    }
+    
+    /* Events Grid - 4 columns for ultra-wide screens */
+    .events-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2rem;
+    }
+}
+
+/* Hide/Show Utilities */
+.hide-desktop {
+    display: none;
+}
+
+.hide-mobile {
+    display: block;
+}
+
+@media (max-width: 1024px) {
+    .hide-desktop {
+        display: block;
+    }
+    
+    .hide-mobile {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .hide-tablet {
+        display: none;
+    }
+    
+    .show-tablet {
+        display: block;
+    }
+}
+
+/* Responsive Text */
+.text-responsive {
+    font-size: clamp(1rem, 4vw, 2rem);
+}
+
+.heading-responsive {
+    font-size: clamp(1.5rem, 6vw, 3rem);
+}
+
+/* Responsive Grid Gaps */
+.gap-responsive {
+    gap: clamp(var(--spacing-md), 2vw, var(--spacing-xl));
+}
+
+/* Responsive Padding */
+.padding-responsive {
+    padding: clamp(var(--spacing-md), 4vw, var(--spacing-4xl)) 0;
+}
+
+/* Reduced Motion Preference */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -92,22 +261,73 @@
     }
 }
 
+/* Print Styles */
 @media print {
     .navbar,
     .footer,
     .messages,
     .btn-primary,
-    .btn-secondary {
+    .btn-secondary,
+    .search-bar {
         display: none !important;
     }
     
     body {
         background: white;
+        color: black;
+    }
+    
+    .container {
+        max-width: 100%;
+        padding: 0;
     }
     
     .np-card,
     .np-card-solid {
         box-shadow: none;
         border: 1px solid #ddd;
+    }
+    
+    a {
+        text-decoration: underline;
+        color: black;
+    }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .hover-lift:hover,
+    .hover-scale:hover {
+        transform: none;
+    }
+    
+    button,
+    a,
+    .clickable {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .btn-primary,
+    .btn-secondary {
+        border: 2px solid currentColor;
+    }
+    
+    .np-card,
+    .np-card-solid {
+        border: 1px solid currentColor;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --np-bg: #0f172a;
+        --np-white: #1e293b;
+        --np-dark: #f1f5f9;
+        --border: #334155;
     }
 }

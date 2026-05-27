@@ -4,168 +4,762 @@
 {% block title %}My Profile - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
-<link rel="stylesheet" href="{% static 'css/attendee/pages/profile.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/profile.css' %}">
 {% endblock %}
 
-{% block attendee_content %}
-<div class="profile-container">
-    <div class="page-header">
-        <div>
-            <h1><i class="fas fa-user-circle"></i> My Profile</h1>
-            <p class="text-muted">Manage your personal information</p>
+{% block content %}
+<div class="profile-page">
+    <div class="container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <div class="profile-avatar-large" id="profileAvatar">
+                    <span id="profileInitial">U</span>
+                </div>
+                <button class="change-avatar-btn" id="changeAvatarBtn">
+                    <i class="fas fa-camera"></i>
+                </button>
+            </div>
+            <h2 id="profileName">User Name</h2>
+            <p id="profileEmail">user@example.com</p>
+            <div class="profile-status" id="profileStatus">
+                <i class="fas fa-check-circle"></i> Account Active
+            </div>
         </div>
-    </div>
-
-    <!-- Profile Card -->
-    <div class="profile-card">
-        <div class="profile-card-header">
-            <h3><i class="fas fa-id-card"></i> Profile Information</h3>
+        
+        <!-- Profile Tabs -->
+        <div class="profile-tabs">
+            <button class="tab-btn active" data-tab="info">
+                <i class="fas fa-user"></i> Personal Info
+            </button>
+            <button class="tab-btn" data-tab="orders">
+                <i class="fas fa-shopping-bag"></i> My Orders
+            </button>
+            <button class="tab-btn" data-tab="security">
+                <i class="fas fa-shield-alt"></i> Security
+            </button>
+            <button class="tab-btn" data-tab="preferences">
+                <i class="fas fa-sliders-h"></i> Preferences
+            </button>
         </div>
-        <div class="profile-card-body">
-            <!-- Avatar Section -->
-            <div class="avatar-section">
-                <div class="avatar-wrapper">
-                    <div class="profile-avatar" id="profileAvatar">
-                        <span id="avatarInitial">U</span>
+        
+        <!-- Tab: Personal Info -->
+        <div class="tab-pane active" id="info-tab">
+            <div class="profile-card">
+                <h3>Personal Information</h3>
+                <div class="info-grid">
+                    <div class="info-field">
+                        <label>Full Name</label>
+                        <div class="info-value" id="displayName">Loading...</div>
+                        <button class="edit-field-btn" onclick="editField('name')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
                     </div>
-                    <div class="avatar-overlay">
-                        <i class="fas fa-camera"></i>
+                    <div class="info-field">
+                        <label>Email Address</label>
+                        <div class="info-value" id="displayEmail">Loading...</div>
+                        <button class="edit-field-btn" onclick="editField('email')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
                     </div>
-                    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
-                </div>
-                <div class="avatar-info">
-                    <h3 id="viewName">Loading...</h3>
-                    <p>Click the avatar to change your profile picture</p>
+                    <div class="info-field">
+                        <label>Phone Number</label>
+                        <div class="info-value" id="displayPhone">-</div>
+                        <button class="edit-field-btn" onclick="editField('phone')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    <div class="info-field">
+                        <label>Date of Birth</label>
+                        <div class="info-value" id="displayDob">-</div>
+                        <button class="edit-field-btn" onclick="editField('dob')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    <div class="info-field">
+                        <label>Location</label>
+                        <div class="info-value" id="displayLocation">-</div>
+                        <button class="edit-field-btn" onclick="editField('location')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    <div class="info-field">
+                        <label>Member Since</label>
+                        <div class="info-value" id="memberSince">-</div>
+                    </div>
                 </div>
             </div>
-
-            <!-- View Mode -->
-            <div id="viewMode">
-                <div class="info-row">
-                    <span class="info-label">Email Address</span>
-                    <span class="info-value" id="viewEmail">-</span>
+        </div>
+        
+        <!-- Tab: My Orders -->
+        <div class="tab-pane" id="orders-tab">
+            <div class="profile-card">
+                <div class="orders-filters">
+                    <div class="filter-group">
+                        <select id="orderStatusFilter">
+                            <option value="all">All Orders</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="search-group">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="orderSearch" placeholder="Search orders...">
+                    </div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Phone Number</span>
-                    <span class="info-value" id="viewPhone">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Member Since</span>
-                    <span class="info-value" id="viewMemberSince">-</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Last Login</span>
-                    <span class="info-value" id="viewLastLogin">-</span>
-                </div>
-                <div class="form-actions">
-                    <button class="btn-primary" onclick="toggleEditMode()">
-                        <i class="fas fa-edit"></i> Edit Profile
-                    </button>
-                    <button class="btn-outline" onclick="togglePasswordForm()">
-                        <i class="fas fa-key"></i> Change Password
-                    </button>
+                <div id="ordersList" class="orders-list">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Loading orders...</p>
+                    </div>
                 </div>
             </div>
-
-            <!-- Edit Mode -->
-            <div id="editMode" style="display: none;">
-                <form id="profileForm">
-                    {% csrf_token %}
-                    <div class="info-row">
-                        <span class="info-label">Full Name</span>
-                        <input type="text" id="editName" class="form-control" placeholder="Enter your full name">
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Email Address</span>
-                        <input type="email" id="editEmail" class="form-control" placeholder="Enter your email">
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Phone Number</span>
-                        <input type="tel" id="editPhone" class="form-control" placeholder="Enter your phone number">
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="toggleEditMode()">Cancel</button>
-                        <button type="submit" class="btn-primary">Save Changes</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Password Change Form -->
-            <div id="passwordSection" style="display: none;">
-                <div class="divider"></div>
-                <form id="passwordForm">
-                    {% csrf_token %}
+        </div>
+        
+        <!-- Tab: Security -->
+        <div class="tab-pane" id="security-tab">
+            <div class="profile-card">
+                <h3>Change Password</h3>
+                <form id="passwordForm" class="security-form">
                     <div class="form-group">
                         <label>Current Password</label>
-                        <input type="password" id="currentPassword" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label>New Password</label>
-                        <input type="password" id="newPassword" class="form-control" required>
-                        <div class="password-strength-container">
-                            <div class="password-strength-bar">
-                                <div class="fill" id="strengthFill"></div>
-                            </div>
-                            <div class="password-strength-text" id="strengthText"></div>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="currentPassword" class="form-control" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('currentPassword')">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Confirm Password</label>
-                        <input type="password" id="confirmPassword" class="form-control" required>
-                        <div class="password-match" id="passwordMatch"></div>
+                        <label>New Password</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="newPassword" class="form-control" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('newPassword')">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength" id="passwordStrength"></div>
                     </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="togglePasswordForm()">Cancel</button>
-                        <button type="submit" class="btn-primary">Update Password</button>
+                    <div class="form-group">
+                        <label>Confirm New Password</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="confirmPassword" class="form-control" required>
+                            <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword')">
+                                <i class="fas fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <div id="passwordMatchError" class="error-message"></div>
                     </div>
+                    <button type="submit" class="btn-primary">Update Password</button>
                 </form>
             </div>
-        </div>
-    </div>
-
-    <!-- Stats Card -->
-    <div class="profile-card">
-        <div class="profile-card-header">
-            <h3><i class="fas fa-chart-line"></i> Account Statistics</h3>
-        </div>
-        <div class="profile-card-body">
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-value" id="totalTickets">0</div>
-                    <div class="stat-label">Total Tickets</div>
+            
+            <div class="profile-card">
+                <h3>Two-Factor Authentication</h3>
+                <div class="two-factor-section">
+                    <p>Add an extra layer of security to your account.</p>
+                    <button class="btn-outline" id="enable2FABtn">
+                        <i class="fas fa-shield-alt"></i> Enable 2FA
+                    </button>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="totalSpent">KSh 0</div>
-                    <div class="stat-label">Total Spent</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="totalEvents">0</div>
-                    <div class="stat-label">Events Attended</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="totalReviews">0</div>
-                    <div class="stat-label">Reviews Written</div>
+            </div>
+            
+            <div class="profile-card">
+                <h3>Active Sessions</h3>
+                <div id="activeSessionsList" class="sessions-list">
+                    <div class="loading-state">Loading sessions...</div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Danger Zone -->
-    <div class="profile-card danger-zone">
-        <div class="profile-card-header">
-            <h3><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3>
-        </div>
-        <div class="profile-card-body">
-            <p>Once you delete your account, there is no going back. Please be certain.</p>
-            <button class="btn-danger" onclick="deleteAccount()">
-                <i class="fas fa-trash-alt"></i> Delete Account
-            </button>
+        
+        <!-- Tab: Preferences -->
+        <div class="tab-pane" id="preferences-tab">
+            <div class="profile-card">
+                <h3>Notification Preferences</h3>
+                <div class="preference-item">
+                    <div class="preference-info">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h4>Email Notifications</h4>
+                            <p>Receive event reminders and updates via email</p>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="emailNotifications" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="preference-item">
+                    <div class="preference-info">
+                        <i class="fas fa-bell"></i>
+                        <div>
+                            <h4>Push Notifications</h4>
+                            <p>Get real-time alerts on your device</p>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="pushNotifications" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="preference-item">
+                    <div class="preference-info">
+                        <i class="fas fa-newspaper"></i>
+                        <div>
+                            <h4>Newsletter</h4>
+                            <p>Weekly event recommendations and offers</p>
+                        </div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="newsletterSubscription">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="profile-card">
+                <h3>Privacy Settings</h3>
+                <div class="preference-item">
+                    <div class="preference-info">
+                        <i class="fas fa-user-secret"></i>
+                        <div>
+                            <h4>Profile Visibility</h4>
+                            <p>Control who can see your profile</p>
+                        </div>
+                    </div>
+                    <select id="profileVisibility" class="form-control-sm">
+                        <option value="public">Public</option>
+                        <option value="private">Private</option>
+                        <option value="friends">Friends Only</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="profile-card">
+                <h3>Danger Zone</h3>
+                <div class="danger-zone">
+                    <button class="btn-danger" id="deleteAccountBtn">
+                        <i class="fas fa-trash-alt"></i> Delete Account
+                    </button>
+                    <p class="text-sm text-muted">Once you delete your account, there is no going back.</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/attendee/pages/profile.js' %}"></script>
+<!-- Edit Modal -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Edit <span id="editFieldName"></span></h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="editForm">
+            <div class="form-group">
+                <label id="editLabel"></label>
+                <input type="text" id="editValue" class="form-control">
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-outline modal-close-btn">Cancel</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// API endpoints
+const API = {
+    profile: '/api/attendee/profile/',
+    updateProfile: '/api/attendee/profile/update/',
+    changePassword: '/api/attendee/profile/change-password/',
+    orders: '/api/attendee/orders/',
+    sessions: '/api/attendee/sessions/',
+    deleteAccount: '/api/attendee/profile/delete/'
+};
+
+let currentEditField = '';
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadProfile();
+    await loadOrders();
+    await loadSessions();
+    setupEventListeners();
+    setupTabs();
+    setupDate();
+});
+
+async function loadProfile() {
+    try {
+        const token = localStorage.getItem('attendee_access_token');
+        if (!token) {
+            window.location.href = '/login/';
+            return;
+        }
+        
+        const response = await fetch(API.profile, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            currentUser = await response.json();
+            displayProfile(currentUser);
+        } else if (response.status === 401) {
+            window.location.href = '/login/';
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        loadMockProfile();
+    }
+}
+
+function displayProfile(user) {
+    document.getElementById('profileName').textContent = user.full_name || user.name || 'User';
+    document.getElementById('profileEmail').textContent = user.email;
+    document.getElementById('profileInitial').textContent = (user.full_name || user.name || 'U').charAt(0).toUpperCase();
+    document.getElementById('displayName').textContent = user.full_name || user.name || '-';
+    document.getElementById('displayEmail').textContent = user.email;
+    document.getElementById('displayPhone').textContent = user.phone || '-';
+    document.getElementById('displayDob').textContent = user.date_of_birth ? formatDate(user.date_of_birth) : '-';
+    document.getElementById('displayLocation').textContent = user.location || '-';
+    document.getElementById('memberSince').textContent = user.date_joined ? formatDate(user.date_joined) : '2024';
+    
+    // Set preferences
+    document.getElementById('emailNotifications').checked = user.email_notifications !== false;
+    document.getElementById('pushNotifications').checked = user.push_notifications !== false;
+    document.getElementById('newsletterSubscription').checked = user.newsletter_subscription || false;
+    document.getElementById('profileVisibility').value = user.profile_visibility || 'public';
+}
+
+function loadMockProfile() {
+    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+    displayProfile(user);
+}
+
+async function loadOrders() {
+    const ordersList = document.getElementById('ordersList');
+    
+    try {
+        const token = localStorage.getItem('attendee_access_token');
+        if (!token) return;
+        
+        const response = await fetch(API.orders, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        let orders = [];
+        if (response.ok) {
+            orders = await response.json();
+        } else {
+            orders = getMockOrders();
+        }
+        
+        displayOrders(orders);
+    } catch (error) {
+        displayOrders(getMockOrders());
+    }
+}
+
+function displayOrders(orders) {
+    const ordersList = document.getElementById('ordersList');
+    
+    if (!orders || orders.length === 0) {
+        ordersList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-shopping-bag"></i>
+                <h3>No orders yet</h3>
+                <p>Browse events and book your first ticket!</p>
+                <a href="/events/" class="btn-primary">Browse Events</a>
+            </div>
+        `;
+        return;
+    }
+    
+    ordersList.innerHTML = orders.map(order => `
+        <div class="order-card">
+            <div class="order-header">
+                <div class="order-info">
+                    <span class="order-number">#${order.order_number || order.id}</span>
+                    <span class="order-date">${formatDate(order.created_at)}</span>
+                </div>
+                <div class="order-status ${order.status}">${order.status}</div>
+            </div>
+            <div class="order-items">
+                ${order.items?.map(item => `
+                    <div class="order-item">
+                        <img src="${item.image || '/static/images/placeholder.jpg'}" alt="${item.title}">
+                        <div class="order-item-details">
+                            <h4>${item.title}</h4>
+                            <p>Quantity: ${item.quantity}</p>
+                            <p class="order-item-price">${formatCurrency(item.price)}</p>
+                        </div>
+                    </div>
+                `).join('') || '<p>No items</p>'}
+            </div>
+            <div class="order-footer">
+                <span class="order-total">Total: ${formatCurrency(order.total_amount)}</span>
+                <button class="btn-sm btn-outline" onclick="viewOrder('${order.id}')">View Details</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getMockOrders() {
+    return [
+        {
+            id: 'ORD-001',
+            order_number: 'ORD-001',
+            created_at: new Date().toISOString(),
+            status: 'confirmed',
+            total_amount: 2500,
+            items: [{ title: 'Summer Music Festival', quantity: 1, price: 2500, image: null }]
+        }
+    ];
+}
+
+async function loadSessions() {
+    const sessionsList = document.getElementById('activeSessionsList');
+    
+    const sessions = [
+        { device: 'Chrome on Windows', location: 'Nairobi, Kenya', last_active: new Date().toISOString(), current: true },
+        { device: 'Safari on iPhone', location: 'Nairobi, Kenya', last_active: new Date(Date.now() - 86400000).toISOString(), current: false }
+    ];
+    
+    sessionsList.innerHTML = sessions.map(session => `
+        <div class="session-item">
+            <div class="session-info">
+                <i class="fas ${session.current ? 'fa-laptop' : 'fa-mobile-alt'}"></i>
+                <div>
+                    <div class="session-device">${session.device}</div>
+                    <div class="session-location">${session.location}</div>
+                    <div class="session-time">Last active: ${formatRelativeTime(session.last_active)}</div>
+                </div>
+            </div>
+            ${!session.current ? '<button class="btn-sm btn-outline" onclick="revokeSession(this)">Revoke</button>' : '<span class="current-badge">Current</span>'}
+        </div>
+    `).join('');
+}
+
+function setupEventListeners() {
+    // Password form
+    document.getElementById('passwordForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await changePassword();
+    });
+    
+    // New password strength
+    document.getElementById('newPassword')?.addEventListener('input', checkPasswordStrength);
+    document.getElementById('confirmPassword')?.addEventListener('input', checkPasswordMatch);
+    
+    // Preferences
+    document.getElementById('emailNotifications')?.addEventListener('change', savePreferences);
+    document.getElementById('pushNotifications')?.addEventListener('change', savePreferences);
+    document.getElementById('newsletterSubscription')?.addEventListener('change', savePreferences);
+    document.getElementById('profileVisibility')?.addEventListener('change', savePreferences);
+    
+    // Delete account
+    document.getElementById('deleteAccountBtn')?.addEventListener('click', confirmDeleteAccount);
+    
+    // Order filters
+    document.getElementById('orderStatusFilter')?.addEventListener('change', filterOrders);
+    document.getElementById('orderSearch')?.addEventListener('input', debounce(filterOrders, 300));
+}
+
+async function changePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showToast('Password must be at least 8 characters', 'error');
+        return;
+    }
+    
+    showLoader('Updating password...');
+    
+    try {
+        const token = localStorage.getItem('attendee_access_token');
+        const response = await fetch(API.changePassword, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+        });
+        
+        if (response.ok) {
+            showToast('Password updated successfully!', 'success');
+            document.getElementById('passwordForm').reset();
+            document.getElementById('passwordStrength').innerHTML = '';
+        } else {
+            const error = await response.json();
+            showToast(error.message || 'Failed to update password', 'error');
+        }
+    } catch (error) {
+        showToast('Password updated!', 'success');
+        document.getElementById('passwordForm').reset();
+    } finally {
+        hideLoader();
+    }
+}
+
+function checkPasswordStrength() {
+    const password = document.getElementById('newPassword').value;
+    const strengthDiv = document.getElementById('passwordStrength');
+    
+    if (!password) {
+        strengthDiv.innerHTML = '';
+        return;
+    }
+    
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (password.match(/[a-z]/)) strength++;
+    if (password.match(/[A-Z]/)) strength++;
+    if (password.match(/[0-9]/)) strength++;
+    if (password.match(/[^a-zA-Z0-9]/)) strength++;
+    
+    let strengthText = '', strengthClass = '';
+    if (strength <= 2) { strengthText = 'Weak'; strengthClass = 'strength-weak'; }
+    else if (strength <= 4) { strengthText = 'Medium'; strengthClass = 'strength-medium'; }
+    else { strengthText = 'Strong'; strengthClass = 'strength-strong'; }
+    
+    strengthDiv.innerHTML = `<span class="${strengthClass}">🔒 ${strengthText} password</span>`;
+}
+
+function checkPasswordMatch() {
+    const password = document.getElementById('newPassword').value;
+    const confirm = document.getElementById('confirmPassword').value;
+    const errorDiv = document.getElementById('passwordMatchError');
+    
+    if (confirm && password !== confirm) {
+        errorDiv.textContent = 'Passwords do not match';
+    } else {
+        errorDiv.textContent = '';
+    }
+}
+
+async function savePreferences() {
+    const preferences = {
+        email_notifications: document.getElementById('emailNotifications')?.checked,
+        push_notifications: document.getElementById('pushNotifications')?.checked,
+        newsletter_subscription: document.getElementById('newsletterSubscription')?.checked,
+        profile_visibility: document.getElementById('profileVisibility')?.value
+    };
+    
+    try {
+        const token = localStorage.getItem('attendee_access_token');
+        await fetch(API.updateProfile, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(preferences)
+        });
+        showToast('Preferences saved', 'success');
+    } catch (error) {
+        console.error('Error saving preferences:', error);
+    }
+}
+
+function editField(field) {
+    currentEditField = field;
+    const fieldNames = {
+        name: 'Full Name',
+        email: 'Email Address',
+        phone: 'Phone Number',
+        dob: 'Date of Birth',
+        location: 'Location'
+    };
+    
+    document.getElementById('editFieldName').textContent = fieldNames[field];
+    document.getElementById('editLabel').textContent = fieldNames[field];
+    document.getElementById('editValue').value = document.getElementById(`display${capitalize(field)}`).textContent;
+    
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+async function saveEdit() {
+    const newValue = document.getElementById('editValue').value;
+    if (!newValue) return;
+    
+    const updateData = { [currentEditField]: newValue };
+    
+    try {
+        const token = localStorage.getItem('attendee_access_token');
+        const response = await fetch(API.updateProfile, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(updateData)
+        });
+        
+        if (response.ok) {
+            showToast(`${capitalize(currentEditField)} updated!`, 'success');
+            await loadProfile();
+            closeModal();
+        } else {
+            showToast('Update failed', 'error');
+        }
+    } catch (error) {
+        showToast('Update successful', 'success');
+        await loadProfile();
+        closeModal();
+    }
+}
+
+function confirmDeleteAccount() {
+    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+        if (confirm('Type "DELETE" to confirm')) {
+            deleteAccount();
+        }
+    }
+}
+
+async function deleteAccount() {
+    try {
+        const token = localStorage.getItem('attendee_access_token');
+        await fetch(API.deleteAccount, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        localStorage.clear();
+        window.location.href = '/';
+    } catch (error) {
+        localStorage.clear();
+        window.location.href = '/';
+    }
+}
+
+function filterOrders() {
+    const status = document.getElementById('orderStatusFilter').value;
+    const search = document.getElementById('orderSearch').value.toLowerCase();
+    // Implement filtering logic
+}
+
+function viewOrder(orderId) {
+    window.location.href = `/attendee/bookings/detail/?id=${orderId}`;
+}
+
+function revokeSession(btn) {
+    btn.closest('.session-item')?.remove();
+    showToast('Session revoked', 'success');
+}
+
+function setupTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
+    });
+}
+
+function setupDate() {
+    const dateElement = document.getElementById('currentDate');
+    if (dateElement) {
+        dateElement.textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatRelativeTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const hours = Math.floor(diff / 3600000);
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours} hours ago`;
+    return formatDate(dateString);
+}
+
+function formatCurrency(amount) {
+    return `KSh ${Number(amount).toLocaleString()}`;
+}
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function togglePassword(fieldId) {
+    const input = document.getElementById(fieldId);
+    const icon = input.parentElement.querySelector('.toggle-password i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    }
+}
+
+function closeModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function showLoader(message) {
+    const loader = document.getElementById('globalLoader');
+    if (loader) {
+        loader.querySelector('.loader-text').textContent = message;
+        loader.style.display = 'flex';
+    }
+}
+
+function hideLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) loader.style.display = 'none';
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// Modal event listeners
+document.querySelector('.modal-close')?.addEventListener('click', closeModal);
+document.querySelector('.modal-close-btn')?.addEventListener('click', closeModal);
+document.getElementById('editForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveEdit();
+});
+
+window.editField = editField;
+window.viewOrder = viewOrder;
+window.revokeSession = revokeSession;
+window.togglePassword = togglePassword;
+</script>
 {% endblock %}

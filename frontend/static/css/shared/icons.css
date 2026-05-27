@@ -1,16 +1,17 @@
 /* ============================================
-   ICONS STYLES - Modern Icon Styling
+   ICONS STYLES - Modern, Consistent, Accessible
    ============================================ */
 
 /* Base Icon Styles */
 i, .icon {
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
-/* Navigation Icons */
+/* ========== NAVIGATION ICONS ========== */
 .nav-link i {
     margin-right: 8px;
     font-size: 1rem;
@@ -19,32 +20,28 @@ i, .icon {
 
 .nav-link:hover i {
     transform: translateX(3px);
-    color: var(--np-red);
+    color: #f59e0b;
 }
 
-/* Auth Dropdown Icons */
-.auth-dropdown-item i {
-    margin-right: 10px;
-    width: 20px;
-    font-size: 0.9rem;
+.nav-link.active i {
+    color: #f59e0b;
 }
 
-.auth-dropdown-item:hover i {
-    transform: translateX(3px);
-}
-
-/* Button Icons */
-.btn-primary i, .btn-secondary i, .btn-outline i {
+/* ========== BUTTON ICONS ========== */
+.btn-primary i, 
+.btn-secondary i, 
+.btn-outline i {
     margin-right: 8px;
     font-size: 0.9rem;
     transition: all 0.3s ease;
 }
 
-.btn-primary:hover i, .btn-secondary:hover i {
+.btn-primary:hover i, 
+.btn-secondary:hover i {
     transform: translateX(3px);
 }
 
-/* Category Card Icons */
+/* ========== CARD CATEGORY ICONS ========== */
 .category-icon {
     font-size: 2.5rem;
     transition: all 0.3s ease;
@@ -52,40 +49,25 @@ i, .icon {
 
 .category-card:hover .category-icon {
     transform: scale(1.1);
-    color: var(--np-red);
+    color: #f59e0b;
 }
 
-/* Premium Card Icons */
-.card-category i {
-    margin-right: 6px;
-    font-size: 0.7rem;
+/* Step Card Icons */
+.step-icon i {
+    font-size: 2rem;
+    transition: all 0.3s ease;
 }
 
-.card-meta i {
-    margin-right: 5px;
-    font-size: 0.7rem;
-    opacity: 0.9;
+.step-card:hover .step-icon i {
+    transform: scale(1.1);
+    color: white;
 }
 
-.card-price i {
-    margin-right: 5px;
-    font-size: 0.8rem;
-}
-
-.card-hover-info i {
-    margin-right: 6px;
-}
-
-/* Featured Events Icons */
-.premium-card .card-content i {
-    margin-right: 6px;
-}
-
-/* Stats Icons */
+/* ========== STATS ICONS ========== */
 .analytics-card i {
-    font-size: 1.8rem;
-    margin-bottom: 10px;
-    color: var(--np-red);
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    color: #f59e0b;
     display: inline-block;
     transition: all 0.3s ease;
 }
@@ -94,7 +76,13 @@ i, .icon {
     transform: scale(1.1);
 }
 
-/* Testimonial Icons */
+/* ========== TESTIMONIAL ICONS ========== */
+.testimonial-content i {
+    font-size: 1.8rem;
+    color: #f59e0b;
+    opacity: 0.3;
+}
+
 .testimonial-avatar i {
     font-size: 1.5rem;
     color: white;
@@ -102,21 +90,21 @@ i, .icon {
 
 .stars-display i {
     margin-right: 3px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: all 0.2s ease;
-    color: #ffd045;
+    color: #fbbf24;
 }
 
 .stars-display i:hover {
     transform: scale(1.1);
 }
 
-/* Footer Icons */
+/* ========== FOOTER ICONS ========== */
 .footer ul li i {
     margin-right: 8px;
-    font-size: 0.7rem;
-    color: var(--np-red);
-    width: 18px;
+    font-size: 0.8rem;
+    color: #f59e0b;
+    width: 20px;
     transition: all 0.3s ease;
 }
 
@@ -133,7 +121,7 @@ i, .icon {
     transform: scale(1.2);
 }
 
-/* Social Media Icon Colors */
+/* Social Media Colors - Subtle */
 .social-links a:nth-child(1) i { color: #1877f2; }
 .social-links a:nth-child(2) i { color: #1da1f2; }
 .social-links a:nth-child(3) i { color: #e4405f; }
@@ -143,29 +131,36 @@ i, .icon {
     color: white !important;
 }
 
-/* Hero Section Icons */
+/* ========== HERO SECTION ICONS ========== */
 .hero-section .btn-primary i,
 .hero-section .btn-secondary i {
     margin-right: 8px;
 }
 
-/* Search Bar Icon */
-.search-btn i {
-    margin-right: 8px;
+.hero-stats .stat i {
+    font-size: 1.2rem;
+    color: #f59e0b;
+    margin-right: 0.25rem;
 }
 
-/* Newsletter Icon */
+/* ========== SEARCH ICON ========== */
+.search-btn i {
+    margin-right: 8px;
+    font-size: 0.9rem;
+}
+
+/* ========== NEWSLETTER ICON ========== */
 .newsletter-icon {
     font-size: 2rem;
     margin-bottom: 1rem;
-    color: var(--np-red);
+    color: #f59e0b;
 }
 
-/* How It Works Icons */
+/* ========== HOW IT WORKS ICONS ========== */
 .how-it-works-icon {
     font-size: 2.5rem;
     margin-bottom: 1rem;
-    color: var(--np-red);
+    color: #f59e0b;
     transition: all 0.3s ease;
 }
 
@@ -173,34 +168,44 @@ i, .icon {
     transform: translateY(-5px);
 }
 
-/* Arrow Icons */
+/* ========== ARROW ICONS ========== */
 .category-arrow i {
     font-size: 1rem;
     transition: all 0.3s ease;
 }
 
 .category-arrow:hover i {
-    transform: scale(1.2);
+    transform: translateX(5px);
 }
 
-/* Mobile Menu Icons */
+.step-link i {
+    transition: transform 0.3s ease;
+}
+
+.step-link:hover i {
+    transform: translateX(5px);
+}
+
+/* ========== MOBILE MENU ICONS ========== */
 .mobile-menu .nav-link i {
-    width: 25px;
-    margin-right: 10px;
+    width: 28px;
+    margin-right: 12px;
+    font-size: 1rem;
 }
 
-/* Auth Button Icons */
+/* ========== AUTH BUTTON ICONS ========== */
 .auth-btn i {
-    margin-right: 5px;
+    margin-right: 6px;
+    font-size: 0.85rem;
 }
 
 .auth-btn i:last-child {
-    margin-left: 5px;
+    margin-left: 6px;
     margin-right: 0;
     font-size: 0.7rem;
 }
 
-/* Logo Icon Animation */
+/* ========== LOGO ICON ========== */
 .logo-icon {
     transition: all 0.3s ease;
 }
@@ -209,35 +214,49 @@ i, .icon {
     transform: rotate(5deg) scale(1.05);
 }
 
-/* Floating Icons Animation */
+/* ========== ANIMATIONS ========== */
+/* Floating Animation */
 .floating-icon {
     animation: floatIcon 3s ease-in-out infinite;
 }
 
 @keyframes floatIcon {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-5px);
-    }
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
 }
 
-/* Pulse Animation for Important Icons */
+/* Pulse Animation */
 .pulse-icon {
     animation: pulseIcon 1.5s ease-in-out infinite;
 }
 
 @keyframes pulseIcon {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
-/* Rotate on Hover */
+/* Spin Animation */
+.spin-icon {
+    animation: spinIcon 1s linear infinite;
+}
+
+@keyframes spinIcon {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Shake Animation on Error */
+.shake-icon {
+    animation: shakeIcon 0.5s ease-in-out;
+}
+
+@keyframes shakeIcon {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+}
+
+/* ========== HOVER EFFECTS ========== */
 .rotate-icon {
     transition: transform 0.3s ease;
 }
@@ -246,69 +265,38 @@ i, .icon {
     transform: rotate(15deg);
 }
 
-/* Icon Colors */
-.icon-primary {
-    color: var(--np-red);
+.bounce-icon {
+    transition: transform 0.3s ease;
 }
 
-.icon-secondary {
-    color: var(--np-orange);
+.bounce-icon:hover {
+    transform: translateY(-3px);
 }
 
-.icon-success {
-    color: #10b981;
-}
+/* ========== ICON COLORS ========== */
+.icon-primary { color: #f59e0b; }
+.icon-secondary { color: #ec6408; }
+.icon-success { color: #10b981; }
+.icon-warning { color: #fbbf24; }
+.icon-error { color: #ef4444; }
+.icon-info { color: #3b82f6; }
+.icon-white { color: #ffffff; }
+.icon-dark { color: #1e293b; }
+.icon-gray { color: #64748b; }
+.icon-muted { color: #94a3b8; }
 
-.icon-warning {
-    color: var(--np-yellow);
-}
+/* ========== ICON SIZES ========== */
+.icon-xs { font-size: 0.65rem; width: 0.65rem; height: 0.65rem; }
+.icon-sm { font-size: 0.75rem; width: 0.75rem; height: 0.75rem; }
+.icon-md { font-size: 0.875rem; width: 0.875rem; height: 0.875rem; }
+.icon-base { font-size: 1rem; width: 1rem; height: 1rem; }
+.icon-lg { font-size: 1.25rem; width: 1.25rem; height: 1.25rem; }
+.icon-xl { font-size: 1.5rem; width: 1.5rem; height: 1.5rem; }
+.icon-2xl { font-size: 2rem; width: 2rem; height: 2rem; }
+.icon-3xl { font-size: 2.5rem; width: 2.5rem; height: 2.5rem; }
+.icon-4xl { font-size: 3rem; width: 3rem; height: 3rem; }
 
-.icon-white {
-    color: white;
-}
-
-.icon-dark {
-    color: var(--np-dark);
-}
-
-.icon-gray {
-    color: var(--np-gray);
-}
-
-/* Icon Sizes */
-.icon-xs {
-    font-size: 0.75rem;
-}
-
-.icon-sm {
-    font-size: 0.875rem;
-}
-
-.icon-md {
-    font-size: 1rem;
-}
-
-.icon-lg {
-    font-size: 1.25rem;
-}
-
-.icon-xl {
-    font-size: 1.5rem;
-}
-
-.icon-2xl {
-    font-size: 2rem;
-}
-
-.icon-3xl {
-    font-size: 2.5rem;
-}
-
-.icon-4xl {
-    font-size: 3rem;
-}
-
-/* Responsive Icon Adjustments */
+/* ========== RESPONSIVE ICON ADJUSTMENTS ========== */
 @media (max-width: 768px) {
     .nav-link i {
         font-size: 0.9rem;
@@ -325,6 +313,10 @@ i, .icon {
     .how-it-works-icon {
         font-size: 2rem;
     }
+    
+    .step-icon i {
+        font-size: 1.5rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -332,7 +324,8 @@ i, .icon {
         margin-right: 5px;
     }
     
-    .btn-primary i, .btn-secondary i {
+    .btn-primary i, 
+    .btn-secondary i {
         margin-right: 5px;
     }
     
@@ -342,5 +335,31 @@ i, .icon {
     
     .analytics-card i {
         font-size: 1.2rem;
+    }
+    
+    .step-icon i {
+        font-size: 1.2rem;
+    }
+    
+    .mobile-menu .nav-link i {
+        width: 24px;
+        margin-right: 8px;
+    }
+}
+
+/* ========== ACCESSIBILITY ========== */
+/* Ensure icons have proper contrast when focused */
+a:focus-visible i,
+button:focus-visible i {
+    outline: 2px solid #f59e0b;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    i, .icon, .floating-icon, .pulse-icon, .rotate-icon, .bounce-icon {
+        animation: none !important;
+        transition: none !important;
     }
 }

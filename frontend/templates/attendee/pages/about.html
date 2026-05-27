@@ -4,77 +4,164 @@
 {% block title %}About Us - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
 <link rel="stylesheet" href="{% static 'css/attendee/pages/about.css' %}">
 {% endblock %}
 
-{% block attendee_content %}
-<div class="page-container">
-    <div class="page-header">
-        <h1>About <span class="highlight">EventHub</span></h1>
-        <p>Kenya's premier event discovery and ticketing platform</p>
-    </div>
-
-    <div class="about-content">
-        <div class="about-section">
-            <h2>Our Story</h2>
-            <p>EventHub was founded in 2020 with a simple mission: to make event discovery and ticketing seamless for everyone in Kenya. We saw a gap in the market where event organizers struggled to sell tickets online, and attendees found it difficult to discover exciting events happening around them.</p>
-            <p>Today, EventHub has grown to become Kenya's leading event ticketing platform, hosting thousands of events and serving millions of happy attendees. From intimate workshops to large-scale music festivals, we're proud to power experiences that bring people together.</p>
+{% block content %}
+<div class="about-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>About EventHub</h1>
+            <p>Connecting people through unforgettable experiences</p>
         </div>
-
-        <div class="about-section">
-            <h2>Our Mission</h2>
-            <p>To connect people with unforgettable experiences through a seamless, secure, and intuitive event discovery and ticketing platform.</p>
+        
+        <!-- Hero Section -->
+        <div class="about-hero">
+            <div class="about-hero-content">
+                <p class="about-hero-text">
+                    EventHub is Kenya's leading event discovery and ticketing platform. We connect event organizers with attendees,
+                    making it easy to discover, book, and attend amazing events across the country.
+                </p>
+            </div>
         </div>
-
-        <div class="about-section">
-            <h2>Our Values</h2>
-            <div class="values-grid">
-                <div class="value-card">
-                    <i class="fas fa-star"></i>
-                    <h3>Excellence</h3>
-                    <p>We strive for excellence in everything we do, from our technology to our customer support.</p>
+        
+        <!-- Stats Section - Modern Card Style -->
+        <div class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-number">500+</div>
+                    <div class="stat-label">Events Hosted</div>
+                    <p class="stat-description">Successfully hosted across Kenya</p>
                 </div>
-                <div class="value-card">
-                    <i class="fas fa-handshake"></i>
-                    <h3>Trust</h3>
-                    <p>Building trust with our users and partners is at the core of our business.</p>
+                
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number">50K+</div>
+                    <div class="stat-label">Happy Attendees</div>
+                    <p class="stat-description">Satisfied customers served</p>
                 </div>
-                <div class="value-card">
-                    <i class="fas fa-bolt"></i>
-                    <h3>Innovation</h3>
-                    <p>Continuously improving our platform to deliver the best experience possible.</p>
+                
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="stat-number">200+</div>
+                    <div class="stat-label">Event Organizers</div>
+                    <p class="stat-description">Trusted partners nationwide</p>
                 </div>
-                <div class="value-card">
-                    <i class="fas fa-users"></i>
-                    <h3>Community</h3>
-                    <p>Bringing people together through memorable events and experiences.</p>
+                
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Satisfaction Rate</div>
+                    <p class="stat-description">Customer satisfaction rate</p>
                 </div>
             </div>
         </div>
-
-        <div class="about-section">
-            <h2>Meet Our Team</h2>
+        
+        <!-- Mission Section -->
+        <div class="mission-section">
+            <div class="mission-card">
+                <div class="mission-icon">
+                    <i class="fas fa-bullseye"></i>
+                </div>
+                <h2>Our Mission</h2>
+                <p>To make event discovery and ticket booking seamless, secure, and accessible to everyone in Kenya.</p>
+            </div>
+        </div>
+        
+        <!-- Values Section -->
+        <div class="values-section">
+            <div class="section-header">
+                <h2>Our Core Values</h2>
+                <p>What drives us every day</p>
+            </div>
+            
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h3>Trust & Integrity</h3>
+                    <p>Building honest relationships with organizers and attendees</p>
+                </div>
+                
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <h3>Innovation</h3>
+                    <p>Constantly improving our platform for better experiences</p>
+                </div>
+                
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3>Community First</h3>
+                    <p>Putting our community at the heart of everything we do</p>
+                </div>
+                
+                <div class="value-card">
+                    <div class="value-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Excellence</h3>
+                    <p>Delivering the highest quality service</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Team Section -->
+        <div class="team-section">
+            <div class="section-header">
+                <h2>Meet Our Team</h2>
+                <p>The passionate people behind EventHub</p>
+            </div>
+            
             <div class="team-grid">
                 <div class="team-card">
                     <div class="team-avatar">JD</div>
-                    <h4>John Doe</h4>
-                    <p>CEO & Co-founder</p>
+                    <h3>John Doe</h3>
+                    <p>Founder & CEO</p>
                 </div>
+                
                 <div class="team-card">
                     <div class="team-avatar">JS</div>
-                    <h4>Jane Smith</h4>
-                    <p>CTO & Co-founder</p>
-                </div>
-                <div class="team-card">
-                    <div class="team-avatar">MK</div>
-                    <h4>Michael Kimani</h4>
+                    <h3>Jane Smith</h3>
                     <p>Head of Operations</p>
                 </div>
+                
+                <div class="team-card">
+                    <div class="team-avatar">MK</div>
+                    <h3>Michael Kim</h3>
+                    <p>Technical Director</p>
+                </div>
+                
                 <div class="team-card">
                     <div class="team-avatar">SW</div>
-                    <h4>Sarah Wanjiku</h4>
-                    <p>Customer Success Lead</p>
+                    <h3>Sarah Wang</h3>
+                    <p>Marketing Lead</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CTA Section -->
+        <div class="cta-section">
+            <div class="cta-card">
+                <h3>Ready to start your event journey?</h3>
+                <p>Join thousands of happy attendees and organizers on EventHub</p>
+                <div class="cta-buttons">
+                    <a href="/events/" class="btn btn-primary">Browse Events</a>
+                    <a href="/register/" class="btn btn-outline">Create Account</a>
                 </div>
             </div>
         </div>

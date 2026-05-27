@@ -19,16 +19,37 @@ async function apiRequest(url, method = 'GET', data = null) {
     
     try {
         const response = await fetch(url, options);
-        const result = await response.json();
+        
+        let result;
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+            result = await response.json();
+        } else {
+            const text = await response.text();
+            if (!response.ok) {
+                throw new Error(`Server returned an invalid response (${response.status})`);
+            }
+            return text;
+        }
         
         if (!response.ok) {
-            throw new Error(result.message || 'Request failed');
+            throw new Error(result.message || result.error || result.detail || 'Request failed');
         }
         
         return result;
     } catch (error) {
         console.error('API Error:', error);
-        showToast(error.message, 'error');
+        
+        let msg = error.message;
+        if (error instanceof SyntaxError || msg.includes('JSON')) {
+            msg = 'Server connection error. Please try again.';
+        }
+        
+        // Suppress 404 Not Found from showing toast popups automatically
+        if (!msg.includes('404')) {
+            showToast(msg, 'error');
+        }
         throw error;
     }
 }
@@ -234,7 +255,8 @@ async function loadNotifications() {
     
     try {
         const response = await fetch('/api/admin/notifications/recent/');
-        if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (response.ok && contentType && contentType.includes('application/json')) {
             const data = await response.json();
             displayNotifications(data.notifications, data.unread_count);
         } else {
@@ -345,7 +367,8 @@ async function fetchPendingCount() {
     
     try {
         const response = await fetch('/api/admin/events/pending/count/');
-        if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (response.ok && contentType && contentType.includes('application/json')) {
             const data = await response.json();
             const count = data.count || 0;
             if (count > 0) {

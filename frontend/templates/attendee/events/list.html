@@ -1,102 +1,58 @@
 {% extends 'attendee/base.html' %}
 {% load static %}
 
-{% block title %}Browse Events - EventHub{% endblock %}
+{% block title %}Events - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/typography.css' %}">
+<link rel="stylesheet" href="{% static 'css/shared/card.css' %}">
 <link rel="stylesheet" href="{% static 'css/attendee/events.css' %}">
 {% endblock %}
 
-{% block attendee_content %}
-<div class="events-container">
-    <!-- Page Header -->
-    <div class="page-header">
-        <div>
-            <h1><i class="fas fa-calendar-alt"></i> Discover Events</h1>
-            <p class="text-muted">Find amazing events happening near you</p>
+{% block content %}
+<div class="events-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="events-header">
+            <h1>Discover Amazing Events</h1>
+            <p>Find and book tickets for the best events in Kenya</p>
         </div>
-        <button class="btn-outline" onclick="toggleFilters()">
-            <i class="fas fa-filter"></i> Filters
-        </button>
-    </div>
-
-    <!-- Filters Panel -->
-    <div class="filters-panel" id="filtersPanel">
-        <div class="filters-row">
-            <div class="filter-group">
-                <label>Search</label>
-                <div class="search-group">
+        
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="filters-wrapper" id="filtersWrapper">
+                <div class="filter-group">
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <select id="sortFilter" class="filter-select">
+                        <option value="date">Date: Soonest First</option>
+                        <option value="-date">Date: Latest First</option>
+                        <option value="price">Price: Low to High</option>
+                        <option value="-price">Price: High to Low</option>
+                        <option value="title">Name: A to Z</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group search-group">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="searchEvents" placeholder="Search by title, venue...">
+                    <input type="text" id="searchInput" placeholder="Search events...">
                 </div>
             </div>
-            <div class="filter-group">
-                <label>Category</label>
-                <select id="categoryFilter">
-                    <option value="">All Categories</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>City</label>
-                <select id="cityFilter">
-                    <option value="">All Cities</option>
-                    <option value="Nairobi">Nairobi</option>
-                    <option value="Mombasa">Mombasa</option>
-                    <option value="Kisumu">Kisumu</option>
-                    <option value="Nakuru">Nakuru</option>
-                    <option value="Eldoret">Eldoret</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Date</label>
-                <select id="dateFilter">
-                    <option value="upcoming">Upcoming</option>
-                    <option value="today">Today</option>
-                    <option value="weekend">This Weekend</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Sort By</label>
-                <select id="sortBy">
-                    <option value="date">Date (Newest)</option>
-                    <option value="price_low">Price (Low to High)</option>
-                    <option value="price_high">Price (High to Low)</option>
-                    <option value="popularity">Popularity</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>Price Range</label>
-                <div class="price-range-inputs">
-                    <input type="number" id="priceMin" placeholder="Min">
-                    <span>-</span>
-                    <input type="number" id="priceMax" placeholder="Max">
-                </div>
-            </div>
-            <button class="btn-secondary" onclick="resetFilters()">Reset</button>
         </div>
-    </div>
-
-    <!-- Results Info -->
-    <div class="results-info">
-        <span id="resultsCount">Loading events...</span>
-    </div>
-
-    <!-- Events Grid -->
-    <div class="events-grid" id="eventsGrid">
-        <div class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>Loading events...</p>
+        
+        <!-- Events Grid -->
+        <div class="events-grid" id="eventsGrid">
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Loading events...</p>
+            </div>
         </div>
-    </div>
-
-    <!-- Load More Button -->
-    <div class="load-more-container">
-        <button class="btn-outline" id="loadMoreBtn" onclick="loadMore()" style="display: none;">
-            Load More Events
-        </button>
+        
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
     </div>
 </div>
 {% endblock %}

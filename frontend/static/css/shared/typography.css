@@ -1,63 +1,182 @@
-@import url('variables.css');
+/* ============================================
+   TYPOGRAPHY CSS - EventHub Light Theme
+   ============================================ */
 
-h1, h2, .logo-text, .kaushan-heading {
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&family=Kaushan+Script&display=swap');
+
+/* Kaushan Script for Special Headings */
+h1, h2, .kaushan-heading {
     font-family: 'Kaushan Script', cursive;
-    color: rgba(0, 0, 0, 0.78);
+    color: #1e293b;
     letter-spacing: 0.5px;
     font-weight: 400;
     line-height: 1.2;
 }
 
+/* Manrope/Inter for other headings and body */
+h3, h4, h5, h6, p, .manrope-text {
+    font-family: 'Manrope', 'Inter', sans-serif;
+    color: #1e293b;
+}
+
 h1 {
     font-size: clamp(48px, 8vw, 88px);
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 1rem;
 }
 
 h2 {
     font-size: clamp(38px, 6vw, 58px);
-    margin-bottom: var(--spacing-2xl);
+    margin-bottom: 1rem;
     text-align: center;
 }
 
 h3 {
-    font-family: 'Manrope', 'Inter', sans-serif;
     font-weight: 700;
     letter-spacing: -0.02em;
     font-size: clamp(24px, 4vw, 32px);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 0.75rem;
 }
 
 h4 {
-    font-family: 'Manrope', 'Inter', sans-serif;
     font-weight: 600;
     font-size: clamp(18px, 3vw, 22px);
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: 0.5rem;
 }
 
+h5 {
+    font-weight: 600;
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+}
+
+h6 {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Logo Text */
+.logo-text {
+    font-family: 'Kaushan Script', cursive;
+    color: #1e293b;
+    letter-spacing: 0.5px;
+    font-weight: 400;
+}
+
+/* Paragraphs */
 p {
-    font-size: 1.1rem;
+    font-size: 1rem;
     line-height: 1.6;
-    color: var(--np-gray);
+    color: #475569;
+    margin-bottom: 1rem;
 }
 
+/* Text Utilities */
 .text-sm {
-    font-size: 0.95rem;
+    font-size: 0.875rem;
     line-height: 1.5;
 }
 
 .text-xs {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     line-height: 1.4;
+}
+
+.text-lg {
+    font-size: 1.125rem;
+    line-height: 1.6;
+}
+
+.text-xl {
+    font-size: 1.25rem;
+    line-height: 1.6;
 }
 
 .text-center {
     text-align: center;
 }
 
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+/* Text Colors */
 .text-red {
-    color: var(--np-red);
+    color: #ef4444;
 }
 
 .text-muted {
-    color: var(--np-gray);
+    color: #64748b;
+}
+
+.text-gold {
+    color: #f59e0b;
+}
+
+.text-white {
+    color: #ffffff;
+}
+
+.text-dark {
+    color: #1e293b;
+}
+
+/* Font Weights */
+.font-light { font-weight: 300; }
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.font-extrabold { font-weight: 800; }
+
+/* Line Heights */
+.leading-tight { line-height: 1.2; }
+.leading-normal { line-height: 1.5; }
+.leading-relaxed { line-height: 1.6; }
+.leading-loose { line-height: 1.8; }
+
+/* No underline for headings */
+h1, h2, h3, h4, h5, h6, .section-header h2 {
+    text-decoration: none;
+}
+
+/* Responsive Typography */
+@media (max-width: 768px) {
+    h1 {
+        font-size: clamp(36px, 6vw, 56px);
+    }
+    
+    h2 {
+        font-size: clamp(28px, 5vw, 44px);
+    }
+    
+    h3 {
+        font-size: clamp(20px, 3.5vw, 28px);
+    }
+    
+    p {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: clamp(28px, 5vw, 44px);
+    }
+    
+    h2 {
+        font-size: clamp(24px, 4vw, 36px);
+    }
+    
+    h3 {
+        font-size: clamp(18px, 3vw, 24px);
+    }
+    
+    p {
+        font-size: 0.9rem;
+    }
 }
