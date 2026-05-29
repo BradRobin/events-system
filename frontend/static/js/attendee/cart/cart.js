@@ -598,8 +598,8 @@ function cancelPayment() {
 }
 
 function updateCartCount(count) {
-    const cartBadge = document.getElementById('cartBadge');
-    const cartCountMobile = document.getElementById('cartCountMobile');
+    const cartBadge = document.getElementById('cartBadgeDropdown');
+    const cartCountMobile = document.getElementById('mobileCartBadge');
     if (cartBadge) {
         if (count > 0) {
             cartBadge.textContent = count > 99 ? '99+' : count;
