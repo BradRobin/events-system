@@ -246,12 +246,44 @@
 document.addEventListener('DOMContentLoaded', function() {
     const accessToken = localStorage.getItem('attendee_access_token');
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
-    if (user.first_name) {
-        document.getElementById('userName').textContent = user.first_name;
-        document.getElementById('userInitial').textContent = user.first_name.charAt(0).toUpperCase();
-    } else if (user.username) {
-        document.getElementById('userName').textContent = user.username;
-        document.getElementById('userInitial').textContent = user.username.charAt(0).toUpperCase();
+    
+    const desktopProtected = document.getElementById('desktopProtectedLinks');
+    const desktopGuest = document.getElementById('desktopGuestLinks');
+    const desktopUser = document.getElementById('desktopUserLinks');
+    
+    const mobileProtected = document.getElementById('mobileProtectedLinks');
+    const mobileGuest = document.getElementById('mobileGuestLinks');
+    const mobileUser = document.getElementById('mobileUserLinks');
+    
+    const desktopName = document.getElementById('desktopUserName');
+    const desktopInitial = document.getElementById('desktopUserInitial');
+    const mobileName = document.getElementById('mobileUserName');
+    const mobileInitial = document.getElementById('mobileUserInitial');
+
+    if (accessToken && user) {
+        if (desktopProtected) desktopProtected.style.display = 'block';
+        if (desktopUser) desktopUser.style.display = 'block';
+        if (desktopGuest) desktopGuest.style.display = 'none';
+        
+        if (mobileProtected) mobileProtected.style.display = 'block';
+        if (mobileUser) mobileUser.style.display = 'block';
+        if (mobileGuest) mobileGuest.style.display = 'none';
+        
+        const nameVal = user.first_name || user.username || 'User';
+        const initialVal = nameVal.charAt(0).toUpperCase();
+        
+        if (desktopName) desktopName.textContent = nameVal;
+        if (desktopInitial) desktopInitial.textContent = initialVal;
+        if (mobileName) mobileName.textContent = nameVal;
+        if (mobileInitial) mobileInitial.textContent = initialVal;
+    } else {
+        if (desktopProtected) desktopProtected.style.display = 'none';
+        if (desktopUser) desktopUser.style.display = 'none';
+        if (desktopGuest) desktopGuest.style.display = 'block';
+        
+        if (mobileProtected) mobileProtected.style.display = 'none';
+        if (mobileUser) mobileUser.style.display = 'none';
+        if (mobileGuest) mobileGuest.style.display = 'block';
     }
     
     // Smooth scroll for newsletter links

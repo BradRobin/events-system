@@ -190,4 +190,51 @@ def api_event_detail(request, event_id):
         return JsonResponse({'success': False, 'message': 'Event not found'}, status=404)
 
 
+from django.utils import timezone
+
+def api_dashboard_stats(request):
+    """API endpoint to get attendee dashboard stats"""
+    upcoming_count = Event.objects.filter(status='published', start_date__gte=timezone.now()).count()
+    if upcoming_count == 0:
+        upcoming_count = Event.objects.filter(status='published').count()
+        
+    return JsonResponse({
+        'total_tickets': 0,
+        'total_spent': 0,
+        'upcoming_events': upcoming_count,
+        'reviews_written': 0,
+        'tickets_trend': {'percentage': 0, 'direction': 'flat'},
+        'spent_trend': {'percentage': 0, 'direction': 'flat'},
+        'upcoming_trend': {'percentage': 0, 'direction': 'flat'},
+        'reviews_trend': {'percentage': 0, 'direction': 'flat'}
+    })
+
+def api_dashboard_recommendations(request):
+    """API endpoint to get recommended events (featured events)"""
+    events = Event.objects.filter(status='published', is_featured=True)[:3]
+    if not events.exists():
+        events = Event.objects.filter(status='published')[:3]
+        
+    results = []
+    for e in events:
+        results.append({
+            'id': e.id,
+            'title': e.title,
+            'date': e.start_date.isoformat(),
+            'location': e.venue,
+            'price': float(e.price),
+            'image': e.banner_image,
+        })
+    return JsonResponse(results, safe=False)
+
+def api_dashboard_recent_activity(request):
+    """API endpoint to get recent activity"""
+    return JsonResponse([], safe=False)
+
+def api_tickets_upcoming(request):
+    """API endpoint to get upcoming tickets"""
+    return JsonResponse({'results': []})
+
+
+
 

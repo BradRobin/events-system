@@ -16,7 +16,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from events.views import (
-    organizer_dashboard_stats, api_event_list, api_category_list, api_event_detail
+    organizer_dashboard_stats, api_event_list, api_category_list, api_event_detail,
+    api_dashboard_stats, api_dashboard_recommendations, api_dashboard_recent_activity,
+    api_tickets_upcoming
 )
 from accounts.auth_views import register_submit, login_submit
 import json
@@ -256,7 +258,12 @@ urlpatterns = [
     path('api/attendee/events/', api_event_list, name='api_attendee_event_list'),
     path('api/attendee/events/search/', api_event_list, name='api_attendee_event_search'),
     path('api/attendee/events/categories/', api_category_list, name='api_attendee_category_list'),
+    path('api/attendee/categories/', api_category_list, name='api_attendee_category_list_legacy'),
     path('api/attendee/events/<int:event_id>/', api_event_detail, name='api_attendee_event_detail'),
+    path('api/attendee/dashboard/stats/', api_dashboard_stats, name='api_attendee_dashboard_stats'),
+    path('api/attendee/dashboard/recommendations/', api_dashboard_recommendations, name='api_attendee_dashboard_recommendations'),
+    path('api/attendee/dashboard/recent-activity/', api_dashboard_recent_activity, name='api_attendee_dashboard_recent_activity'),
+    path('api/attendee/tickets/upcoming/', api_tickets_upcoming, name='api_attendee_tickets_upcoming'),
     path('api/organizer/dashboard/stats/', organizer_dashboard_stats, name='organizer_dashboard_stats'),
     path('api/contact/submit/', api_contact_submit, name='api_contact_submit'),
     path('api/events/categories/', get_categories_list, name='api_categories'),
