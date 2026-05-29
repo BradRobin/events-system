@@ -21,6 +21,12 @@ from events.views import (
     api_tickets_upcoming
 )
 from accounts.auth_views import register_submit, login_submit
+from events.api_organizer_views import (
+    api_organizer_events_list,
+    api_organizer_events_create,
+    api_organizer_events_update,
+    api_organizer_events_delete
+)
 import json
 
 # ============ ADMIN LOGIN VIEWS ============
@@ -264,7 +270,14 @@ urlpatterns = [
     path('api/attendee/dashboard/recommendations/', api_dashboard_recommendations, name='api_attendee_dashboard_recommendations'),
     path('api/attendee/dashboard/recent-activity/', api_dashboard_recent_activity, name='api_attendee_dashboard_recent_activity'),
     path('api/attendee/tickets/upcoming/', api_tickets_upcoming, name='api_attendee_tickets_upcoming'),
+    
+    # Organizer API Endpoints
     path('api/organizer/dashboard/stats/', organizer_dashboard_stats, name='organizer_dashboard_stats'),
+    path('api/organizer/events/', api_organizer_events_list, name='api_organizer_events_list'),
+    path('api/organizer/events/create/', api_organizer_events_create, name='api_organizer_events_create'),
+    path('api/organizer/events/<int:event_id>/update/', api_organizer_events_update, name='api_organizer_events_update'),
+    path('api/organizer/events/<int:event_id>/delete/', api_organizer_events_delete, name='api_organizer_events_delete'),
+    
     path('api/contact/submit/', api_contact_submit, name='api_contact_submit'),
     path('api/events/categories/', get_categories_list, name='api_categories'),
     path('newsletter/subscribe/', newsletter_subscribe, name='newsletter_subscribe'),

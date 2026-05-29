@@ -47,15 +47,24 @@ def organizer_dashboard(request):
     return render(request, 'organizer_dashboard.html')
 
 def organizer_dashboard_stats(request):
+    if not request.user.is_authenticated or getattr(request.user, 'role', None) != 'organizer':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+    events = Event.objects.filter(organizer=request.user)
+    
+    events_count = events.count()
+    tickets_sold = sum(e.total_seats - e.available_seats for e in events)
+    revenue = sum((e.total_seats - e.available_seats) * e.price for e in events)
+    
     metrics = {
-        'events_count': 0,
-        'tickets_sold': 0,
-        'revenue': 0.00,
-        'attendees': 0,
-        'top_event': 'No events yet',
+        'events_count': events_count,
+        'tickets_sold': tickets_sold,
+        'revenue': float(revenue),
+        'attendees': tickets_sold,
+        'top_event': 'No events yet' if events_count == 0 else events.first().title,
         'conversion_rate': 0,
         'new_followers': 0,
-        'pending_payout': 0.00,
+        'pending_payout': float(revenue) * 0.9 if revenue > 0 else 0.00,
     }
 
     return JsonResponse(metrics)
