@@ -321,6 +321,7 @@ urlpatterns = [
     
     # Portal URLs
     path('', include('config.attendee_urls')),
+    path('attendee/', include('config.attendee_urls')),
     path('organizer/', include('config.organizer_urls')),
     path('admin-portal/', include('config.admin_urls')),
 ]

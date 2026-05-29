@@ -7,6 +7,9 @@ from django.urls import path
 from django.views.generic import TemplateView
 
 urlpatterns = [
+    # Homepage
+    path('', TemplateView.as_view(template_name='attendee/pages/homepage/homepage.html'), name='attendee_home'),
+    
     # Auth
     path('login/', TemplateView.as_view(template_name='shared/auth/login.html'), name='attendee_login'),
     
@@ -36,6 +39,7 @@ urlpatterns = [
     
     # Tickets
     path('tickets/', TemplateView.as_view(template_name='attendee/tickets/list.html'), name='attendee_tickets'),
+    path('my-tickets/', TemplateView.as_view(template_name='attendee/tickets/list.html'), name='attendee_my_tickets'),
     path('tickets/detail/', TemplateView.as_view(template_name='attendee/tickets/detail.html'), name='attendee_ticket_detail'),
     path('tickets/qr/', TemplateView.as_view(template_name='attendee/tickets/qr.html'), name='attendee_ticket_qr'),
     
