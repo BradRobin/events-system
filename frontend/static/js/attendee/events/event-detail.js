@@ -188,35 +188,63 @@ const EventDetailModule = (function() {
         if (!token) {
             showToast('Please login to book tickets', 'info');
             setTimeout(() => {
-                localStorage.setItem('redirect_after_login', window.location.pathname);
+                localStorage.setItem('redirect_after_login', window.location.pathname + window.location.search);
                 window.location.href = '/login/';
             }, 1500);
             return;
         }
         
         try {
-            const response = await fetch(API.cart, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ event_id: eventId, quantity: quantity })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showToast('Added to cart! Redirecting to cart...', 'success');
+            // Get existing cart or initialize it
+            const savedCart = localStorage.getItem('eventhub_cart');
+            let cart = savedCart ? JSON.parse(savedCart) : {
+                items: [],
+                subtotal: 0,
+                platform_fee: 0,
+                total: 0,
+                discount_amount: 0,
+                promo_code: null
+            };
+
+            // Check if item is already in cart
+            const existingItem = cart.items.find(item => item.id == eventId);
+            if (existingItem) {
+                showToast('This event is already in your cart!', 'info');
                 setTimeout(() => {
                     window.location.href = '/cart/';
                 }, 1000);
+                return;
             } else {
-                showToast(data.message || 'Failed to book', 'error');
+                cart.items.push({
+                    id: eventData.id,
+                    title: eventData.title,
+                    category: eventData.category_name || eventData.category || 'Event',
+                    date: eventData.start_date || eventData.date,
+                    location: eventData.location || eventData.venue,
+                    price: parseFloat(eventData.price),
+                    image: eventData.image || eventData.banner_image,
+                    quantity: parseInt(quantity || 1)
+                });
             }
+
+            // Recalculate totals
+            cart.subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            cart.platform_fee = Math.ceil(cart.subtotal * 0.05);
+            cart.total = cart.subtotal + cart.platform_fee - (cart.discount_amount || 0);
+
+            // Save back to localStorage
+            localStorage.setItem('eventhub_cart', JSON.stringify(cart));
+
+            // Trigger custom event to notify navbar to update badge
+            window.dispatchEvent(new Event('cart-updated'));
+
+            showToast('Added to cart! Redirecting...', 'success');
+            setTimeout(() => {
+                window.location.href = '/cart/';
+            }, 1000);
         } catch (error) {
             console.error('Error booking:', error);
-            showToast('Failed to book. Please try again.', 'error');
+            showToast('Failed to add to cart. Please try again.', 'error');
         }
     }
     

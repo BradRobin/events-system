@@ -352,11 +352,11 @@ const EventsModule = (function() {
     }
     
     function showToast(message, type = 'success') {
-        const existingToast = document.querySelector('.toast-notification');
+        const existingToast = document.querySelector('.toast');
         if (existingToast) existingToast.remove();
         
         const toast = document.createElement('div');
-        toast.className = `toast-notification toast-${type}`;
+        toast.className = `toast toast-${type}`;
         toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i><span>${message}</span>`;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
