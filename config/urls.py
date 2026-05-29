@@ -15,7 +15,9 @@ from django.contrib.auth.views import LogoutView
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from events.views import organizer_dashboard_stats
+from events.views import (
+    organizer_dashboard_stats, api_event_list, api_category_list, api_event_detail
+)
 from accounts.auth_views import register_submit, login_submit
 import json
 
@@ -251,6 +253,10 @@ urlpatterns = [
     
     # API Endpoints
     path('api/', include('accounts.urls')),
+    path('api/attendee/events/', api_event_list, name='api_attendee_event_list'),
+    path('api/attendee/events/search/', api_event_list, name='api_attendee_event_search'),
+    path('api/attendee/events/categories/', api_category_list, name='api_attendee_category_list'),
+    path('api/attendee/events/<int:event_id>/', api_event_detail, name='api_attendee_event_detail'),
     path('api/organizer/dashboard/stats/', organizer_dashboard_stats, name='organizer_dashboard_stats'),
     path('api/contact/submit/', api_contact_submit, name='api_contact_submit'),
     path('api/events/categories/', get_categories_list, name='api_categories'),
