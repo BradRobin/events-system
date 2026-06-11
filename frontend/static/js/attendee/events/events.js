@@ -505,7 +505,7 @@ function bookTicket(id) {
 
     const existingItem = cart.items.find(i => i.id == id);
     if (existingItem) {
-        showToast(`🎟️ ${event.title} is already in your booking cart!`, 'info');
+        window.location.href = '/cart/';
         return;
     }
 
@@ -542,7 +542,7 @@ function bookTicket(id) {
             localStorage.setItem('eventhub_cart', JSON.stringify(cart));
         }
         window.dispatchEvent(new Event('cart-updated'));
-        showToast(`✅ ${event.title} added to booking cart!`, 'success');
+        window.location.href = '/cart/';
     } catch (error) {
         console.error('Failed to save cart:', error);
         showToast('Could not save cart. Please clear site data or book from the event page.', 'error');
