@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     displayGreeting();
     displayUserName();
     setupAutoRefresh();
+    window.addEventListener('profile-updated', displayUserName);
 });
 
 function displayGreeting() {
@@ -35,14 +36,21 @@ function displayCurrentDate() {
     }
 }
 
+function getGreetingFirstName(user) {
+    if (user.first_name && String(user.first_name).trim()) {
+        return String(user.first_name).trim().split(/\s+/)[0];
+    }
+    const full = window.AccountProfile
+        ? AccountProfile.resolveDisplayName(user)
+        : (user.full_name || user.name || user.username || 'Attendee');
+    return full.split(/\s+/)[0] || full;
+}
+
 function displayUserName() {
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
     const userNameSpan = document.getElementById('userName');
     if (userNameSpan) {
-        const name = window.AccountProfile
-            ? AccountProfile.resolveDisplayName(user)
-            : (user.full_name || user.name || user.first_name || user.username || 'Attendee');
-        userNameSpan.textContent = name;
+        userNameSpan.textContent = getGreetingFirstName(user);
     }
 }
 
