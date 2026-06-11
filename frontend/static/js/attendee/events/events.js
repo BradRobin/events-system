@@ -94,6 +94,35 @@ function formatDate(dateString) {
     return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function getEventImageUrl(event) {
+    return (event.image || event.banner_image || '').trim();
+}
+
+function markEventImageLoaded(img) {
+    img.classList.remove('is-loading');
+    img.classList.add('is-loaded');
+    const skeleton = img.closest('.card-image-container')?.querySelector('.card-image-skeleton');
+    if (skeleton) skeleton.classList.add('is-hidden');
+}
+
+function initEventCardImages() {
+    document.querySelectorAll('.card-bg-image.is-loading').forEach(img => {
+        const finish = () => markEventImageLoaded(img);
+        if (img.complete && img.naturalWidth > 0) {
+            finish();
+            return;
+        }
+        img.addEventListener('load', finish, { once: true });
+        img.addEventListener('error', () => {
+            img.src = '/static/images/placeholder.jpg';
+        }, { once: true });
+    });
+
+    document.querySelectorAll('.card-image-container--no-image .card-image-skeleton').forEach(skeleton => {
+        skeleton.classList.add('is-hidden');
+    });
+}
+
 async function loadEventsFromAPI() {
     try {
         const params = new URLSearchParams();
@@ -434,19 +463,25 @@ function renderEvents() {
     
     grid.innerHTML = filteredEvents.map(e => {
         const inWishlist = wishlistIds.includes(e.id);
+        const imageUrl = getEventImageUrl(e);
+        const imageBlock = imageUrl
+            ? `<img src="${escapeHtml(imageUrl)}" class="card-bg-image is-loading" alt="" loading="lazy" decoding="async">`
+            : `<div class="card-image-fallback" aria-hidden="true"><i class="fas fa-calendar-alt"></i></div>`;
+        const imageContainerClass = imageUrl ? 'card-image-container' : 'card-image-container card-image-container--no-image';
         return `
             <div class="event-card premium-card" onclick="window.location.href='/events/detail/?id=${e.id}'">
-                <div class="card-image-container">
-                    <img src="${e.image || '/static/images/placeholder.jpg'}" class="card-bg-image" onerror="this.src='/static/images/placeholder.jpg'">
+                <div class="${imageContainerClass}">
+                    <div class="card-image-skeleton" aria-hidden="true"></div>
+                    ${imageBlock}
                     <div class="card-gradient-overlay"></div>
-                    ${e.featured ? '<span class="featured-badge">Featured</span>' : ''}
+                    ${e.featured || e.is_featured ? '<span class="featured-badge">Featured</span>' : ''}
                     <button class="wishlist-btn" data-id="${e.id}" style="background:${inWishlist ? '#f59e0b' : 'rgba(0,0,0,0.5)'}">
                         <i class="${inWishlist ? 'fas' : 'far'} fa-heart"></i> ${inWishlist ? 'Remove' : 'Add to wish list'}
                     </button>
                 </div>
                 <div class="card-content">
-                    <span class="card-category">${e.category_name || 'Event'}</span>
-                    <h3 class="card-title">${e.title}</h3>
+                    <span class="card-category">${escapeHtml(e.category_name || 'Event')}</span>
+                    <h3 class="card-title">${escapeHtml(e.title)}</h3>
                     <div class="card-meta">
                         <span><i class="fas fa-calendar"></i> ${formatDate(e.date)}</span>
                         <span><i class="fas fa-map-marker-alt"></i> ${e.location ? e.location.split(',')[0] : 'TBD'}</span>
@@ -474,6 +509,8 @@ function renderEvents() {
         btn.removeEventListener('click', handleWishlistClick);
         btn.addEventListener('click', handleWishlistClick);
     });
+
+    initEventCardImages();
 }
 
 function handleBookClick(e) {
