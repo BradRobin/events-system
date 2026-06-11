@@ -1,5 +1,5 @@
 /* ============================================
-   EVENT CARD CSS - Redesigned Card Layout
+   EVENT CARD CSS - Premium Card with Gradient Overlay
    ============================================ */
 
 .premium-card {
@@ -22,13 +22,66 @@
     border-color: #e2e8f0;
 }
 
-/* Image container on top */
+/* Animated border on hover - orange circulating effect */
+.premium-card:hover::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+        #f59e0b, #ec6408, #f59e0b, #ec6408, #f59e0b);
+    background-size: 400% 400%;
+    border-radius: 18px;
+    z-index: -1;
+    animation: borderGlow 3s ease infinite;
+    opacity: 1;
+}
+
+.premium-card:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    border-radius: 15px;
+    z-index: -0;
+}
+
+@keyframes borderGlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Image container - height will be increased by gradient overlay */
 .card-image-container {
     position: relative;
     width: 100%;
-    height: 200px;
     overflow: hidden;
     background: #f1f5f9;
+}
+
+/* Gradient overlay at bottom of image (visually extends image into content area) */
+.card-image-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px; /* 10-11% of content area (~180px content = ~18-20px) */
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
+    pointer-events: none;
+    z-index: 5;
 }
 
 .card-image-skeleton {
@@ -88,18 +141,15 @@
     100% { background-position: -120% 0; }
 }
 
-/* Gradient overlay is hidden in standard card */
-.card-gradient-overlay {
-    display: none;
-}
-
-/* Content section below picture with white background */
+/* Content section below gradient - fully white background */
 .card-content {
     padding: 16px;
     background: #ffffff;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 2;
 }
 
 .card-category {
@@ -236,13 +286,13 @@
     transform: translateY(-1px);
 }
 
-.add-to-cart-btn {
+.book-ticket-btn {
     background: linear-gradient(135deg, #f59e0b, #ec6408);
     color: white;
     box-shadow: 0 2px 4px rgba(236, 100, 8, 0.15);
 }
 
-.add-to-cart-btn:hover {
+.book-ticket-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(236, 100, 8, 0.25);
     background: linear-gradient(135deg, #ec6408, #d97706);
@@ -259,7 +309,7 @@
     border-radius: 6px;
     font-size: 0.65rem;
     font-weight: 700;
-    z-index: 3;
+    z-index: 10;
     text-transform: uppercase;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -272,14 +322,14 @@
     border: none;
     padding: 6px 10px;
     border-radius: 20px;
-    color: #ffffff;
+    color: #1e293b;
     font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 4px;
-    z-index: 3;
+    z-index: 10;
     transition: all 0.2s ease;
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
@@ -327,9 +377,14 @@
 .premium-card:nth-child(5) { animation-delay: 0.25s; }
 .premium-card:nth-child(6) { animation-delay: 0.3s; }
 
+/* Responsive */
 @media (max-width: 768px) {
     .card-image-container {
-        height: 180px;
+        height: auto;
+    }
+    
+    .card-image-container::after {
+        height: 18px;
     }
     
     .card-content {
@@ -353,5 +408,11 @@
         padding: 8px 10px;
         font-size: 0.7rem;
         border-radius: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-image-container::after {
+        height: 15px;
     }
 }

@@ -1,10 +1,16 @@
-// EVENTS MODULE - Live API Integration
+// EVENTS MODULE - Live API Integration (Optimized with Infinite Scroll)
 console.log('Events.js loaded');
 
 let currentCategory = "all";
 let currentSearch = "";
 let filteredEvents = [];
 let eventsCatalog = [];
+let debounceTimer = null;
+let isLoadingMore = false;
+let currentOffset = 0;
+const PAGE_SIZE = 12;
+let hasMoreEvents = true;
+let observer = null;
 
 // API endpoints
 const API = {
@@ -12,81 +18,64 @@ const API = {
     categories: '/api/attendee/categories/',
 };
 
+// Cache for categories
+let cachedCategories = null;
+
+// DOM cache
+const domCache = {
+    grid: null,
+    stats: null,
+    get gridElement() {
+        if (!this.grid) this.grid = document.getElementById('eventsGrid');
+        return this.grid;
+    },
+    get statsElement() {
+        if (!this.stats) this.stats = document.getElementById('searchStats');
+        return this.stats;
+    }
+};
+
+// Throttle function for scroll events
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
 function showToast(message, type) {
     const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 10000;
-        padding: 12px 20px;
-        border-radius: 12px;
-        color: white;
-        font-size: 14px;
-        font-weight: 500;
-        background: ${type === 'success' ? '#10b981' : '#3b82f6'};
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        animation: slideInRight 0.3s ease;
-    `;
-    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i> ${message}`;
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i><span>${escapeHtml(message)}</span>`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
 
-function renderStreamLoader(isSearch = false) {
-    const grid = document.getElementById('eventsGrid');
+function showSkeletonCards(count = 6) {
+    const grid = domCache.gridElement;
     if (!grid) return;
     
-    const term = isSearch ? "Retrieving matches..." : "Retrieving active events catalog...";
-    
-    grid.innerHTML = `
-        <div class="stream-loader">
-            <div class="stream-loader-spinner"></div>
-            <h3 class="stream-loader-title">${isSearch ? "Searching Event Registry" : "Scanning Event Registry"}</h3>
-            <div class="stream-loader-steps">
-                <div class="loader-step active" id="step-connect">
-                    <i class="fas fa-circle-notch fa-spin"></i>
-                    <span>Connecting to database...</span>
-                </div>
-                <div class="loader-step pending" id="step-categories">
-                    <i class="far fa-circle"></i>
-                    <span>Loading filter categories...</span>
-                </div>
-                <div class="loader-step pending" id="step-events">
-                    <i class="far fa-circle"></i>
-                    <span>${term}</span>
-                </div>
-                <div class="loader-step pending" id="step-render">
-                    <i class="far fa-circle"></i>
-                    <span>Rendering displays...</span>
-                </div>
+    grid.innerHTML = Array(count).fill(`
+        <div class="skeleton-card">
+            <div class="skeleton-image"></div>
+            <div class="skeleton-title"></div>
+            <div class="skeleton-text"></div>
+            <div class="skeleton-text short"></div>
+            <div class="skeleton-actions">
+                <div class="skeleton-btn"></div>
+                <div class="skeleton-btn"></div>
             </div>
         </div>
-    `;
+    `).join('');
 }
 
-function updateStep(stepId, status) {
-    const el = document.getElementById(stepId);
-    if (!el) return;
-    
-    const icon = el.querySelector('i');
-    
-    if (status === 'completed') {
-        el.className = 'loader-step completed';
-        if (icon) {
-            icon.className = 'fas fa-check-circle';
-        }
-    } else if (status === 'active') {
-        el.className = 'loader-step active';
-        if (icon) {
-            icon.className = 'fas fa-circle-notch fa-spin';
-        }
-    } else if (status === 'pending') {
-        el.className = 'loader-step pending';
-        if (icon) {
-            icon.className = 'far fa-circle';
-        }
-    }
+function hideSkeletonCards() {
+    const skeletons = document.querySelectorAll('.skeleton-card');
+    skeletons.forEach(skeleton => skeleton.remove());
 }
 
 function formatDate(dateString) {
@@ -117,15 +106,21 @@ function initEventCardImages() {
             img.src = '/static/images/placeholder.jpg';
         }, { once: true });
     });
-
-    document.querySelectorAll('.card-image-container--no-image .card-image-skeleton').forEach(skeleton => {
-        skeleton.classList.add('is-hidden');
-    });
 }
 
-async function loadEventsFromAPI() {
+async function loadEventsFromAPI(reset = true) {
+    if (reset) {
+        currentOffset = 0;
+        eventsCatalog = [];
+        hasMoreEvents = true;
+    }
+    
+    if (!hasMoreEvents && !reset) return;
+    
     try {
         const params = new URLSearchParams();
+        params.set('offset', currentOffset);
+        params.set('limit', PAGE_SIZE);
 
         if (currentCategory !== 'all') {
             params.set('category', currentCategory);
@@ -133,7 +128,6 @@ async function loadEventsFromAPI() {
 
         if (currentSearch) {
             params.set('search', currentSearch);
-            params.set('limit', '200');
         }
 
         const url = API.events + (params.toString() ? '?' + params.toString() : '');
@@ -141,24 +135,36 @@ async function loadEventsFromAPI() {
         const data = await response.json();
 
         if (data.success) {
-            eventsCatalog = data.events || [];
+            if (reset) {
+                eventsCatalog = data.events || [];
+            } else {
+                eventsCatalog.push(...(data.events || []));
+            }
+            currentOffset += data.events?.length || 0;
+            hasMoreEvents = (data.events?.length || 0) === PAGE_SIZE;
+            return true;
         } else {
             console.error('Failed to load events:', data.message);
-            eventsCatalog = [];
+            return false;
         }
     } catch (error) {
         console.error('Error loading events:', error);
-        eventsCatalog = [];
+        return false;
     }
 }
 
 async function loadCategoriesFromAPI() {
+    if (cachedCategories) {
+        return cachedCategories;
+    }
+    
     try {
         const response = await fetch(API.categories);
         const data = await response.json();
         
         if (data.success && data.categories) {
-            return data.categories;
+            cachedCategories = data.categories;
+            return cachedCategories;
         }
         return [];
     } catch (error) {
@@ -195,24 +201,21 @@ async function addFilters(categoriesData = null) {
         });
         wrapper.innerHTML = categoriesHtml;
         
-        // Category button event listeners
         wrapper.querySelectorAll('.category-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 currentCategory = btn.dataset.category;
                 wrapper.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.dataset.category === currentCategory));
-                filterEvents();
+                resetAndReload();
             });
         });
     }
     
-    // Set up page search listener (Option 1)
     setupPageSearchListener();
 }
 
 function setupPageSearchListener() {
     const pageSearchInput = document.getElementById('searchInput');
     if (pageSearchInput) {
-        // Create suggestions container dynamically inside search-wrapper
         const wrapper = pageSearchInput.closest('.search-wrapper');
         let suggestionsContainer = document.getElementById('searchSuggestions');
         if (wrapper && !suggestionsContainer) {
@@ -228,24 +231,24 @@ function setupPageSearchListener() {
         pageSearchInput.removeEventListener('focus', showSuggestions);
         pageSearchInput.addEventListener('focus', showSuggestions);
 
-        // Hide suggestions when clicking outside
         document.addEventListener('click', (e) => {
             if (suggestionsContainer && !pageSearchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
                 suggestionsContainer.classList.remove('show');
             }
         });
 
-        // Add Enter key listener to save search query
         pageSearchInput.removeEventListener('keydown', handleSearchKeydown);
         pageSearchInput.addEventListener('keydown', handleSearchKeydown);
     }
 }
 
 function handleSearchInput(e) {
-    currentSearch = e.target.value.toLowerCase().trim();
-    filterEvents();
-    // Show updated list as they type
-    showSuggestions();
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        currentSearch = e.target.value.toLowerCase().trim();
+        resetAndReload();
+        showSuggestions();
+    }, 300);
 }
 
 function showSuggestions() {
@@ -261,7 +264,6 @@ function showSuggestions() {
     const input = document.getElementById('searchInput');
     const typed = input ? input.value.trim().toLowerCase() : '';
     
-    // Filter history based on what is typed (if anything is typed)
     const filteredSearches = typed 
         ? recentSearches.filter(q => q.toLowerCase().includes(typed))
         : recentSearches;
@@ -286,7 +288,6 @@ function showSuggestions() {
 
     suggestionsContainer.classList.add('show');
 
-    // Add click event for suggestion items
     suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
         item.addEventListener('click', () => {
             const query = item.dataset.query;
@@ -294,13 +295,12 @@ function showSuggestions() {
                 input.value = query;
                 currentSearch = query.toLowerCase();
                 saveSearchQuery(query);
-                filterEvents();
+                resetAndReload();
             }
             suggestionsContainer.classList.remove('show');
         });
     });
 
-    // Add click event for clear button
     const clearBtn = document.getElementById('clearRecentBtn');
     if (clearBtn) {
         clearBtn.addEventListener('click', (e) => {
@@ -340,58 +340,167 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-async function filterEvents(isInitialLoad = false) {
-    if (isInitialLoad) {
-        renderStreamLoader(false);
-        updateStep('step-connect', 'active');
-        
-        // Start both fetches concurrently
-        const categoriesPromise = loadCategoriesFromAPI();
-        const eventsPromise = loadEventsFromAPI();
-        
-        updateStep('step-connect', 'completed');
-        updateStep('step-categories', 'active');
-        updateStep('step-events', 'active');
-        
-        const categoriesData = await categoriesPromise;
-        updateStep('step-categories', 'completed');
-        
-        await addFilters(categoriesData);
-        
-        await eventsPromise;
-        updateStep('step-events', 'completed');
-        updateStep('step-render', 'active');
-        
-        // Minimal visual transition delay
-        await new Promise(resolve => setTimeout(resolve, 50));
-    } else {
-        const grid = document.getElementById('eventsGrid');
-        if (grid) {
-            grid.innerHTML = `
-                <div class="stream-loader">
-                    <div class="stream-loader-spinner"></div>
-                    <h3 class="stream-loader-title">Updating stream...</h3>
-                </div>
-            `;
-        }
-        await loadEventsFromAPI();
-    }
+async function resetAndReload() {
+    if (observer) observer.disconnect();
+    showSkeletonCards(6);
+    await loadEventsFromAPI(true);
+    setupInfiniteScroll();
+    await filterAndDisplay();
+}
 
+async function loadMoreEvents() {
+    if (isLoadingMore || !hasMoreEvents) return;
+    isLoadingMore = true;
+    
+    const sentinel = document.getElementById('scroll-sentinel');
+    if (sentinel) {
+        const loadingMore = sentinel.querySelector('.loading-more');
+        if (loadingMore) loadingMore.style.display = 'block';
+    }
+    
+    await loadEventsFromAPI(false);
+    await filterAndDisplay(false);
+    
+    if (sentinel) {
+        const loadingMore = sentinel.querySelector('.loading-more');
+        if (loadingMore) loadingMore.style.display = 'none';
+    }
+    isLoadingMore = false;
+}
+
+async function filterAndDisplay(updateStats = true) {
     filteredEvents = [...eventsCatalog];
     
-    // Update stats display
-    const stats = document.getElementById('searchStats');
-    if (stats) {
-        if (currentSearch) {
-            stats.innerHTML = `🔍 Found ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} for "${currentSearch}"`;
-        } else if (currentCategory !== 'all') {
-            const categoryName = document.querySelector(`.category-btn[data-category="${currentCategory}"] span`)?.textContent || currentCategory;
-            stats.innerHTML = `📂 ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} in ${categoryName}`;
-        } else {
-            stats.innerHTML = `📅 ${filteredEvents.length} upcoming event${filteredEvents.length !== 1 ? 's' : ''}`;
+    if (updateStats) {
+        const stats = domCache.statsElement;
+        if (stats) {
+            if (currentSearch) {
+                stats.innerHTML = `🔍 Found ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} for "${currentSearch}"`;
+            } else if (currentCategory !== 'all') {
+                const categoryName = document.querySelector(`.category-btn[data-category="${currentCategory}"] span`)?.textContent || currentCategory;
+                stats.innerHTML = `📂 ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} in ${categoryName}`;
+            } else {
+                stats.innerHTML = `✨ New events coming soon! Check back later.`;
+            }
         }
     }
+    
     renderEvents();
+}
+
+function goToNewsletter() {
+    // Navigate to homepage and scroll to newsletter section
+    window.location.href = '/#newsletterSection';
+}
+
+function renderEvents() {
+    const grid = domCache.gridElement;
+    if (!grid) return;
+    
+    hideSkeletonCards();
+    
+    if (filteredEvents.length === 0) { 
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-newspaper"></i>
+                <h3>No Events Available</h3>
+                <p>We don't have any events right now. Stay updated with our newsletter!</p>
+                <button onclick="goToNewsletter()" class="btn-browse">
+                    <i class="fas fa-envelope"></i> Subscribe to Newsletter
+                </button>
+            </div>
+        `; 
+        return; 
+    }
+    
+    const wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
+    const wishlistIds = wishlist.map(item => item.id);
+    
+    const fragment = document.createDocumentFragment();
+    const tempDiv = document.createElement('div');
+    
+    filteredEvents.forEach(e => {
+        const inWishlist = wishlistIds.includes(e.id);
+        const imageUrl = getEventImageUrl(e);
+        const imageBlock = imageUrl
+            ? `<img src="${escapeHtml(imageUrl)}" class="card-bg-image is-loading" alt="" loading="lazy" decoding="async">`
+            : `<div class="card-image-fallback" aria-hidden="true"><i class="fas fa-calendar-alt"></i></div>`;
+        const imageContainerClass = imageUrl ? 'card-image-container' : 'card-image-container card-image-container--no-image';
+        
+        tempDiv.innerHTML = `
+            <div class="event-card premium-card" onclick="window.location.href='/events/detail/?id=${e.id}'">
+                <div class="${imageContainerClass}">
+                    <div class="card-image-skeleton" aria-hidden="true"></div>
+                    ${imageBlock}
+                    <div class="card-gradient-overlay"></div>
+                    ${e.featured || e.is_featured ? '<span class="featured-badge">Featured</span>' : ''}
+                    <button class="wishlist-btn" data-id="${e.id}" style="background:${inWishlist ? '#f59e0b' : 'rgba(0,0,0,0.5)'}">
+                        <i class="${inWishlist ? 'fas' : 'far'} fa-heart"></i> ${inWishlist ? 'Remove' : 'Add to wish list'}
+                    </button>
+                </div>
+                <div class="card-content">
+                    <span class="card-category">${escapeHtml(e.category_name || 'Event')}</span>
+                    <h3 class="card-title">${escapeHtml(e.title)}</h3>
+                    <div class="card-meta">
+                        <span><i class="fas fa-calendar"></i> ${formatDate(e.date)}</span>
+                        <span><i class="fas fa-map-marker-alt"></i> ${e.location ? e.location.split(',')[0] : 'TBD'}</span>
+                    </div>
+                    <div class="card-price">KES ${(e.price || 0).toLocaleString()}</div>
+                </div>
+                <div class="card-actions">
+                    <button class="card-action-btn view-details-btn" onclick="event.stopPropagation();window.location.href='/events/detail/?id=${e.id}'">
+                        <i class="fas fa-info-circle"></i> Details
+                    </button>
+                    <button class="card-action-btn book-ticket-btn add-to-cart-btn" data-id="${e.id}">
+                        <i class="fas fa-ticket-alt"></i> Book Ticket
+                    </button>
+                </div>
+            </div>
+        `;
+        fragment.appendChild(tempDiv.firstElementChild);
+    });
+    
+    grid.innerHTML = '';
+    grid.appendChild(fragment);
+    
+    document.querySelectorAll('.book-ticket-btn').forEach(btn => {
+        btn.removeEventListener('click', handleBookClick);
+        btn.addEventListener('click', handleBookClick);
+    });
+    
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+        btn.removeEventListener('click', handleWishlistClick);
+        btn.addEventListener('click', handleWishlistClick);
+    });
+
+    initEventCardImages();
+}
+
+function setupInfiniteScroll() {
+    const sentinel = document.createElement('div');
+    sentinel.id = 'scroll-sentinel';
+    sentinel.style.height = '20px';
+    sentinel.style.margin = '10px 0';
+    sentinel.style.textAlign = 'center';
+    sentinel.innerHTML = '<div class="loading-more" style="display:none;">Loading more events...</div>';
+    
+    const existingSentinel = document.getElementById('scroll-sentinel');
+    if (existingSentinel) existingSentinel.remove();
+    
+    const grid = domCache.gridElement;
+    if (grid && grid.parentNode) {
+        grid.parentNode.appendChild(sentinel);
+    }
+    
+    if (observer) observer.disconnect();
+    
+    observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore && hasMoreEvents && filteredEvents.length > 0) {
+            loadMoreEvents();
+        }
+    }, { threshold: 0.1 });
+    
+    observer.observe(sentinel);
 }
 
 function toggleWishlist(id, btn) {
@@ -438,79 +547,6 @@ function toggleWishlist(id, btn) {
         badge.textContent = wishlist.length;
         badge.style.display = wishlist.length > 0 ? 'inline-block' : 'none';
     }
-}
-
-function renderEvents() {
-    const grid = document.getElementById('eventsGrid');
-    if (!grid) return;
-    
-    if (filteredEvents.length === 0) { 
-        grid.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-calendar-times"></i>
-                <h3>No events found</h3>
-                <p>Try adjusting your search or browse all events</p>
-                <button onclick="resetFilters()" class="btn-browse">
-                    <i class="fas fa-redo-alt"></i> Browse All Events
-                </button>
-            </div>
-        `; 
-        return; 
-    }
-    
-    const wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
-    const wishlistIds = wishlist.map(item => item.id);
-    
-    grid.innerHTML = filteredEvents.map(e => {
-        const inWishlist = wishlistIds.includes(e.id);
-        const imageUrl = getEventImageUrl(e);
-        const imageBlock = imageUrl
-            ? `<img src="${escapeHtml(imageUrl)}" class="card-bg-image is-loading" alt="" loading="lazy" decoding="async">`
-            : `<div class="card-image-fallback" aria-hidden="true"><i class="fas fa-calendar-alt"></i></div>`;
-        const imageContainerClass = imageUrl ? 'card-image-container' : 'card-image-container card-image-container--no-image';
-        return `
-            <div class="event-card premium-card" onclick="window.location.href='/events/detail/?id=${e.id}'">
-                <div class="${imageContainerClass}">
-                    <div class="card-image-skeleton" aria-hidden="true"></div>
-                    ${imageBlock}
-                    <div class="card-gradient-overlay"></div>
-                    ${e.featured || e.is_featured ? '<span class="featured-badge">Featured</span>' : ''}
-                    <button class="wishlist-btn" data-id="${e.id}" style="background:${inWishlist ? '#f59e0b' : 'rgba(0,0,0,0.5)'}">
-                        <i class="${inWishlist ? 'fas' : 'far'} fa-heart"></i> ${inWishlist ? 'Remove' : 'Add to wish list'}
-                    </button>
-                </div>
-                <div class="card-content">
-                    <span class="card-category">${escapeHtml(e.category_name || 'Event')}</span>
-                    <h3 class="card-title">${escapeHtml(e.title)}</h3>
-                    <div class="card-meta">
-                        <span><i class="fas fa-calendar"></i> ${formatDate(e.date)}</span>
-                        <span><i class="fas fa-map-marker-alt"></i> ${e.location ? e.location.split(',')[0] : 'TBD'}</span>
-                    </div>
-                    <div class="card-price">KES ${(e.price || 0).toLocaleString()}</div>
-                </div>
-                <div class="card-actions">
-                    <button class="card-action-btn view-details-btn" onclick="event.stopPropagation();window.location.href='/events/detail/?id=${e.id}'">
-                        <i class="fas fa-info-circle"></i> Details
-                    </button>
-                    <button class="card-action-btn book-ticket-btn add-to-cart-btn" data-id="${e.id}">
-                        <i class="fas fa-ticket-alt"></i> Book Ticket
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    document.querySelectorAll('.book-ticket-btn').forEach(btn => {
-        btn.removeEventListener('click', handleBookClick);
-        btn.addEventListener('click', handleBookClick);
-    });
-    
-    document.querySelectorAll('.wishlist-btn').forEach(btn => {
-        btn.removeEventListener('click', handleWishlistClick);
-        btn.addEventListener('click', handleWishlistClick);
-    });
-
-    initEventCardImages();
 }
 
 function handleBookClick(e) {
@@ -590,33 +626,28 @@ function resetFilters() {
     currentCategory = "all";
     currentSearch = "";
     
-    // Update active category button
     document.querySelectorAll('.category-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.category === currentCategory);
     });
     
-    // Clear page search input
     const pageSearchInput = document.getElementById('searchInput');
     if (pageSearchInput) {
         pageSearchInput.value = '';
     }
     
-    filterEvents();
+    resetAndReload();
 }
 
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-`;
-document.head.appendChild(style);
-
-// Make resetFilters available globally
+// Make resetFilters and goToNewsletter available globally
 window.resetFilters = resetFilters;
+window.goToNewsletter = goToNewsletter;
 
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => { 
-    // Initialise and load events catalog with stepped loading screens
-    await filterEvents(true); 
+    showSkeletonCards(6);
+    await loadCategoriesFromAPI();
+    await addFilters();
+    await loadEventsFromAPI(true);
+    await filterAndDisplay();
+    setupInfiniteScroll();
 });
