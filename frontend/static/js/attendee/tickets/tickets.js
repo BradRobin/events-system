@@ -6,13 +6,17 @@ let allTickets = [];
 let currentTab = 'upcoming';
 let currentSearch = '';
 let currentBookingId = null;
+let userReviewsByEvent = {};
+let reviewModalState = { eventId: null, reviewId: null, rating: 0 };
 
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     currentBookingId = urlParams.get('booking_id');
-    
+    applyInitialTabFromUrl(urlParams.get('tab'));
+
     loadTickets();
     setupEventListeners();
+    setupReviewModal();
     
     const path = window.location.pathname;
     if (path.includes('/detail/')) {
@@ -36,6 +40,7 @@ function mapApiTicket(t) {
     return {
         id: t.ticket_number,
         booking_id: t.ticket_number,
+        event_id: t.event?.id,
         title: t.event?.title || 'Event',
         category: 'Event',
         date: t.event?.start_date,
@@ -48,6 +53,78 @@ function mapApiTicket(t) {
         purchased_date: t.purchase_date,
         quantity: t.quantity,
     };
+}
+
+function applyInitialTabFromUrl(tab) {
+    if (tab !== 'past' && tab !== 'upcoming') return;
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+    });
+}
+
+async function loadUserReviews() {
+    userReviewsByEvent = {};
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/api/attendee/reviews/', {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'same-origin',
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        (data.results || []).forEach(review => {
+            userReviewsByEvent[review.event_id] = review;
+        });
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+    }
+}
+
+function renderStarsHtml(rating, interactive = false) {
+    const stars = [];
+    for (let i = 1; i <= 5; i += 1) {
+        const filled = i <= rating;
+        const icon = filled ? 'fas' : 'far';
+        if (interactive) {
+            stars.push(`<button type="button" class="event-review-star is-active" data-rating="${i}" aria-label="${i} star${i > 1 ? 's' : ''}"><i class="${icon} fa-star"></i></button>`);
+        } else {
+            stars.push(`<span class="event-review-star-display" aria-hidden="true"><i class="${icon} fa-star"></i></span>`);
+        }
+    }
+    return stars.join('');
+}
+
+function renderPastEventReviewPanel(ticket) {
+    const review = userReviewsByEvent[ticket.event_id];
+    if (review) {
+        const commentHtml = review.comment
+            ? `<p class="past-event-review-comment">${escapeHtml(review.comment)}</p>`
+            : '';
+        return `
+            <div class="past-event-review past-event-review--submitted">
+                <div class="past-event-review-header">
+                    <span class="past-event-review-label"><i class="fas fa-star"></i> Your review</span>
+                    <button type="button" class="past-event-review-edit" data-event-id="${ticket.event_id}" data-review-id="${review.id}">
+                        Edit
+                    </button>
+                </div>
+                <div class="past-event-review-stars">${renderStarsHtml(review.rating)}</div>
+                ${commentHtml}
+            </div>
+        `;
+    }
+
+    return `
+        <div class="past-event-review">
+            <p class="past-event-review-prompt">How was this event?</p>
+            <button type="button" class="past-event-review-btn" data-event-id="${ticket.event_id}">
+                <i class="fas fa-star"></i> Rate &amp; review
+            </button>
+        </div>
+    `;
 }
 
 function tierBadgeClass(tier) {
@@ -178,6 +255,7 @@ async function loadTickets() {
         const [upRes, pastRes] = await Promise.all([
             fetch('/api/attendee/tickets/upcoming/', { headers, credentials: 'same-origin' }),
             fetch('/api/attendee/tickets/past/', { headers, credentials: 'same-origin' }),
+            loadUserReviews(),
         ]);
         const up = await upRes.json();
         const past = await pastRes.json();
@@ -252,8 +330,181 @@ function renderTickets() {
         return;
     }
     
-    container.innerHTML = filtered.map((ticket, index) => renderFlipTicketCard(ticket, index)).join('');
+    const reviewEventsShown = new Set();
+    container.innerHTML = filtered.map((ticket, index) => {
+        const card = renderFlipTicketCard(ticket, index);
+        const showReview = currentTab === 'past'
+            && ticket.event_id
+            && !reviewEventsShown.has(ticket.event_id);
+        if (showReview) {
+            reviewEventsShown.add(ticket.event_id);
+            return `<div class="ticket-with-review">${card}${renderPastEventReviewPanel(ticket)}</div>`;
+        }
+        return card;
+    }).join('');
     setupFlipTickets();
+    setupPastEventReviewHandlers();
+}
+
+function setupPastEventReviewHandlers() {
+    document.querySelectorAll('.past-event-review-btn, .past-event-review-edit').forEach(btn => {
+        if (btn.dataset.reviewBound) return;
+        btn.dataset.reviewBound = '1';
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const eventId = parseInt(btn.dataset.eventId, 10);
+            const ticket = allTickets.find(t => t.event_id === eventId);
+            const reviewId = btn.dataset.reviewId ? parseInt(btn.dataset.reviewId, 10) : null;
+            openReviewModal(eventId, ticket?.title || 'Event', reviewId);
+        });
+    });
+}
+
+function setupReviewModal() {
+    const modal = document.getElementById('eventReviewModal');
+    if (!modal) return;
+
+    modal.querySelectorAll('[data-close-review-modal]').forEach(el => {
+        el.addEventListener('click', closeReviewModal);
+    });
+
+    document.getElementById('eventReviewStars')?.querySelectorAll('.event-review-star').forEach(star => {
+        star.addEventListener('click', () => {
+            setReviewModalRating(parseInt(star.dataset.rating, 10));
+        });
+        star.addEventListener('mouseenter', () => {
+            highlightReviewStars(parseInt(star.dataset.rating, 10));
+        });
+    });
+
+    document.getElementById('eventReviewStars')?.addEventListener('mouseleave', () => {
+        highlightReviewStars(reviewModalState.rating);
+    });
+
+    document.getElementById('eventReviewSubmitBtn')?.addEventListener('click', submitEventReview);
+}
+
+function openReviewModal(eventId, eventTitle, reviewId = null) {
+    const modal = document.getElementById('eventReviewModal');
+    if (!modal) return;
+
+    const existing = userReviewsByEvent[eventId];
+    reviewModalState = {
+        eventId,
+        reviewId: reviewId || existing?.id || null,
+        rating: existing?.rating || 0,
+    };
+
+    const titleEl = document.getElementById('eventReviewModalTitle');
+    const eventEl = document.getElementById('eventReviewModalEventName');
+    const commentEl = document.getElementById('eventReviewComment');
+    const submitBtn = document.getElementById('eventReviewSubmitBtn');
+
+    if (titleEl) titleEl.textContent = reviewModalState.reviewId ? 'Update your review' : 'Rate this event';
+    if (eventEl) eventEl.textContent = eventTitle;
+    if (commentEl) commentEl.value = existing?.comment || '';
+    if (submitBtn) submitBtn.textContent = reviewModalState.reviewId ? 'Save changes' : 'Submit review';
+
+    setReviewModalRating(reviewModalState.rating);
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('review-modal-open');
+}
+
+function closeReviewModal() {
+    const modal = document.getElementById('eventReviewModal');
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('review-modal-open');
+    reviewModalState = { eventId: null, reviewId: null, rating: 0 };
+}
+
+function ratingLabel(rating) {
+    const labels = ['Select a rating', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
+    return labels[rating] || labels[0];
+}
+
+function highlightReviewStars(rating) {
+    document.getElementById('eventReviewStars')?.querySelectorAll('.event-review-star').forEach(star => {
+        const value = parseInt(star.dataset.rating, 10);
+        const icon = star.querySelector('i');
+        const active = value <= rating;
+        star.classList.toggle('is-selected', active);
+        if (icon) icon.className = `${active ? 'fas' : 'far'} fa-star`;
+    });
+}
+
+function setReviewModalRating(rating) {
+    reviewModalState.rating = rating;
+    highlightReviewStars(rating);
+    const label = document.getElementById('eventReviewRatingLabel');
+    const submitBtn = document.getElementById('eventReviewSubmitBtn');
+    if (label) label.textContent = ratingLabel(rating);
+    if (submitBtn) submitBtn.disabled = rating < 1;
+}
+
+async function submitEventReview() {
+    const { eventId, reviewId, rating } = reviewModalState;
+    if (!eventId || rating < 1) return;
+
+    const comment = (document.getElementById('eventReviewComment')?.value || '').trim();
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) {
+        alert('Please log in to submit a review.');
+        return;
+    }
+
+    const submitBtn = document.getElementById('eventReviewSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving…';
+    }
+
+    try {
+        const url = reviewId
+            ? `/api/attendee/reviews/update/${reviewId}/`
+            : `/api/attendee/reviews/create/${eventId}/`;
+        const res = await fetch(url, {
+            method: reviewId ? 'PUT' : 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ rating, comment }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'Failed to save review.');
+        }
+
+        const review = data.review;
+        userReviewsByEvent[review.event_id] = review;
+        closeReviewModal();
+        renderTickets();
+        showReviewToast(reviewId ? 'Review updated!' : 'Thank you for your review!');
+    } catch (error) {
+        console.error('Error saving review:', error);
+        alert(error.message || 'Could not save your review. Please try again.');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = reviewModalState.rating < 1;
+            submitBtn.textContent = reviewModalState.reviewId ? 'Save changes' : 'Submit review';
+        }
+    }
+}
+
+function showReviewToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'event-review-toast';
+    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(message)}`;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('is-visible'));
+    setTimeout(() => {
+        toast.classList.remove('is-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 2800);
 }
 
 function viewTicketDetail(ticketId) {
@@ -637,14 +888,22 @@ function exportTicketAsPDF(ticket) {
 
 function switchTab(tab) {
     currentTab = tab;
-    
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
         if (btn.getAttribute('data-tab') === tab) {
             btn.classList.add('active');
         }
     });
-    
+
+    const url = new URL(window.location.href);
+    if (tab === 'past') {
+        url.searchParams.set('tab', 'past');
+    } else {
+        url.searchParams.delete('tab');
+    }
+    window.history.replaceState({}, '', url);
+
     renderTickets();
 }
 

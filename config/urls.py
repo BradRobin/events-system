@@ -43,6 +43,13 @@ from payments.order_views import (
     organizer_reject_order,
     organizer_payment_order_screenshot,
 )
+from reviews.views import (
+    api_my_reviews,
+    api_event_reviews,
+    api_create_review,
+    api_update_review,
+    api_delete_review,
+)
 from events.api_organizer_views import (
     api_organizer_events_list,
     api_organizer_events_create,
@@ -195,6 +202,11 @@ urlpatterns = [
     path('api/attendee/events/categories/', api_category_list, name='api_attendee_category_list'),
     path('api/attendee/categories/', api_category_list, name='api_attendee_category_list_legacy'),
     path('api/attendee/events/<int:event_id>/', api_event_detail, name='api_attendee_event_detail'),
+    path('api/attendee/events/<int:event_id>/reviews/', api_event_reviews, name='api_attendee_event_reviews'),
+    path('api/attendee/reviews/', api_my_reviews, name='api_attendee_my_reviews'),
+    path('api/attendee/reviews/create/<int:event_id>/', api_create_review, name='api_attendee_create_review'),
+    path('api/attendee/reviews/update/<int:review_id>/', api_update_review, name='api_attendee_update_review'),
+    path('api/attendee/reviews/delete/<int:review_id>/', api_delete_review, name='api_attendee_delete_review'),
     path('api/attendee/dashboard/stats/', api_dashboard_stats, name='api_attendee_dashboard_stats'),
     path('api/attendee/dashboard/recommendations/', api_dashboard_recommendations, name='api_attendee_dashboard_recommendations'),
     path('api/attendee/dashboard/recent-activity/', api_dashboard_recent_activity, name='api_attendee_dashboard_recent_activity'),

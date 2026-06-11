@@ -477,7 +477,8 @@ def api_dashboard_stats(request):
         # Count upcoming events that this specific user has tickets for
         user_upcoming_count = user_tickets.filter(event__end_date__gte=timezone.now()).values('event').distinct().count()
         upcoming_events = user_upcoming_count if user_upcoming_count > 0 else general_upcoming_count
-        reviews_written = 0
+        from reviews.models import EventReview
+        reviews_written = EventReview.objects.filter(user=user).count()
 
     return JsonResponse({
         'total_tickets': total_tickets,

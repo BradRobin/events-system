@@ -37,6 +37,15 @@
     box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.15);
 }
 
+.stat-card--clickable {
+    cursor: pointer;
+}
+
+.stat-card--clickable:focus-visible {
+    outline: 2px solid #f59e0b;
+    outline-offset: 2px;
+}
+
 .stat-icon {
     width: 55px;
     height: 55px;

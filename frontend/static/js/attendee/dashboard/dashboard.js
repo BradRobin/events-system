@@ -5,6 +5,7 @@
 let refreshInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    setupStatCardNavigation();
     loadDashboardData();
     displayCurrentDate();
     displayGreeting();
@@ -12,6 +13,34 @@ document.addEventListener('DOMContentLoaded', function() {
     setupAutoRefresh();
     window.addEventListener('profile-updated', displayUserName);
 });
+
+function setupStatCardNavigation() {
+    const navigableCards = [
+        { statId: 'totalTickets', href: '/tickets/' },
+        { statId: 'upcomingEvents', href: '/events/' },
+        { statId: 'reviewsWritten', href: '/tickets/?tab=past' },
+    ];
+
+    navigableCards.forEach(({ statId, href }) => {
+        const statEl = document.getElementById(statId);
+        const card = statEl?.closest('.stat-card');
+        if (!card) return;
+
+        card.classList.add('stat-card--clickable');
+        card.setAttribute('role', 'link');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', `${card.querySelector('.stat-info span')?.textContent || 'View'} — open page`);
+
+        const navigate = () => { window.location.href = href; };
+        card.addEventListener('click', navigate);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate();
+            }
+        });
+    });
+}
 
 function displayGreeting() {
     const greetingTextEl = document.getElementById('greetingText');
