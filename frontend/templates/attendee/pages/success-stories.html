@@ -16,23 +16,23 @@
             <p>Real stories from our amazing community</p>
         </div>
         
-        <!-- Stats Bar -->
-        <div class="stats-bar">
+        <!-- Stats Bar (values from platform stats pipeline) -->
+        <div class="stats-bar" id="platformStatsBar">
             <div class="stat-item">
                 <div class="stat-number">
-                    <span class="counter" data-target="10000">0</span><span class="plus-sign">+</span>
+                    <span class="counter" data-stat="happy_attendees" data-target="{{ happy_attendees|default:0 }}">0</span><span class="plus-sign">+</span>
                 </div>
                 <div class="stat-label">Happy Attendees</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number">
-                    <span class="counter" data-target="500">0</span><span class="plus-sign">+</span>
+                    <span class="counter" data-stat="events_hosted" data-target="{{ events_hosted|default:0 }}">0</span><span class="plus-sign">+</span>
                 </div>
                 <div class="stat-label">Events Hosted</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number">
-                    <span class="counter" data-target="98">0</span><span class="percent-sign">%</span>
+                    <span class="counter" data-stat="satisfaction_rate" data-target="{{ satisfaction_rate|default:0 }}">0</span><span class="percent-sign">%</span>
                 </div>
                 <div class="stat-label">Satisfaction Rate</div>
             </div>

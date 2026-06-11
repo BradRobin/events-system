@@ -11,26 +11,58 @@ from django.views.decorators.cache import cache_page
 from events.models import Event
 from accounts.models import User
 from bookings.models import Ticket
-from django.db.models import Sum
+from django.db.models import Sum, Avg
 
 def home(request):
     return render(request, 'index.html')
+
+
+def get_platform_stats():
+    """
+    Shared platform headline stats for public pages and APIs.
+    """
+    from reviews.models import EventReview
+
+    events_hosted = Event.objects.exclude(status='draft').count()
+
+    ticket_agg = Ticket.objects.exclude(status='cancelled').aggregate(total=Sum('quantity'))
+    happy_attendees = ticket_agg['total'] or 0
+
+    event_organizers = Event.objects.values('organizer').distinct().count()
+
+    avg_rating = EventReview.objects.aggregate(avg=Avg('rating'))['avg']
+    if avg_rating is not None:
+        satisfaction_rate = round((float(avg_rating) / 5.0) * 100)
+    else:
+        satisfaction_rate = 0
+
+    return {
+        'events_hosted': events_hosted,
+        'happy_attendees': happy_attendees,
+        'event_organizers': event_organizers,
+        'satisfaction_rate': satisfaction_rate,
+    }
+
 
 def homepage_view(request):
     events_count = Event.objects.filter(status='published').count()
     attendees_count = User.objects.filter(role='attendee').count()
     organizers_count = User.objects.filter(role='organizer').count()
     tickets_count = Ticket.objects.filter(status='valid').aggregate(Sum('quantity'))['quantity__sum'] or 0
-    satisfaction_rate = 98
-    
+    platform_stats = get_platform_stats()
+
     context = {
         'events_count': events_count,
         'attendees_count': attendees_count,
         'organizers_count': organizers_count,
         'tickets_count': tickets_count,
-        'satisfaction_rate': satisfaction_rate,
+        'satisfaction_rate': platform_stats['satisfaction_rate'],
     }
     return render(request, 'attendee/pages/homepage/homepage.html', context)
+
+
+def success_stories_view(request):
+    return render(request, 'attendee/pages/success-stories.html', get_platform_stats())
 
 
 
@@ -568,28 +600,12 @@ def api_featured_events(request):
 def api_platform_stats(request):
     """
     Public API endpoint — no authentication required.
-    Returns platform-wide headline stats for the Why EventHub / About page.
+    Returns platform-wide headline stats for public marketing pages.
     """
-    from django.db.models import Sum as _Sum
-
-    # Total events ever hosted (all non-draft statuses)
-    events_hosted = Event.objects.exclude(status='draft').count()
-
-    # Happy attendees: total ticket quantity sold (non-cancelled)
-    ticket_agg = Ticket.objects.exclude(status='cancelled').aggregate(total=_Sum('quantity'))
-    happy_attendees = ticket_agg['total'] or 0
-
-    # Event organizers: distinct users who have created at least one event
-    event_organizers = Event.objects.values('organizer').distinct().count()
-
-    satisfaction_rate = 98  # fixed business metric
-
+    stats = get_platform_stats()
     return JsonResponse({
         'success': True,
-        'events_hosted': events_hosted,
-        'happy_attendees': happy_attendees,
-        'event_organizers': event_organizers,
-        'satisfaction_rate': satisfaction_rate,
+        **stats,
     })
 
 

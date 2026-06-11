@@ -6,7 +6,7 @@ All attendee-related URLs
 from django.urls import path
 from django.views.generic import TemplateView
 
-from events.views import homepage_view
+from events.views import homepage_view, success_stories_view
 
 urlpatterns = [
     # Homepage
@@ -24,9 +24,9 @@ urlpatterns = [
     path('privacy/', TemplateView.as_view(template_name='attendee/pages/privacy.html'), name='attendee_privacy'),
     path('terms/', TemplateView.as_view(template_name='attendee/pages/terms.html'), name='attendee_terms'),
     path('reviews/', TemplateView.as_view(template_name='attendee/pages/reviews.html'), name='attendee_reviews'),
-    path('success-stories/', TemplateView.as_view(template_name='attendee/pages/success-stories.html'), name='attendee_success_stories'),
+    path('success-stories/', success_stories_view, name='attendee_success_stories'),
     path('why-eventhub/', TemplateView.as_view(template_name='attendee/pages/about.html'), name='attendee_why_eventhub'),
-    path('customer-stories/', TemplateView.as_view(template_name='attendee/pages/success-stories.html'), name='attendee_customer_stories'),
+    path('customer-stories/', success_stories_view, name='attendee_customer_stories'),
     
     # Events
     path('events/', TemplateView.as_view(template_name='attendee/events/list.html'), name='attendee_events'),

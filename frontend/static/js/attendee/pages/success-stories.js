@@ -636,22 +636,78 @@
             });
         }
         
-        // Counter animation
-        function animateCounters() {
-            const counters = document.querySelectorAll('.counter');
-            counters.forEach(counter => {
-                const target = parseInt(counter.dataset.target);
-                let current = 0;
-                const interval = setInterval(() => {
-                    current += Math.ceil(target / 50);
-                    if (current >= target) {
-                        counter.textContent = target;
-                        clearInterval(interval);
-                    } else {
-                        counter.textContent = current;
+        // Platform stats pipeline — fetch live counts then animate
+        function easeOutExpo(t) {
+            return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        }
+
+        function animateCounter(el) {
+            const target = parseInt(el.getAttribute('data-target'), 10) || 0;
+            const duration = 2000;
+            let startTime = null;
+
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = easeOutExpo(progress);
+                el.textContent = Math.floor(eased * target).toLocaleString();
+
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    el.textContent = target.toLocaleString();
+                }
+            }
+
+            requestAnimationFrame(step);
+        }
+
+        function observeStats(counters) {
+            if (!counters.length) return;
+
+            const statsBar = document.getElementById('platformStatsBar') || counters[0].closest('.stats-bar');
+            if (!statsBar) return;
+
+            let animated = false;
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting && !animated) {
+                        animated = true;
+                        counters.forEach(animateCounter);
+                        observer.disconnect();
                     }
-                }, 40);
-            });
+                });
+            }, { threshold: 0.25 });
+
+            observer.observe(statsBar);
+        }
+
+        function loadPlatformStats() {
+            const counters = Array.from(document.querySelectorAll('.stats-bar .counter[data-stat]'));
+            if (!counters.length) return;
+
+            fetch('/api/platform/stats/')
+                .then(function(res) {
+                    if (!res.ok) throw new Error('Network response was not ok');
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (!data.success) throw new Error('API returned failure');
+
+                    counters.forEach(function(el) {
+                        const key = el.getAttribute('data-stat');
+                        if (data[key] !== undefined && data[key] !== null) {
+                            el.setAttribute('data-target', data[key]);
+                        }
+                    });
+                })
+                .catch(function(err) {
+                    console.warn('[success-stories] Using server-rendered stats fallback:', err);
+                })
+                .finally(function() {
+                    observeStats(counters);
+                });
         }
         
         // Form submission
@@ -733,7 +789,7 @@
         renderStories();
         updateShareButtonState();
         setupRatingStars();
-        animateCounters();
+        loadPlatformStats();
         
         console.log('Success Stories initialized with', allStories.length, 'stories');
     }
