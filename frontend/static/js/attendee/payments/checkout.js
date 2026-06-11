@@ -76,8 +76,11 @@
                     <strong>${escapeHtml(opt.label)}</strong>
                     <div class="checkout-payment-value">${escapeHtml(opt.value)}</div>
                 </div>
-                <button type="button" class="checkout-copy-btn" data-copy="${escapeHtml(opt.value)}">
-                    <i class="fas fa-copy"></i> Copy
+                <button type="button" class="checkout-copy-btn" data-copy="${escapeHtml(opt.value)}" aria-label="Copy ${escapeHtml(opt.value)}">
+                    <span class="checkout-copy-btn-inner">
+                        <i class="fas fa-copy checkout-copy-icon" aria-hidden="true"></i>
+                        <span class="checkout-copy-label">Copy</span>
+                    </span>
                 </button>
             </div>
         `).join('');
@@ -85,14 +88,44 @@
         container.querySelectorAll('.checkout-copy-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const value = btn.getAttribute('data-copy');
+                if (!value || btn.classList.contains('is-copied')) return;
                 try {
                     await navigator.clipboard.writeText(value);
+                    container.querySelectorAll('.checkout-copy-btn').forEach(other => {
+                        if (other !== btn) resetCopyButton(other);
+                    });
+                    setCopyButtonCopied(btn);
                     showToast('Copied to clipboard!', 'success');
                 } catch (e) {
                     showToast('Could not copy. Please copy manually.', 'error');
                 }
             });
         });
+    }
+
+    function setCopyButtonCopied(btn) {
+        btn.classList.add('is-copied');
+        const icon = btn.querySelector('.checkout-copy-icon');
+        const label = btn.querySelector('.checkout-copy-label');
+        if (icon) {
+            icon.classList.remove('fa-copy');
+            icon.classList.add('fa-check');
+        }
+        if (label) label.textContent = 'Copied';
+        clearTimeout(btn._copyResetTimer);
+        btn._copyResetTimer = setTimeout(() => resetCopyButton(btn), 2200);
+    }
+
+    function resetCopyButton(btn) {
+        btn.classList.remove('is-copied');
+        const icon = btn.querySelector('.checkout-copy-icon');
+        const label = btn.querySelector('.checkout-copy-label');
+        if (icon) {
+            icon.classList.remove('fa-check');
+            icon.classList.add('fa-copy');
+        }
+        if (label) label.textContent = 'Copy';
+        clearTimeout(btn._copyResetTimer);
     }
 
     function renderStreamStep(message) {
