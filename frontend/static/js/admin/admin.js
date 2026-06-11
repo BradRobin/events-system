@@ -265,6 +265,7 @@ function initActivePageHighlighting() {
 function initNotifications() {
     const notificationsBtn = document.getElementById('notificationsBtn');
     const notificationsPanel = document.getElementById('notificationsPanel');
+    const notificationsList = document.getElementById('notificationsList');
     
     if (notificationsBtn && notificationsPanel) {
         notificationsBtn.addEventListener('click', function(e) {
@@ -281,23 +282,46 @@ function initNotifications() {
             e.stopPropagation();
         });
     }
+
+    if (notificationsList) {
+        notificationsList.addEventListener('click', function(e) {
+            const item = e.target.closest('.notification-item');
+            if (!item || e.target.closest('.mark-read')) return;
+            const notificationId = item.dataset.id;
+            const redirectUrl = item.dataset.url;
+            if (notificationId && redirectUrl) {
+                handleNotificationClick(e, notificationId, redirectUrl);
+            }
+        });
+    }
     
     loadNotifications();
+    setInterval(loadNotifications, 30000);
 
     window.addEventListener('pageshow', function() {
         loadNotifications();
     });
+
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            loadNotifications();
+        }
+    });
 }
 
-async function dismissAdminNotification(notificationId, onView = false) {
+function encodeNotificationId(notificationId) {
+    return encodeURIComponent(String(notificationId));
+}
+
+async function dismissAdminNotification(notificationId, onView = false, force = false) {
     try {
-        await fetch(`/api/admin/notifications/${notificationId}/dismiss/`, {
+        await fetch(`/api/admin/notifications/${encodeNotificationId(notificationId)}/dismiss/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCSRFToken()
             },
-            body: JSON.stringify({ on_view: onView })
+            body: JSON.stringify({ on_view: onView, force: force })
         });
     } catch (error) {
         console.error('Error dismissing notification:', error);
@@ -313,31 +337,20 @@ function clearActiveNotification() {
     sessionStorage.removeItem('admin_active_notification_id');
 }
 
-async function resolveActiveNotificationOnView() {
-    const notificationId = getActiveNotificationId();
-    if (!notificationId) return;
-
-    await dismissAdminNotification(notificationId, true);
-    clearActiveNotification();
-}
-
 window.dismissAdminNotification = dismissAdminNotification;
 window.getActiveNotificationId = getActiveNotificationId;
 window.clearActiveNotification = clearActiveNotification;
-window.resolveActiveNotificationOnView = resolveActiveNotificationOnView;
 
 async function loadNotifications() {
     const container = document.getElementById('notificationsList');
     if (!container) return;
     
-    // Show loading state
-    container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    const isFirstLoad = !container.querySelector('.notification-item') && !container.querySelector('.empty-state');
+    if (isFirstLoad) {
+        container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    }
     
     try {
-        await fetch('/api/admin/notifications/prune/', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': getCSRFToken() }
-        });
         const response = await fetch('/api/admin/notifications/recent/');
         const contentType = response.headers.get('content-type');
         if (response.ok && contentType && contentType.includes('application/json')) {
@@ -389,19 +402,13 @@ function displayNotifications(notifications, unreadCount) {
                 }
             }
 
-            const safeUrl = redirectUrl.replace(/'/g, "\\'");
-            const requiresAction = n.requires_action === true;
-
             return `
-                <div class="notification-item ${!n.is_read ? 'unread' : ''}" data-id="${n.id}" style="cursor: pointer;" onclick="handleNotificationClick(event, ${n.id}, '${safeUrl}', ${requiresAction})">
+                <div class="notification-item ${!n.is_read ? 'unread' : ''}" data-id="${escapeHtml(n.id)}" data-url="${escapeHtml(redirectUrl)}" style="cursor: pointer;">
                     <div class="notification-content">
                         <div class="notification-title">${escapeHtml(n.title)}</div>
                         <div class="notification-message">${escapeHtml(n.message)}</div>
                         <div class="notification-time">${formatRelativeTime(n.created_at)}</div>
                     </div>
-                    <a href="/admin-portal/settings/general/" class="mark-read" title="Information: View general settings & privacy policy" onclick="event.stopPropagation();" style="color: var(--success); font-size: 1.15rem; display: flex; align-items: center; justify-content: center; text-decoration: none; padding: 4px;">
-                        <i class="ri-info-circle-line"></i>
-                    </a>
                 </div>
             `;
         }).join('');
@@ -418,11 +425,11 @@ function displayNotifications(notifications, unreadCount) {
     }
 }
 
-window.handleNotificationClick = async function(event, notificationId, redirectUrl, requiresAction) {
+window.handleNotificationClick = async function(event, notificationId, redirectUrl) {
     if (event) event.stopPropagation();
 
     try {
-        await fetch(`/api/admin/notifications/${notificationId}/read/`, {
+        await fetch(`/api/admin/notifications/${encodeNotificationId(notificationId)}/read/`, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCSRFToken() }
         });
@@ -432,13 +439,17 @@ window.handleNotificationClick = async function(event, notificationId, redirectU
 
     sessionStorage.setItem('admin_active_notification_id', String(notificationId));
 
+    const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+    if (item) item.classList.remove('unread');
+    updateNotificationBadge();
+
     const separator = redirectUrl.includes('?') ? '&' : '?';
-    window.location.href = `${redirectUrl}${separator}from_notification=${notificationId}`;
+    window.location.href = `${redirectUrl}${separator}from_notification=${encodeURIComponent(notificationId)}`;
 };
 
 window.markNotificationRead = async function(notificationId) {
     try {
-        await fetch(`/api/admin/notifications/${notificationId}/read/`, {
+        await fetch(`/api/admin/notifications/${encodeNotificationId(notificationId)}/read/`, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCSRFToken() }
         });

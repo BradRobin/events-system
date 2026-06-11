@@ -45,43 +45,6 @@ def seed_initial_data():
     two_hours_ago = (timezone.now() - timezone.timedelta(hours=2)).isoformat()
     yesterday = (timezone.now() - timezone.timedelta(days=1)).isoformat()
 
-    notifications = [
-        {
-            "id": 1,
-            "title": "New Event Submitted",
-            "message": f"Organizer {organizer_name} has submitted a new event 'Nairobi Food Festival' for approval.",
-            "type": "warning",
-            "is_read": False,
-            "created_at": two_hours_ago,
-            "redirect_url": "/admin-portal/events/pending/",
-            "entity_type": "event",
-            "action_type": "event_pending_approval",
-            "requires_action": True,
-        },
-        {
-            "id": 2,
-            "title": "Refund Request Pending",
-            "message": f"Attendee {attendee_name} has requested a refund for booking TICK-9E28B.",
-            "type": "info",
-            "is_read": False,
-            "created_at": yesterday,
-            "redirect_url": "/admin-portal/bookings/refunds/",
-            "entity_type": "refund",
-            "action_type": "refund_pending",
-            "requires_action": True,
-        },
-        {
-            "id": 3,
-            "title": "New Organizer Registration",
-            "message": "A new organizer 'Tech Innovations' is awaiting verification.",
-            "type": "warning",
-            "is_read": True,
-            "created_at": yesterday,
-            "redirect_url": "/admin-portal/users/organizers/",
-            "requires_action": False,
-        }
-    ]
-
     support_tickets = [
         {
             "id": 1,
@@ -136,168 +99,184 @@ def seed_initial_data():
     ]
 
     return {
-        "notifications": notifications,
         "support_tickets": support_tickets,
-        "next_notification_id": 4,
         "next_support_ticket_id": 4
     }
 
-ACTIONABLE_TYPES = ('event_pending_approval', 'refund_pending')
 
-
-def _is_notification_resolved(notification):
-    """Return True when an actionable notification no longer needs admin attention."""
-    action_type = notification.get('action_type')
-    entity_id = notification.get('entity_id')
-    if not action_type or entity_id is None:
-        return False
-
+def _notification_state_map():
     try:
-        if action_type == 'event_pending_approval':
-            from events.models import Event
-            event = Event.objects.filter(id=entity_id).first()
-            if not event:
-                return True
-            return event.status != 'pending'
-        if action_type == 'refund_pending':
-            from bookings.models import Ticket
-            ticket = Ticket.objects.filter(id=entity_id).first()
-            if not ticket:
-                return True
-            return ticket.status != 'cancelled'
+        from accounts.models import AdminNotificationState
+        return {
+            s.notification_key: s
+            for s in AdminNotificationState.objects.all()
+        }
     except Exception as e:
-        print(f"Error checking notification resolution: {e}")
-    return False
+        print(f"Admin notification state unavailable: {e}")
+        return {}
 
 
-def _prune_resolved_notifications(notifications):
-    """Remove actionable notifications whose underlying task is already complete."""
-    pruned = []
-    for n in notifications:
-        if n.get('requires_action') and _is_notification_resolved(n):
-            continue
-        pruned.append(n)
-    return pruned
+def _upsert_notification_state(notification_key, **fields):
+    try:
+        from accounts.models import AdminNotificationState
+    except Exception as e:
+        print(f"Admin notification state unavailable: {e}")
+        return None
+    state, _ = AdminNotificationState.objects.get_or_create(
+        notification_key=notification_key,
+        defaults=fields,
+    )
+    changed = False
+    for key, value in fields.items():
+        if getattr(state, key) != value:
+            setattr(state, key, value)
+            changed = True
+    if changed:
+        state.save(update_fields=[*fields.keys(), 'updated_at'])
+    return state
+
+
+def build_dynamic_notifications():
+    """Build live notifications from current database state."""
+    from events.models import Event
+    from bookings.models import Ticket
+
+    notifications = []
+
+    pending_events = (
+        Event.objects.filter(status='pending')
+        .select_related('organizer', 'category')
+        .order_by('-updated_at', '-created_at')[:25]
+    )
+    for event in pending_events:
+        organizer_name = (
+            event.organizer.organization_name
+            or event.organizer.get_full_name()
+            or event.organizer.username
+        )
+        timestamp = event.updated_at or event.created_at
+        notifications.append({
+            "id": f"event-pending-{event.id}",
+            "title": "Event Pending Approval",
+            "message": f"\"{event.title}\" submitted by {organizer_name} requires your approval.",
+            "type": "warning",
+            "is_read": False,
+            "created_at": timestamp.isoformat(),
+            "redirect_url": f"/admin-portal/events/detail/?id={event.id}",
+            "entity_type": "event",
+            "entity_id": event.id,
+            "action_type": "event_pending_approval",
+            "requires_action": True,
+        })
+
+    pending_refunds = (
+        Ticket.objects.filter(status='cancelled')
+        .select_related('event')
+        .order_by('-purchase_date')[:25]
+    )
+    for ticket in pending_refunds:
+        notifications.append({
+            "id": f"refund-pending-{ticket.id}",
+            "title": "Refund Request Pending",
+            "message": (
+                f"{ticket.billing_name or 'Customer'} requested a refund of "
+                f"Kes {float(ticket.price * ticket.quantity):,.0f} for {ticket.event.title} "
+                f"(booking {ticket.ticket_number})."
+            ),
+            "type": "info",
+            "is_read": False,
+            "created_at": ticket.purchase_date.isoformat(),
+            "redirect_url": "/admin-portal/bookings/refunds/",
+            "entity_type": "refund",
+            "entity_id": ticket.id,
+            "action_type": "refund_pending",
+            "requires_action": True,
+        })
+
+    notifications.sort(key=lambda item: item["created_at"], reverse=True)
+    return notifications
 
 
 def get_notifications():
-    store = load_store()
-    notifications = store.get("notifications", [])
-    pruned = _prune_resolved_notifications(notifications)
-    if len(pruned) != len(notifications):
-        store["notifications"] = pruned
-        save_store(store)
-    return pruned
+    """Return current actionable admin notifications, excluding dismissed items."""
+    state_map = _notification_state_map()
+    visible = []
+
+    for notification in build_dynamic_notifications():
+        state = state_map.get(notification["id"])
+        if state and state.is_dismissed:
+            continue
+        if state:
+            notification["is_read"] = state.is_read
+        visible.append(notification)
+
+    return visible
+
+
+def _normalize_notification_key(notification_id):
+    return str(notification_id)
 
 
 def delete_notification(notification_id):
-    store = load_store()
-    notifications = store.get("notifications", [])
-    filtered = [n for n in notifications if n["id"] != int(notification_id)]
-    if len(filtered) == len(notifications):
-        return False
-    store["notifications"] = filtered
-    save_store(store)
-    return True
+    return dismiss_notification(notification_id, force=True)
 
 
-def dismiss_notification(notification_id, on_view=False):
-    """Remove a notification. On view, only dismiss informational or already-resolved items."""
-    store = load_store()
-    notifications = store.get("notifications", [])
-    target = next((n for n in notifications if n["id"] == int(notification_id)), None)
-    if not target:
+def dismiss_notification(notification_id, on_view=False, force=False):
+    """Dismiss a notification. Actionable items auto-expire when the task is resolved."""
+    key = _normalize_notification_key(notification_id)
+    active_ids = {n["id"] for n in build_dynamic_notifications()}
+
+    if key not in active_ids and not force:
         return False
 
-    if on_view:
-        if target.get('requires_action') and not _is_notification_resolved(target):
+    if on_view and not force:
+        active = next((n for n in build_dynamic_notifications() if n["id"] == key), None)
+        if active and active.get("requires_action"):
             return False
 
-    store["notifications"] = [n for n in notifications if n["id"] != int(notification_id)]
-    save_store(store)
+    _upsert_notification_state(key, is_dismissed=True, is_read=True)
     return True
 
 
 def expire_notifications_for_entity(entity_type, entity_id, action_types=None):
-    """Remove notifications linked to an entity after the admin completes the related action."""
-    store = load_store()
-    notifications = store.get("notifications", [])
+    """Mark entity-linked notifications as dismissed after admin completes the action."""
     entity_id = str(entity_id)
-    filtered = []
-    for n in notifications:
-        if (
-            n.get("entity_type") == entity_type
-            and str(n.get("entity_id")) == entity_id
-            and (not action_types or n.get("action_type") in action_types)
-        ):
+    keys = []
+
+    for notification in build_dynamic_notifications():
+        if notification.get("entity_type") != entity_type:
             continue
-        filtered.append(n)
-    if len(filtered) != len(notifications):
-        store["notifications"] = filtered
-        save_store(store)
+        if str(notification.get("entity_id")) != entity_id:
+            continue
+        if action_types and notification.get("action_type") not in action_types:
+            continue
+        keys.append(notification["id"])
+
+    if entity_type == "event":
+        keys.append(f"event-pending-{entity_id}")
+    elif entity_type == "refund":
+        keys.append(f"refund-pending-{entity_id}")
+
+    for key in set(keys):
+        _upsert_notification_state(key, is_dismissed=True, is_read=True)
     return True
 
 
 def mark_notification_read(notification_id):
-    store = load_store()
-    notifications = store.get("notifications", [])
-    for n in notifications:
-        if n["id"] == int(notification_id):
-            n["is_read"] = True
-            break
-    store["notifications"] = notifications
-    save_store(store)
+    key = _normalize_notification_key(notification_id)
+    _upsert_notification_state(key, is_read=True)
     return True
+
 
 def mark_all_notifications_read():
-    store = load_store()
-    notifications = store.get("notifications", [])
-    for n in notifications:
-        n["is_read"] = True
-    store["notifications"] = notifications
-    save_store(store)
+    for notification in get_notifications():
+        _upsert_notification_state(notification["id"], is_read=True)
     return True
 
-def add_notification(
-    title,
-    message,
-    n_type="info",
-    redirect_url=None,
-    entity_type=None,
-    entity_id=None,
-    action_type=None,
-    requires_action=None,
-):
-    store = load_store()
-    notifications = store.get("notifications", [])
-    next_id = store.get("next_notification_id", len(notifications) + 1)
 
-    if requires_action is None:
-        requires_action = action_type in ACTIONABLE_TYPES
-
-    new_notif = {
-        "id": next_id,
-        "title": title,
-        "message": message,
-        "type": n_type,
-        "is_read": False,
-        "created_at": timezone.now().isoformat(),
-        "requires_action": requires_action,
-    }
-    if redirect_url:
-        new_notif["redirect_url"] = redirect_url
-    if entity_type:
-        new_notif["entity_type"] = entity_type
-    if entity_id is not None:
-        new_notif["entity_id"] = entity_id
-    if action_type:
-        new_notif["action_type"] = action_type
-
-    notifications.insert(0, new_notif)
-    store["notifications"] = notifications
-    store["next_notification_id"] = next_id + 1
-    save_store(store)
-    return new_notif
+def add_notification(*args, **kwargs):
+    """Legacy hook — notifications are generated dynamically from database state."""
+    return None
 
 def get_support_tickets():
     store = load_store()

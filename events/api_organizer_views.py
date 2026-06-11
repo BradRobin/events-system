@@ -189,20 +189,6 @@ def api_organizer_events_create(request):
         )
 
         try:
-            from accounts.admin_store import add_notification
-            add_notification(
-                title="Event Pending Approval",
-                message=f"Event '{event.title}' created by '{request.user.username}' is waiting for approval.",
-                n_type="warning",
-                redirect_url=f"/admin-portal/events/detail/?id={event.id}",
-                entity_type="event",
-                entity_id=event.id,
-                action_type="event_pending_approval",
-            )
-        except Exception as notif_err:
-            print("Failed to dispatch admin notification:", notif_err)
-
-        try:
             details_str = f"{event.start_date.strftime('%B %d, %Y')} at {event.venue}"
             send_organizer_event_crud_email(
                 organizer_email=request.user.email,
@@ -300,36 +286,10 @@ def api_organizer_events_update(request, event_id):
                     event.status = 'published'
                 else:
                     event.status = 'pending'
-                    try:
-                        from accounts.admin_store import add_notification
-                        add_notification(
-                            title="Event Pending Approval",
-                            message=f"Event '{event.title}' updated by '{request.user.username}' is waiting for approval.",
-                            n_type="warning",
-                            redirect_url=f"/admin-portal/events/detail/?id={event.id}",
-                            entity_type="event",
-                            entity_id=event.id,
-                            action_type="event_pending_approval",
-                        )
-                    except Exception as notif_err:
-                        print("Failed to dispatch admin notification:", notif_err)
             elif status == 'cancelled':
                 event.status = 'cancelled'
             elif status == 'pending':
                 event.status = 'pending'
-                try:
-                    from accounts.admin_store import add_notification
-                    add_notification(
-                        title="Event Pending Approval",
-                        message=f"Event '{event.title}' is waiting for approval.",
-                        n_type="warning",
-                        redirect_url=f"/admin-portal/events/detail/?id={event.id}",
-                        entity_type="event",
-                        entity_id=event.id,
-                        action_type="event_pending_approval",
-                    )
-                except Exception as notif_err:
-                    print("Failed to dispatch admin notification:", notif_err)
             else:
                 event.status = 'draft'
             

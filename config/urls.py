@@ -372,9 +372,9 @@ urlpatterns = [
     # Notifications
     path('api/admin/notifications/', admin_api.notifications_api, name='admin_notifications'),
     path('api/admin/notifications/recent/', admin_api.api_notifications_recent, name='admin_notifications_recent'),
-    path('api/admin/notifications/<int:notification_id>/read/', admin_api.api_notification_mark_read, name='admin_notification_mark_read'),
-    path('api/admin/notifications/<int:notification_id>/dismiss/', admin_api.api_notification_dismiss, name='admin_notification_dismiss'),
-    path('api/admin/notifications/<int:notification_id>/', admin_api.api_notification_delete, name='admin_notification_delete'),
+    path('api/admin/notifications/<str:notification_id>/read/', admin_api.api_notification_mark_read, name='admin_notification_mark_read'),
+    path('api/admin/notifications/<str:notification_id>/dismiss/', admin_api.api_notification_dismiss, name='admin_notification_dismiss'),
+    path('api/admin/notifications/<str:notification_id>/', admin_api.api_notification_delete, name='admin_notification_delete'),
     path('api/admin/notifications/mark-all-read/', admin_api.api_notifications_mark_all_read, name='admin_notifications_mark_all_read'),
     path('api/admin/notifications/prune/', admin_api.api_notifications_prune, name='admin_notifications_prune'),
 

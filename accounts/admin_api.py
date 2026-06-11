@@ -14,7 +14,7 @@ from events.models import Event, Category
 from bookings.models import Ticket
 from accounts.admin_store import (
     get_notifications, mark_notification_read, mark_all_notifications_read,
-    add_notification, delete_notification, dismiss_notification,
+    delete_notification, dismiss_notification,
     expire_notifications_for_entity,
     get_support_tickets, get_support_ticket_detail,
     add_support_ticket_reply, update_support_ticket_status
@@ -406,15 +406,6 @@ def api_approve_event(request, event_id):
         e.status = 'published'
         e.save()
         expire_notifications_for_entity('event', e.id, ['event_pending_approval'])
-        add_notification(
-            title="Event Approved",
-            message=f"Event '{e.title}' has been approved successfully.",
-            n_type="success",
-            redirect_url=f"/admin-portal/events/detail/?id={e.id}",
-            entity_type="event",
-            entity_id=e.id,
-            requires_action=False,
-        )
         return JsonResponse({'success': True, 'message': 'Event approved successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -436,15 +427,6 @@ def api_reject_event(request, event_id):
         msg = f"Approval for event '{e.title}' was revoked." if is_revocation else f"Event '{e.title}' was rejected. Reason: {reason}."
         
         expire_notifications_for_entity('event', e.id, ['event_pending_approval'])
-        add_notification(
-            title=title,
-            message=msg,
-            n_type="warning",
-            redirect_url=f"/admin-portal/events/detail/?id={e.id}",
-            entity_type="event",
-            entity_id=e.id,
-            requires_action=False,
-        )
         return JsonResponse({'success': True, 'message': 'Event rejected successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -703,11 +685,7 @@ def booking_refund(request, booking_id):
         t = get_object_or_404(Ticket, ticket_number=booking_id)
         t.status = 'refunded'
         t.save()
-        add_notification(
-            title="Refund Processed",
-            message=f"Refund of Kes {t.price * t.quantity} was processed for ticket {t.ticket_number}.",
-            n_type="info"
-        )
+        expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund processed successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1590,6 +1568,7 @@ def transaction_refund_api(request):
         t = get_object_or_404(Ticket, ticket_number=ticket_number)
         t.status = 'refunded'
         t.save()
+        expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund completed successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1953,7 +1932,8 @@ def api_notification_dismiss(request, notification_id):
     try:
         data = json.loads(request.body) if request.body else {}
         on_view = bool(data.get('on_view', False))
-        dismissed = dismiss_notification(notification_id, on_view=on_view)
+        force = bool(data.get('force', False))
+        dismissed = dismiss_notification(notification_id, on_view=on_view, force=force)
         return JsonResponse({'success': True, 'dismissed': dismissed})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)

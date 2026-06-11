@@ -61,7 +61,6 @@ async function sendBroadcast() {
 
 async function loadNotifications() {
     try {
-        await apiRequest('/api/admin/notifications/prune/', 'POST');
         const data = await apiRequest(`/api/admin/notifications/?page=${currentPage}`);
         
         displayNotifications(data.notifications);
@@ -88,10 +87,9 @@ function displayNotifications(notifications) {
     
     container.innerHTML = notifications.map(n => {
         const redirectUrl = n.redirect_url || '/admin-portal/dashboard/';
-        const safeUrl = redirectUrl.replace(/'/g, "\\'");
-        const requiresAction = n.requires_action === true;
+        const notifId = escapeHtml(String(n.id));
         return `
-        <div class="notification-item ${n.is_read ? '' : 'unread'}" style="cursor: pointer;" onclick="openNotification(${n.id}, '${safeUrl}', ${requiresAction})">
+        <div class="notification-item ${n.is_read ? '' : 'unread'}" style="cursor: pointer;" onclick="openNotification('${notifId}', '${redirectUrl.replace(/'/g, "\\'")}')">
             <div class="notification-content">
                 <div class="notification-title">
                     ${escapeHtml(n.title)}
@@ -101,8 +99,8 @@ function displayNotifications(notifications) {
                 <div class="notification-time">${formatRelativeTime(n.created_at)}</div>
             </div>
             <div class="notification-actions">
-                ${!n.is_read ? `<button class="action-btn" onclick="event.stopPropagation(); markAsRead(${n.id})" title="Mark as Read"><i class="fas fa-check"></i></button>` : ''}
-                <button class="action-btn" onclick="event.stopPropagation(); deleteNotification(${n.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                ${!n.is_read ? `<button class="action-btn" onclick="event.stopPropagation(); markAsRead('${notifId}')" title="Mark as Read"><i class="fas fa-check"></i></button>` : ''}
+                <button class="action-btn" onclick="event.stopPropagation(); deleteNotification('${notifId}')" title="Delete"><i class="fas fa-trash"></i></button>
             </div>
         </div>
     `;
@@ -210,20 +208,24 @@ async function deleteTemplate(id) {
     });
 }
 
-async function openNotification(id, redirectUrl, requiresAction) {
+function encodeNotificationId(notificationId) {
+    return encodeURIComponent(String(notificationId));
+}
+
+async function openNotification(id, redirectUrl) {
     try {
-        await apiRequest(`/api/admin/notifications/${id}/read/`, 'POST');
+        await apiRequest(`/api/admin/notifications/${encodeNotificationId(id)}/read/`, 'POST');
     } catch (error) {
         console.error('Error marking as read:', error);
     }
     sessionStorage.setItem('admin_active_notification_id', String(id));
     const separator = redirectUrl.includes('?') ? '&' : '?';
-    window.location.href = `${redirectUrl}${separator}from_notification=${id}`;
+    window.location.href = `${redirectUrl}${separator}from_notification=${encodeNotificationId(id)}`;
 }
 
 async function markAsRead(id) {
     try {
-        await apiRequest(`/api/admin/notifications/${id}/read/`, 'POST');
+        await apiRequest(`/api/admin/notifications/${encodeNotificationId(id)}/read/`, 'POST');
         loadNotifications();
     } catch (error) {
         console.error('Error marking as read:', error);
@@ -233,7 +235,7 @@ async function markAsRead(id) {
 async function deleteNotification(id) {
     showConfirm('Delete this notification?', async () => {
         try {
-            await apiRequest(`/api/admin/notifications/${id}/`, 'DELETE');
+            await apiRequest(`/api/admin/notifications/${encodeNotificationId(id)}/`, 'DELETE');
             showToast('Notification deleted', 'success');
             loadNotifications();
         } catch (error) {

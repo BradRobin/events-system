@@ -128,3 +128,20 @@ class APIToken(models.Model):
     @property
     def is_active(self):
         return self.revoked_at is None and self.expires_at > timezone.now()
+
+
+class AdminNotificationState(models.Model):
+    """Tracks read/dismissed state for dynamically generated admin notifications."""
+    notification_key = models.CharField(max_length=64, unique=True, db_index=True)
+    is_read = models.BooleanField(default=False)
+    is_dismissed = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['is_dismissed']),
+            models.Index(fields=['is_read']),
+        ]
+
+    def __str__(self):
+        return self.notification_key
