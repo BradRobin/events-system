@@ -1,8 +1,15 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.conf import settings
 
 
 class Payment(models.Model):
+    """
+    Legacy M-Pesa STK-push payment record.
+
+    The active checkout flow uses PaymentOrder → Ticket. This model is retained
+    for historical rows only; STK routes were removed from payments/urls.py.
+    """
     STATUS_CHOICES = [
         ("pending", "Pending"),
         ("completed", "Completed"),
@@ -16,7 +23,7 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField(default=1)
     merchant_request_id = models.CharField(max_length=100, blank=True)
-    checkout_request_id = models.CharField(max_length=100, unique=True, blank=True)
+    checkout_request_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     mpesa_receipt = models.CharField(max_length=50, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -84,6 +91,32 @@ class PaymentOrder(models.Model):
             models.Index(fields=['attendee', 'status']),
             models.Index(fields=['organizer', 'status']),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.event_id and self.organizer_id and self.event.organizer_id != self.organizer_id:
+            raise ValidationError({
+                'organizer': 'Organizer must match the event owner.',
+            })
+
+    def save(self, *args, **kwargs):
+        if self.event_id:
+            event_organizer_id = None
+            if getattr(self, 'event', None) and getattr(self.event, 'organizer_id', None):
+                event_organizer_id = self.event.organizer_id
+            else:
+                from events.models import Event
+                event_organizer_id = Event.objects.filter(pk=self.event_id).values_list(
+                    'organizer_id', flat=True,
+                ).first()
+            if event_organizer_id:
+                if not self.organizer_id:
+                    self.organizer_id = event_organizer_id
+                elif self.organizer_id != event_organizer_id:
+                    raise ValidationError({
+                        'organizer': 'Organizer must match the event owner.',
+                    })
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Order #{self.pk} - {self.event.title} - {self.status}"

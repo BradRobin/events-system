@@ -14,6 +14,14 @@ class EventReview(models.Model):
         on_delete=models.CASCADE,
         related_name='reviews',
     )
+    ticket = models.ForeignKey(
+        'bookings.Ticket',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviews',
+        help_text='Ticket that verified attendance for this review.',
+    )
     rating = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)],
     )

@@ -45,10 +45,10 @@ def ticket_checkout_api(request):
 
         try:
             order = PaymentOrder.objects.select_related('event', 'organizer', 'ticket').get(
-                pk=payment_order_id, attendee=user, status='completed'
+                pk=payment_order_id, attendee=user,
             )
         except PaymentOrder.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Valid completed payment order not found.'}, status=404)
+            return JsonResponse({'success': False, 'message': 'Payment order not found.'}, status=404)
 
         if order.ticket_id:
             return JsonResponse({
@@ -56,6 +56,15 @@ def ticket_checkout_api(request):
                 'message': 'Checkout already completed.',
                 'ticket_number': order.ticket.ticket_number,
             })
+
+        fulfillable_statuses = {
+            'pending_payment', 'failed', 'manual_review', 'verifying', 'completed',
+        }
+        if order.status not in fulfillable_statuses:
+            return JsonResponse({
+                'success': False,
+                'message': f'Order cannot be fulfilled in its current state ({order.status}).',
+            }, status=400)
 
         try:
             ticket = fulfill_payment_order(order)

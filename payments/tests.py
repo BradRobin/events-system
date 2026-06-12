@@ -2,6 +2,7 @@ from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from django.utils import timezone
@@ -184,6 +185,69 @@ class PaymentOrderTests(TestCase):
         self.assertFalse(order.screenshot_verified)
         self.assertFalse(Ticket.objects.filter(attendee=self.attendee).exists())
         self.assertEqual(OrganizerNotification.objects.filter(payment_order=order).count(), 1)
+
+    def test_payment_order_rejects_mismatched_organizer(self):
+        other_organizer = User.objects.create_user(
+            username='org3', email='org3@test.com', password='pass12345', role='organizer',
+        )
+        with self.assertRaises(ValidationError):
+            PaymentOrder.objects.create(
+                attendee=self.attendee,
+                event=self.event,
+                organizer=other_organizer,
+                ticket_type='Regular',
+                quantity=1,
+                unit_price=Decimal('1000'),
+                total_amount=Decimal('1000'),
+                status='pending_payment',
+            )
+
+    def test_checkout_api_fulfills_manual_review_order(self):
+        order = PaymentOrder.objects.create(
+            attendee=self.attendee,
+            event=self.event,
+            organizer=self.organizer,
+            ticket_type='Regular',
+            quantity=1,
+            unit_price=Decimal('1000'),
+            total_amount=Decimal('1000'),
+            status='manual_review',
+        )
+        self.client.force_login(self.attendee)
+        response = self.client.post(
+            '/api/bookings/checkout/',
+            data=f'{{"payment_order_id": {order.id}}}',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertTrue(Ticket.objects.filter(attendee=self.attendee).exists())
+
+    def test_organizer_notifications_api(self):
+        order = PaymentOrder.objects.create(
+            attendee=self.attendee,
+            event=self.event,
+            organizer=self.organizer,
+            ticket_type='Regular',
+            quantity=1,
+            unit_price=Decimal('1000'),
+            total_amount=Decimal('1000'),
+            status='manual_review',
+        )
+        OrganizerNotification.objects.create(
+            organizer=self.organizer,
+            payment_order=order,
+            title='Test',
+            message='Approve payment',
+            requires_action=True,
+        )
+        self.client.force_login(self.organizer)
+        response = self.client.get('/api/organizer/notifications/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(len(data['notifications']), 1)
 
     def test_reject_manual_review_order(self):
         order = PaymentOrder.objects.create(
