@@ -37,42 +37,51 @@
     padding: 0 2rem;
 }
 
+/* ============================================
+   UNIFIED SECTION HEADER STYLES
+   Applies to ALL sections (Categories, Testimonials, Sponsors, etc.)
+   ============================================ */
+
 .section-header {
     text-align: center;
     margin-bottom: 3rem;
 }
 
 .section-header h2 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    color: var(--np-dark);
+    font-family: 'Kaushan Script', cursive;
+    font-size: 2.5rem;
+    font-weight: 400;
+    margin-bottom: 0.75rem;
+    color: #1e293b;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
     position: relative;
     display: inline-block;
 }
 
-.section-header h2:after {
+.section-header h2::after {
     content: '';
     position: absolute;
-    bottom: -10px;
+    bottom: -12px;
     left: 50%;
     transform: translateX(-50%);
     width: 60px;
     height: 3px;
-    background: var(--np-gradient);
-    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    border-radius: 3px;
 }
 
 .section-header p {
-    color: var(--np-gray);
     font-size: 1rem;
+    color: #64748b;
     margin-top: 1rem;
 }
 
 .loading-state {
     text-align: center;
     padding: 3rem;
-    color: var(--np-gray);
+    color: #64748b;
 }
 
 /* Responsive */
@@ -82,10 +91,30 @@
     }
     
     .section-header h2 {
+        font-size: 2rem;
+    }
+    
+    .section-header h2::after {
+        width: 50px;
+        bottom: -10px;
+    }
+    
+    .section-header p {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .section-header h2 {
         font-size: 1.5rem;
     }
     
-    .section-header h2:after {
+    .section-header h2::after {
         width: 40px;
+        bottom: -8px;
+    }
+    
+    .section-header p {
+        font-size: 0.85rem;
     }
 }

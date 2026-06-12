@@ -4,55 +4,97 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&family=Kaushan+Script&display=swap');
 
-/* Kaushan Script for Special Headings */
-h1, h2, .kaushan-heading {
+/* ============================================
+   DEFAULT H1 - GRADIENT FOR ALL PAGES
+   ============================================ */
+
+/* ALL h1 elements get the orange gradient by default */
+h1, .kaushan-heading {
+    font-family: 'Kaushan Script', cursive;
+    letter-spacing: 0.5px;
+    font-weight: 400;
+    line-height: 1.4;
+    overflow: visible;
+    white-space: normal;
+    word-wrap: break-word;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-align: center;
+}
+
+h2, .section-header h2 {
     font-family: 'Kaushan Script', cursive;
     color: #1e293b;
     letter-spacing: 0.5px;
     font-weight: 400;
-    line-height: 1.2;
+    line-height: 1.3;
+    overflow: visible;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 /* Manrope/Inter for other headings and body */
 h3, h4, h5, h6, p, .manrope-text {
     font-family: 'Manrope', 'Inter', sans-serif;
     color: #1e293b;
+    overflow: visible;
 }
 
 h1 {
-    font-size: clamp(48px, 8vw, 88px);
-    margin-bottom: 1rem;
+    font-size: clamp(56px, 10vw, 100px);
+    margin-bottom: 1.25rem;
+    line-height: 1.4;
+    overflow: visible;
+    padding-bottom: 0.3rem;
 }
 
 h2 {
-    font-size: clamp(38px, 6vw, 58px);
+    font-size: clamp(44px, 8vw, 72px);
     margin-bottom: 1rem;
     text-align: center;
+    line-height: 1.3;
+    overflow: visible;
+    color: #1e293b;
 }
 
 h3 {
     font-weight: 700;
     letter-spacing: -0.02em;
-    font-size: clamp(24px, 4vw, 32px);
+    font-size: clamp(28px, 5vw, 38px);
     margin-bottom: 0.75rem;
+    line-height: 1.35;
+    overflow: visible;
+    color: #1e293b;
 }
 
 h4 {
     font-weight: 600;
-    font-size: clamp(18px, 3vw, 22px);
+    font-size: clamp(22px, 4vw, 28px);
     margin-bottom: 0.5rem;
+    line-height: 1.4;
+    overflow: visible;
+    color: #1e293b;
 }
 
 h5 {
     font-weight: 600;
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     margin-bottom: 0.5rem;
+    line-height: 1.4;
+    overflow: visible;
+    color: #1e293b;
 }
 
 h6 {
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 1.125rem;
     margin-bottom: 0.5rem;
+    line-height: 1.4;
+    overflow: visible;
+    color: #1e293b;
 }
 
 /* Logo Text */
@@ -69,6 +111,7 @@ p {
     line-height: 1.6;
     color: #475569;
     margin-bottom: 1rem;
+    overflow: visible;
 }
 
 /* Text Utilities */
@@ -90,6 +133,16 @@ p {
 .text-xl {
     font-size: 1.25rem;
     line-height: 1.6;
+}
+
+.text-2xl {
+    font-size: 1.5rem;
+    line-height: 1.4;
+}
+
+.text-3xl {
+    font-size: 1.875rem;
+    line-height: 1.3;
 }
 
 .text-center {
@@ -134,7 +187,7 @@ p {
 .font-extrabold { font-weight: 800; }
 
 /* Line Heights */
-.leading-tight { line-height: 1.2; }
+.leading-tight { line-height: 1.25; }
 .leading-normal { line-height: 1.5; }
 .leading-relaxed { line-height: 1.6; }
 .leading-loose { line-height: 1.8; }
@@ -144,39 +197,173 @@ h1, h2, h3, h4, h5, h6, .section-header h2 {
     text-decoration: none;
 }
 
+/* ============================================
+   EXCLUDE ONLY HERO SECTION
+   ============================================ */
+
+/* Hero section - NO gradient, keep original styling */
+.hero-section h1,
+.hero-content h1,
+.homepage-hero h1,
+.landing-page h1,
+[class*="hero"] h1 {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    color: #1e293b !important;
+    text-align: center !important;
+    font-size: clamp(36px, 8vw, 64px) !important;
+    font-family: 'Kaushan Script', cursive !important;
+    padding: 0 !important;
+    margin-bottom: 1rem !important;
+}
+
+/* ============================================
+   EXCLUDE ONLY DASHBOARD
+   ============================================ */
+
+/* Dashboard welcome section - NO gradient */
+.dashboard-container .welcome-content h1,
+.dashboard-container h1 {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    color: #1e293b !important;
+    text-align: left !important;
+    font-size: 2rem !important;
+    font-family: 'Kaushan Script', cursive !important;
+    padding: 0.75rem 0 !important;
+    margin-bottom: 0.75rem !important;
+    line-height: 1.5 !important;
+}
+
+/* Keep the span gradient for dashboard welcome name only */
+.dashboard-container .welcome-content h1 span {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+    padding: 0.2rem 0;
+}
+
+/* ============================================
+   PAGE HEADERS - Ensure gradient works
+   ============================================ */
+
+.page-header h1,
+.events-header h1,
+.settings-header h1,
+.faq-page .page-header h1,
+.help-center-page h1,
+.customer-stories-page h1,
+.wishlist-page h1,
+.cart-page h1,
+.tickets-page h1,
+.profile-page h1 {
+    background: linear-gradient(135deg, #f59e0b, #ec6408) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    color: transparent !important;
+    text-align: center !important;
+    font-size: clamp(48px, 9vw, 88px) !important;
+    padding-bottom: 0.3rem !important;
+    line-height: 1.4 !important;
+}
+
+.section-header h2 {
+    font-size: clamp(42px, 7vw, 68px) !important;
+    color: #1e293b !important;
+}
+
 /* Responsive Typography */
 @media (max-width: 768px) {
     h1 {
-        font-size: clamp(36px, 6vw, 56px);
+        font-size: clamp(42px, 8vw, 72px);
+        line-height: 1.4;
     }
     
     h2 {
-        font-size: clamp(28px, 5vw, 44px);
+        font-size: clamp(34px, 6vw, 56px);
+        line-height: 1.3;
     }
     
     h3 {
-        font-size: clamp(20px, 3.5vw, 28px);
+        font-size: clamp(24px, 4.5vw, 32px);
+        line-height: 1.35;
+    }
+    
+    h4 {
+        font-size: clamp(20px, 3.5vw, 24px);
     }
     
     p {
         font-size: 0.95rem;
     }
+    
+    .page-header h1,
+    .events-header h1 {
+        font-size: clamp(38px, 7vw, 64px) !important;
+        line-height: 1.4 !important;
+        padding-bottom: 0.3rem !important;
+    }
+    
+    .section-header h2 {
+        font-size: clamp(34px, 6vw, 52px) !important;
+    }
+    
+    /* Dashboard responsive */
+    .dashboard-container .welcome-content h1 {
+        font-size: 1.5rem !important;
+        padding: 0.6rem 0 !important;
+    }
 }
 
 @media (max-width: 480px) {
     h1 {
-        font-size: clamp(28px, 5vw, 44px);
+        font-size: clamp(34px, 6vw, 56px);
+        line-height: 1.4;
     }
     
     h2 {
-        font-size: clamp(24px, 4vw, 36px);
+        font-size: clamp(28px, 5vw, 44px);
+        line-height: 1.3;
     }
     
     h3 {
-        font-size: clamp(18px, 3vw, 24px);
+        font-size: clamp(20px, 3.5vw, 28px);
+        line-height: 1.35;
+    }
+    
+    h4 {
+        font-size: clamp(18px, 3vw, 22px);
     }
     
     p {
         font-size: 0.9rem;
+    }
+    
+    .page-header h1,
+    .events-header h1 {
+        font-size: clamp(30px, 6vw, 48px) !important;
+        padding-bottom: 0.25rem !important;
+    }
+    
+    .section-header h2 {
+        font-size: clamp(28px, 5vw, 42px) !important;
+    }
+    
+    /* Dashboard responsive */
+    .dashboard-container .welcome-content h1 {
+        font-size: 1.3rem !important;
+        padding: 0.5rem 0 !important;
+    }
+}
+
+/* Support for browsers that don't support background-clip: text */
+@supports not (background-clip: text) {
+    h1, .page-header h1, .events-header h1 {
+        color: #f59e0b !important;
+        background: none !important;
     }
 }

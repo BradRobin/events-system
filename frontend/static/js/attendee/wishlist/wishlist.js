@@ -48,7 +48,43 @@ document.addEventListener('DOMContentLoaded', function() {
     loadWishlist();
     setupEventListeners();
     setupModalClose();
+    
+    // Clear wishlist badge since user is viewing the wishlist page
+    clearWishlistBadgeOnView();
 });
+
+function clearWishlistBadgeOnView() {
+    // Clear wishlist badge
+    const wishlistBadge = document.getElementById('wishlistBadgeDropdown');
+    const mobileWishlistBadge = document.getElementById('mobileWishlistBadge');
+    const myTicketsBadge = document.getElementById('myTicketsBadge');
+    
+    if (wishlistBadge) wishlistBadge.style.display = 'none';
+    if (mobileWishlistBadge) mobileWishlistBadge.style.display = 'none';
+    
+    // Update My Tickets badge to only show cart count (not wishlist)
+    try {
+        const savedCart = localStorage.getItem('eventhub_cart');
+        let cart = { items: [] };
+        if (savedCart) cart = JSON.parse(savedCart);
+        const cartCount = cart.items ? cart.items.reduce((sum, item) => sum + (item.quantity || 1), 0) : 0;
+        
+        if (myTicketsBadge) {
+            if (cartCount > 0) {
+                myTicketsBadge.textContent = cartCount;
+                myTicketsBadge.style.display = 'inline-flex';
+                myTicketsBadge.style.animation = 'badgePulse 0.5s ease-in-out';
+                setTimeout(() => {
+                    if (myTicketsBadge) myTicketsBadge.style.animation = '';
+                }, 500);
+            } else {
+                myTicketsBadge.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error("Error updating badge on view:", error);
+    }
+}
 
 function setupEventListeners() {
     if (searchInput) {

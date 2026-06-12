@@ -24,6 +24,19 @@ img {
     height: auto;
 }
 
+/* FIX: Avatar images should be perfect circles - override the reset */
+.author-avatar img,
+.reviewer-avatar img,
+.testimonial-author .author-avatar img,
+.featured-author .author-avatar img,
+.avatar-img,
+[class*="avatar"] img {
+    max-width: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
 a {
     text-decoration: none;
     color: inherit;

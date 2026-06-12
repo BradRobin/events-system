@@ -53,37 +53,7 @@
                     <img src="{% static 'images/sponsors/redux.svg' %}" alt="Redux" class="sponsor-logo">
                 </div>
                 
-                <!-- Screenshot 1 -->
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-55-56.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                
-                <!-- Screenshot 2 -->
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-56-17.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                
-                <!-- Screenshot 3 -->
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-56-52.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                
-                <!-- Screenshot 4 -->
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-57-24.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                
-                <!-- Screenshot 5 -->
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-58-42.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                
-                <!-- Screenshot 6 -->
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-27%2000-00-03.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                
-                <!-- Duplicate all for seamless looping -->
+                <!-- Duplicate for seamless looping -->
                 <div class="sponsor-item">
                     <img src="{% static 'images/sponsors/google-1-1.svg' %}" alt="Google" class="sponsor-logo">
                 </div>
@@ -111,24 +81,6 @@
                 <div class="sponsor-item">
                     <img src="{% static 'images/sponsors/redux.svg' %}" alt="Redux" class="sponsor-logo">
                 </div>
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-55-56.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-56-17.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-56-52.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-57-24.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-26%2023-58-42.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
-                <div class="sponsor-item">
-                    <img src="{% static 'images/sponsors/Screenshot%20From%202026-05-27%2000-00-03.png' %}" alt="Partner" class="sponsor-logo">
-                </div>
             </div>
         </div>
     </div>
@@ -138,38 +90,75 @@
 document.addEventListener('DOMContentLoaded', function() {
     const carousel = document.getElementById('sponsorsCarousel');
     let scrollInterval;
-    let scrollSpeed = 0.8;
+    let scrollSpeed = 1.5;
+    let animationId = null;
+    let lastTimestamp = 0;
     
-    function startContinuousScroll() {
-        if (scrollInterval) clearInterval(scrollInterval);
+    // Use requestAnimationFrame for smoother animation
+    function smoothScroll(timestamp) {
+        if (!carousel) return;
         
-        scrollInterval = setInterval(() => {
-            if (carousel) {
-                carousel.scrollLeft += scrollSpeed;
-                const maxScroll = carousel.scrollWidth / 2;
-                if (carousel.scrollLeft >= maxScroll) {
-                    carousel.scrollLeft = 0;
-                }
-            }
-        }, 16);
+        // Calculate time delta for smooth frame-independent movement
+        if (!lastTimestamp) {
+            lastTimestamp = timestamp;
+            animationId = requestAnimationFrame(smoothScroll);
+            return;
+        }
+        
+        // Move the carousel
+        carousel.scrollLeft += scrollSpeed;
+        
+        // Reset position for infinite loop
+        const maxScroll = carousel.scrollWidth / 2;
+        if (carousel.scrollLeft >= maxScroll) {
+            carousel.scrollLeft = 0;
+        }
+        
+        lastTimestamp = timestamp;
+        animationId = requestAnimationFrame(smoothScroll);
     }
     
-    startContinuousScroll();
+    function startSmoothScroll() {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+        }
+        lastTimestamp = 0;
+        animationId = requestAnimationFrame(smoothScroll);
+    }
     
+    function stopSmoothScroll() {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+    }
+    
+    // Start the smooth scroll
+    startSmoothScroll();
+    
+    // Handle page visibility (stop when tab is inactive)
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
-            if (scrollInterval) clearInterval(scrollInterval);
+            stopSmoothScroll();
         } else {
-            startContinuousScroll();
+            startSmoothScroll();
         }
     });
     
+    // Handle window resize - reset position
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            if (carousel) carousel.scrollLeft = 0;
+            if (carousel) {
+                carousel.scrollLeft = 0;
+            }
         }, 250);
+    });
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+        stopSmoothScroll();
     });
 });
 </script>

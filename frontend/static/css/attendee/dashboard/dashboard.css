@@ -1,4 +1,3 @@
-
 /* ============================================
    DASHBOARD MAIN CSS - EventHub Attendee
    ============================================ */
@@ -14,9 +13,10 @@
     padding: 2rem;
     background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
     min-height: calc(100vh - 200px);
+    overflow-x: visible;
 }
 
-/* Welcome Section */
+/* Welcome Section - FIXED for no text clipping */
 .welcome-section {
     display: flex;
     justify-content: space-between;
@@ -24,14 +24,34 @@
     margin-bottom: 2rem;
     flex-wrap: wrap;
     gap: 1rem;
+    overflow: visible;
+}
+
+.welcome-content {
+    overflow: visible;
+    flex: 1;
 }
 
 .welcome-content h1 {
     font-family: 'Kaushan Script', cursive;
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 400;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.75rem;
+    margin-top: 0;
     color: #1e293b;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    text-align: left !important;
+    padding: 0.75rem 0 0.75rem 0 !important;
+    line-height: 1.5 !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    letter-spacing: 0.5px;
+    min-height: auto;
+    height: auto;
+    max-height: none;
 }
 
 .welcome-content h1 span {
@@ -39,20 +59,25 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    display: inline-block;
+    padding: 0.2rem 0;
 }
 
 .welcome-content p {
     color: #64748b;
     font-size: 0.85rem;
+    margin-top: 0.25rem;
+    line-height: 1.4;
 }
 
 .welcome-date {
     background: white;
-    padding: 0.5rem 1.2rem;
+    padding: 0.6rem 1.5rem;
     border-radius: 40px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: #1e293b;
+    white-space: nowrap;
 }
 
 .welcome-date i {
@@ -65,6 +90,7 @@
     display: grid;
     grid-template-columns: 1fr 360px;
     gap: 1.5rem;
+    overflow: visible;
 }
 
 /* Cards */
@@ -187,6 +213,7 @@
     background-size: cover;
     background-position: center;
     background-color: #e2e8f0;
+    flex-shrink: 0;
 }
 
 .ticket-item-info {
@@ -241,6 +268,11 @@
 @media (max-width: 1024px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .welcome-content h1 {
+        font-size: 1.8rem;
     }
 }
 
@@ -249,17 +281,29 @@
         padding: 1rem;
     }
     
-    .welcome-content h1 {
-        font-size: 1.4rem;
-    }
-    
     .welcome-section {
         flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    
+    .welcome-content h1 {
+        font-size: 1.5rem;
+        padding: 0.6rem 0 0.6rem 0 !important;
+    }
+    
+    .welcome-date {
+        width: 100%;
         text-align: center;
+        white-space: normal;
     }
 }
 
 @media (max-width: 480px) {
+    .welcome-content h1 {
+        font-size: 1.3rem;
+    }
+    
     .ticket-item {
         flex-wrap: wrap;
     }
@@ -362,18 +406,44 @@
 }
 
 @media (max-width: 768px) {
+    .dashboard-search-section {
+        padding: 3rem 1rem;
+    }
+    
+    .search-title {
+        font-size: 2rem;
+    }
+    
     .dashboard-search-form {
         flex-direction: column;
     }
     
-    .dashboard-search-btn {
-        padding: 0.9rem;
-    }
-        flex-direction: column;
+    .search-input-wrapper input {
+        padding: 1rem 8rem 1rem 3rem;
+        font-size: 0.9rem;
     }
     
-    .dashboard-search-btn {
-        padding: 0.9rem;
+    .detected-location-badge {
+        padding: 5px 12px;
+        font-size: 0.75rem;
+        right: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .search-title {
+        font-size: 1.5rem;
+    }
+    
+    .search-input-wrapper input {
+        padding-right: 7.5rem !important;
+        font-size: 0.85rem;
+    }
+    
+    .detected-location-badge {
+        padding: 4px 10px;
+        font-size: 0.65rem;
+        right: 8px;
     }
 }
 
@@ -394,7 +464,7 @@
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- Header ---- */
+/* Header */
 .discovery-header {
     display: flex;
     justify-content: space-between;
@@ -469,7 +539,7 @@
     color: #ef4444;
 }
 
-/* ---- Section groups ---- */
+/* Section groups */
 .discovery-section {
     background: white;
     padding: 1.25rem 1.5rem;
@@ -514,14 +584,14 @@
     color: #94a3b8;
 }
 
-/* ---- Card grid ---- */
+/* Card grid */
 .discovery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
     gap: 1.1rem;
 }
 
-/* ---- Event cards ---- */
+/* Event cards */
 .discovery-card {
     background: white;
     border-radius: 16px;
@@ -568,7 +638,6 @@
 }
 
 .disc-platform-badge--ext {
-    /* background set inline via JS */
     background: rgba(15, 23, 42, 0.72);
 }
 
@@ -675,7 +744,7 @@
     gap: 0.25rem;
 }
 
-/* ---- Action buttons ---- */
+/* Action buttons */
 .disc-btn {
     display: inline-flex;
     align-items: center;
@@ -714,7 +783,7 @@
     background: #f1f5f9;
     color: #1e293b;
     transform: translateY(-2px);
-    border-color: var(--src-color, #cbd5e1);
+    border-color: #cbd5e1;
 }
 
 .disc-btn--ghost {
@@ -729,7 +798,7 @@
     background: #e2e8f0;
 }
 
-/* ---- Loading state ---- */
+/* Loading state */
 .discovery-loading {
     background: white;
     padding: 3rem 2rem;
@@ -786,7 +855,7 @@
     50%       { opacity: 1; }
 }
 
-/* ---- Generic state boxes (error / empty) ---- */
+/* Generic state boxes (error / empty) */
 .discovery-state-box {
     background: white;
     padding: 3rem 2rem;
@@ -816,7 +885,7 @@
     color: #fca5a5;
 }
 
-/* ---- Disclaimer footer ---- */
+/* Disclaimer footer */
 .discovery-disclaimer {
     background: #f8fafc;
     padding: 0.7rem 1.5rem;
@@ -833,7 +902,7 @@
     flex-shrink: 0;
 }
 
-/* ---- Responsive ---- */
+/* Responsive */
 @media (max-width: 768px) {
     .discovery-grid {
         grid-template-columns: 1fr;
@@ -853,15 +922,20 @@
     }
 }
 
-@media (max-width: 480px) {
-    .search-input-wrapper input {
-        padding-right: 7.5rem !important;
-        font-size: 0.95rem;
-    }
-    .detected-location-badge {
-        padding: 6px 10px;
-        font-size: 0.75rem;
-        right: 10px;
-    }
+/* Dashboard Specific - Override any global gradient */
+.dashboard-container h1,
+.dashboard-container .welcome-content h1 {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    color: #1e293b !important;
 }
 
+.dashboard-container .welcome-content h1 span {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+    padding: 0.2rem 0;
+}
