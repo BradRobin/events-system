@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
@@ -248,6 +249,94 @@ class PaymentOrderTests(TestCase):
         data = response.json()
         self.assertTrue(data['success'])
         self.assertEqual(len(data['notifications']), 1)
+
+    @patch.dict('os.environ', {
+        'MPESA_ENVIRONMENT': 'sandbox',
+        'MPESA_CONSUMER_KEY': 'test-key',
+        'MPESA_CONSUMER_SECRET': 'test-secret',
+        'MPESA_SHORTCODE': '174379',
+        'MPESA_PASSKEY': 'test-passkey',
+        'MPESA_CALLBACK_URL': 'https://example.com/api/payments/mpesa/stk-callback/',
+    })
+    @patch('payments.order_views.MpesaClient.stk_push')
+    def test_stk_push_initiates_order(self, mock_stk_push):
+        mock_stk_push.return_value = {
+            'ResponseCode': '0',
+            'CheckoutRequestID': 'ws_CO_123',
+            'MerchantRequestID': 'mr_123',
+        }
+        order = PaymentOrder.objects.create(
+            attendee=self.attendee,
+            event=self.event,
+            organizer=self.organizer,
+            ticket_type='Regular',
+            quantity=1,
+            unit_price=Decimal('1000'),
+            total_amount=Decimal('1000'),
+            status='pending_payment',
+        )
+        self.client.force_login(self.attendee)
+        response = self.client.post(
+            f'/api/attendee/payment-orders/{order.id}/stk-push/',
+            data='{"phone": "254708374149"}',
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        data = response.json()
+        self.assertTrue(data['success'])
+        order.refresh_from_db()
+        self.assertEqual(order.checkout_request_id, 'ws_CO_123')
+        self.assertEqual(order.stk_status, 'initiated')
+        self.assertEqual(order.payment_rail, 'stk_platform')
+
+    @patch.dict('os.environ', {
+        'MPESA_ENVIRONMENT': 'sandbox',
+        'MPESA_CONSUMER_KEY': 'test-key',
+        'MPESA_CONSUMER_SECRET': 'test-secret',
+        'MPESA_SHORTCODE': '174379',
+        'MPESA_PASSKEY': 'test-passkey',
+        'MPESA_CALLBACK_URL': 'https://example.com/api/payments/mpesa/stk-callback/',
+    })
+    def test_stk_callback_fulfills_order(self):
+        order = PaymentOrder.objects.create(
+            attendee=self.attendee,
+            event=self.event,
+            organizer=self.organizer,
+            ticket_type='Regular',
+            quantity=1,
+            unit_price=Decimal('1000'),
+            total_amount=Decimal('1000'),
+            status='verifying',
+            payment_rail='stk_platform',
+            checkout_request_id='ws_CO_456',
+            stk_status='initiated',
+        )
+        payload = {
+            'Body': {
+                'stkCallback': {
+                    'CheckoutRequestID': 'ws_CO_456',
+                    'ResultCode': 0,
+                    'CallbackMetadata': {
+                        'Item': [
+                            {'Name': 'MpesaReceiptNumber', 'Value': 'QAB123XYZ'},
+                        ],
+                    },
+                },
+            },
+        }
+        response = self.client.post(
+            '/api/payments/mpesa/stk-callback/',
+            data=json.dumps(payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.event.refresh_from_db()
+        self.assertEqual(order.status, 'completed')
+        self.assertEqual(order.stk_status, 'success')
+        self.assertEqual(order.mpesa_receipt, 'QAB123XYZ')
+        self.assertEqual(self.event.available_seats, 99)
+        self.assertTrue(Ticket.objects.filter(attendee=self.attendee).exists())
 
     def test_reject_manual_review_order(self):
         order = PaymentOrder.objects.create(

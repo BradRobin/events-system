@@ -5,14 +5,43 @@
         <h3><i class="fas fa-mobile-alt"></i> Pay with M-Pesa</h3>
 
         <div id="checkoutStep1">
-            <p class="checkout-hint">Send the exact amount below to the organizer using any of the payment options.</p>
             <div class="checkout-summary">
                 <span id="checkoutTierBadge" class="checkout-tier-badge ticket-tier-regular">Regular</span>
                 <div class="checkout-amount" id="checkoutTotalAmount">KES 0</div>
-                <div class="checkout-receiver">Pay to: <strong id="checkoutReceiverName"></strong></div>
+                <div class="checkout-receiver" id="checkoutReceiverRow">Pay to: <strong id="checkoutReceiverName"></strong></div>
             </div>
-            <div id="checkoutPaymentOptions" class="checkout-payment-options"></div>
-            <button type="button" id="checkoutPaidBtn" class="checkout-primary-btn">I have paid</button>
+
+            <div id="checkoutStkSection" style="display:none;" class="checkout-stk-section">
+                <p class="checkout-hint">Pay instantly with an M-Pesa prompt on your phone.</p>
+                <label for="checkoutStkPhone">M-Pesa phone number</label>
+                <input type="tel" id="checkoutStkPhone" class="checkout-text-input" placeholder="e.g. 0712345678" autocomplete="tel">
+                <p id="checkoutStkSandboxHint" class="checkout-hint checkout-stk-sandbox" style="display:none;">
+                    Sandbox test number: <strong>254708374149</strong>
+                </p>
+                <button type="button" id="checkoutStkBtn" class="checkout-primary-btn">Send M-Pesa prompt</button>
+                <button type="button" id="checkoutManualInsteadBtn" class="checkout-secondary-btn checkout-stk-fallback">Pay manually instead</button>
+            </div>
+
+            <div id="checkoutManualSection">
+                <p class="checkout-hint" id="checkoutManualHint">Send the exact amount below to the organizer using any of the payment options.</p>
+                <div id="checkoutPaymentOptions" class="checkout-payment-options"></div>
+                <button type="button" id="checkoutPaidBtn" class="checkout-primary-btn">I have paid</button>
+            </div>
+        </div>
+
+        <div id="checkoutStepStkWait" style="display:none;" class="checkout-result pending">
+            <i class="fas fa-mobile-alt fa-spin"></i>
+            <h4>Check your phone</h4>
+            <p id="checkoutStkWaitMessage">Enter your M-Pesa PIN on the prompt we sent to your phone.</p>
+            <p class="checkout-hint">This usually takes a few seconds. Do not close this window.</p>
+        </div>
+
+        <div id="checkoutStep4Success" style="display:none;" class="checkout-result success">
+            <i class="fas fa-check-circle"></i>
+            <h4>Payment successful</h4>
+            <p id="checkoutSuccessMessage">Your ticket has been issued.</p>
+            <p class="checkout-hint">Ticket: <strong id="checkoutSuccessTicket"></strong></p>
+            <button type="button" id="checkoutSuccessCloseBtn" class="checkout-primary-btn">View my tickets</button>
         </div>
 
         <div id="checkoutStep2" style="display:none;">

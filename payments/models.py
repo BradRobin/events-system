@@ -79,6 +79,21 @@ class PaymentOrder(models.Model):
         help_text='OCR auto-verification result (null = not checked).',
     )
     verification_message = models.TextField(blank=True)
+    PAYMENT_RAIL_CHOICES = [
+        ('manual', 'Manual M-Pesa'),
+        ('stk_platform', 'Platform STK Push'),
+    ]
+    payment_rail = models.CharField(max_length=20, choices=PAYMENT_RAIL_CHOICES, default='manual')
+    checkout_request_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    merchant_request_id = models.CharField(max_length=100, blank=True)
+    mpesa_receipt = models.CharField(max_length=50, blank=True)
+    payer_phone = models.CharField(max_length=15, blank=True)
+    STK_STATUS_CHOICES = [
+        ('initiated', 'Initiated'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+    ]
+    stk_status = models.CharField(max_length=20, choices=STK_STATUS_CHOICES, blank=True)
     ticket = models.ForeignKey(
         'bookings.Ticket', on_delete=models.SET_NULL, null=True, blank=True, related_name='payment_orders'
     )

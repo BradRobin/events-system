@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from io import BytesIO
 
@@ -14,8 +15,11 @@ from events.api_organizer_views import organizer_required
 from events.models import Event
 
 from .models import PaymentOrder, OrganizerNotification, AttendeeNotification
+from .mpesa import MpesaClient
 from .screenshot_verifier import verify_screenshot as analyze_payment_screenshot
 from .screenshot_storage import encode_upload_to_data_uri, open_screenshot_stream, order_has_screenshot
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
 MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024
@@ -58,6 +62,9 @@ def _serialize_order(order, include_payment=False):
         'submitted_mpesa_name': order.submitted_mpesa_name,
         'screenshot_verified': order.screenshot_verified,
         'ticket_number': order.ticket.ticket_number if order.ticket_id else None,
+        'payment_rail': order.payment_rail,
+        'stk_status': order.stk_status,
+        'mpesa_receipt': order.mpesa_receipt,
         'created_at': order.created_at.isoformat(),
         'updated_at': order.updated_at.isoformat(),
     }
@@ -65,6 +72,7 @@ def _serialize_order(order, include_payment=False):
         organizer = order.organizer
         data['mpesa_display_name'] = organizer.mpesa_display_name
         data['payment_options'] = organizer.mpesa_payment_options()
+        data['stk_available'] = MpesaClient.is_configured()
     return data
 
 
@@ -181,7 +189,8 @@ def create_payment_order(request):
         return JsonResponse({'success': False, 'message': 'Not enough tickets available.'}, status=400)
 
     organizer = event.organizer
-    if not organizer.has_mpesa_payment_config():
+    stk_available = MpesaClient.is_configured()
+    if not organizer.has_mpesa_payment_config() and not stk_available:
         return JsonResponse({
             'success': False,
             'message': 'Organizer has not configured M-Pesa payment details yet.',
@@ -344,6 +353,179 @@ def verify_screenshot(request, order_id):
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
     return response
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def payment_order_stk_push(request, order_id):
+    user = get_authenticated_user(request)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Please login.'}, status=401)
+
+    if not MpesaClient.is_configured():
+        return JsonResponse({
+            'success': False,
+            'message': 'M-Pesa STK Push is not available right now. Please pay manually.',
+        }, status=503)
+
+    data = parse_json_body(request)
+    if data is None:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON body.'}, status=400)
+
+    phone = (data.get('phone') or data.get('phone_number') or '').strip()
+    if not phone:
+        return JsonResponse({'success': False, 'message': 'M-Pesa phone number is required.'}, status=400)
+
+    normalized_phone = MpesaClient.normalize_phone(phone)
+    if not normalized_phone.startswith('254') or len(normalized_phone) != 12:
+        return JsonResponse({
+            'success': False,
+            'message': 'Enter a valid Kenyan M-Pesa number (e.g. 0712345678).',
+        }, status=400)
+
+    try:
+        order = PaymentOrder.objects.select_related('event').get(pk=order_id, attendee=user)
+    except PaymentOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Order not found.'}, status=404)
+
+    if order.status == 'completed':
+        return JsonResponse({
+            'success': True,
+            'message': 'Payment already completed.',
+            'order': _serialize_order(order),
+        })
+
+    if order.status not in ('pending_payment', 'failed', 'rejected'):
+        return JsonResponse({
+            'success': False,
+            'message': 'This order cannot start a new M-Pesa prompt.',
+        }, status=400)
+
+    client = MpesaClient()
+    account_ref = f'ORD{order.id}'
+    description = (order.event.title or 'EventHub')[:13]
+
+    try:
+        result = client.stk_push(
+            phone_number=normalized_phone,
+            amount=order.total_amount,
+            account_ref=account_ref,
+            description=description,
+        )
+    except Exception as exc:
+        logger.exception('STK push failed for order %s', order.id)
+        return JsonResponse({
+            'success': False,
+            'message': f'Could not send M-Pesa prompt: {exc}',
+        }, status=502)
+
+    if str(result.get('ResponseCode')) != '0':
+        message = (
+            result.get('errorMessage')
+            or result.get('ResponseDescription')
+            or result.get('error')
+            or 'M-Pesa could not send the payment prompt.'
+        )
+        return JsonResponse({'success': False, 'message': message}, status=400)
+
+    order.payment_rail = 'stk_platform'
+    order.payer_phone = normalized_phone
+    order.checkout_request_id = result.get('CheckoutRequestID', '')
+    order.merchant_request_id = result.get('MerchantRequestID', '')
+    order.stk_status = 'initiated'
+    order.status = 'verifying'
+    order.verification_message = 'Waiting for M-Pesa confirmation on your phone.'
+    order.save(update_fields=[
+        'payment_rail',
+        'payer_phone',
+        'checkout_request_id',
+        'merchant_request_id',
+        'stk_status',
+        'status',
+        'verification_message',
+        'updated_at',
+    ])
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Check your phone for the M-Pesa prompt and enter your PIN.',
+        'checkout_request_id': order.checkout_request_id,
+        'order': _serialize_order(order),
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def mpesa_stk_callback(request):
+    """Daraja STK callback — auto-fulfills PaymentOrder on success."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        stk_callback = data['Body']['stkCallback']
+        checkout_id = stk_callback['CheckoutRequestID']
+        result_code = stk_callback['ResultCode']
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        logger.warning('Invalid M-Pesa callback payload: %s', exc)
+        return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+
+    try:
+        order = PaymentOrder.objects.select_related('event', 'organizer', 'attendee').get(
+            checkout_request_id=checkout_id,
+        )
+    except PaymentOrder.DoesNotExist:
+        logger.warning('M-Pesa callback for unknown CheckoutRequestID: %s', checkout_id)
+        return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+
+    if order.status == 'completed' and order.ticket_id:
+        return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+
+    if result_code == 0:
+        meta = {}
+        callback_metadata = stk_callback.get('CallbackMetadata') or {}
+        for item in callback_metadata.get('Item', []):
+            meta[item.get('Name')] = item.get('Value')
+
+        order.mpesa_receipt = str(meta.get('MpesaReceiptNumber', '') or '')
+        order.stk_status = 'success'
+        order.verification_message = 'M-Pesa payment confirmed.'
+        order.save(update_fields=[
+            'mpesa_receipt',
+            'stk_status',
+            'verification_message',
+            'updated_at',
+        ])
+
+        try:
+            ticket = fulfill_payment_order(order)
+        except FulfillmentError as exc:
+            logger.error('STK fulfillment failed for order %s: %s', order.id, exc.message)
+            order.status = 'failed'
+            order.stk_status = 'failed'
+            order.verification_message = exc.message
+            order.save(update_fields=['status', 'stk_status', 'verification_message', 'updated_at'])
+            return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
+
+        order.refresh_from_db()
+        AttendeeNotification.objects.create(
+            attendee=order.attendee,
+            payment_order=order,
+            title='Payment confirmed',
+            message=(
+                f'Your M-Pesa payment for {order.event.title} was successful. '
+                f'Ticket {ticket.ticket_number} has been issued.'
+            ),
+            notification_type='success',
+        )
+    else:
+        desc = stk_callback.get('ResultDesc', 'M-Pesa payment was not completed.')
+        order.status = 'failed'
+        order.stk_status = 'failed'
+        order.verification_message = desc
+        order.save(update_fields=['status', 'stk_status', 'verification_message', 'updated_at'])
+
+    return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
 
 
 @csrf_exempt
@@ -613,4 +795,15 @@ def attendee_notification_mark_read(request, notification_id):
     updated = AttendeeNotification.objects.filter(pk=notification_id, attendee=user).update(is_read=True)
     if not updated:
         return JsonResponse({'success': False, 'message': 'Notification not found.'}, status=404)
+    return JsonResponse({'success': True})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def attendee_notifications_mark_all_read(request):
+    user = get_authenticated_user(request)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Please login.'}, status=401)
+
+    AttendeeNotification.objects.filter(attendee=user, is_read=False).update(is_read=True)
     return JsonResponse({'success': True})

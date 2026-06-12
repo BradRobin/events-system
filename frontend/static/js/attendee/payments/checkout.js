@@ -1,13 +1,14 @@
 /**
- * Two-step M-Pesa checkout:
- * 1) Upload screenshot → automatic OCR check
- * 2) Organizer approval → ticket issued
+ * M-Pesa checkout:
+ * - STK Push (platform) when configured
+ * - Manual screenshot + organizer approval as fallback
  */
 (function () {
     'use strict';
 
     let currentOrder = null;
     let currentStep = 1;
+    let stkPollTimer = null;
 
     function getAuthHeaders(json = true) {
         const headers = {};
@@ -43,13 +44,22 @@
         return document.getElementById('checkoutModal');
     }
 
+    function clearStkPoll() {
+        if (stkPollTimer) {
+            clearInterval(stkPollTimer);
+            stkPollTimer = null;
+        }
+    }
+
     function showStep(step) {
         currentStep = step;
         [
             'checkoutStep1',
             'checkoutStep2',
             'checkoutStep3',
+            'checkoutStepStkWait',
             'checkoutStep4Pending',
+            'checkoutStep4Success',
             'checkoutStep4Fail',
         ].forEach(id => {
             const el = document.getElementById(id);
@@ -59,7 +69,9 @@
             1: 'checkoutStep1',
             2: 'checkoutStep2',
             3: 'checkoutStep3',
+            'stk': 'checkoutStepStkWait',
             4: 'checkoutStep4Pending',
+            6: 'checkoutStep4Success',
             5: 'checkoutStep4Fail',
         };
         const target = document.getElementById(map[step]);
@@ -162,6 +174,84 @@
         return data.order;
     }
 
+    async function fetchOrderStatus(orderId) {
+        const response = await fetch(`/api/attendee/payment-orders/${orderId}/status/`, {
+            headers: getAuthHeaders(),
+            credentials: 'same-origin',
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Could not check payment status.');
+        }
+        return data.order;
+    }
+
+    async function initiateStkPush(orderId, phone) {
+        const response = await fetch(`/api/attendee/payment-orders/${orderId}/stk-push/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            credentials: 'same-origin',
+            body: JSON.stringify({ phone }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || data.error || 'Could not send M-Pesa prompt.');
+        }
+        return data;
+    }
+
+    function showStkSuccess(order) {
+        clearStkPoll();
+        const msgEl = document.getElementById('checkoutSuccessMessage');
+        const ticketEl = document.getElementById('checkoutSuccessTicket');
+        if (msgEl) {
+            msgEl.textContent = `Your payment for ${order.event_title || 'this event'} was successful.`;
+        }
+        if (ticketEl) ticketEl.textContent = order.ticket_number || '—';
+        showStep(6);
+        window.dispatchEvent(new CustomEvent('checkout-completed', { detail: order }));
+    }
+
+    function startStkPolling(orderId) {
+        clearStkPoll();
+        let attempts = 0;
+        const maxAttempts = 45;
+
+        stkPollTimer = setInterval(async () => {
+            attempts += 1;
+            try {
+                const order = await fetchOrderStatus(orderId);
+                currentOrder = order;
+                if (order.status === 'completed' && order.ticket_number) {
+                    showStkSuccess(order);
+                    return;
+                }
+                if (order.status === 'failed' || order.stk_status === 'failed') {
+                    clearStkPoll();
+                    const failMsg = document.getElementById('checkoutFailMessage');
+                    if (failMsg) {
+                        failMsg.textContent = order.verification_message || 'M-Pesa payment was not completed.';
+                    }
+                    showStep(5);
+                    return;
+                }
+            } catch (e) {
+                if (attempts >= maxAttempts) {
+                    clearStkPoll();
+                    showToast(e.message, 'error');
+                }
+            }
+            if (attempts >= maxAttempts) {
+                clearStkPoll();
+                const failMsg = document.getElementById('checkoutFailMessage');
+                if (failMsg) {
+                    failMsg.textContent = 'Payment is taking longer than expected. Check your phone or try again.';
+                }
+                showStep(5);
+            }
+        }, 2000);
+    }
+
     async function verifyScreenshot(orderId, file) {
         const formData = new FormData();
         formData.append('screenshot', file);
@@ -236,8 +326,37 @@
         window.dispatchEvent(new CustomEvent('checkout-submitted', { detail: result }));
     }
 
+    function configureCheckoutSections(order) {
+        const stkSection = document.getElementById('checkoutStkSection');
+        const manualSection = document.getElementById('checkoutManualSection');
+        const sandboxHint = document.getElementById('checkoutStkSandboxHint');
+        const receiverRow = document.getElementById('checkoutReceiverRow');
+        const manualHint = document.getElementById('checkoutManualHint');
+        const stkAvailable = Boolean(order.stk_available);
+        const hasManualOptions = (order.payment_options || []).length > 0;
+
+        if (stkSection) stkSection.style.display = stkAvailable ? 'block' : 'none';
+        if (sandboxHint) sandboxHint.style.display = stkAvailable ? 'block' : 'none';
+
+        if (manualSection) {
+            manualSection.style.display = (!stkAvailable || hasManualOptions) ? 'block' : 'none';
+        }
+        if (stkAvailable && !hasManualOptions) {
+            if (receiverRow) receiverRow.style.display = 'none';
+            if (manualHint) manualHint.textContent = 'If the M-Pesa prompt fails, contact the organizer for help.';
+        } else {
+            if (receiverRow) receiverRow.style.display = '';
+            if (manualHint) {
+                manualHint.textContent = stkAvailable
+                    ? 'Or send the exact amount to the organizer using any of the payment options below.'
+                    : 'Send the exact amount below to the organizer using any of the payment options.';
+            }
+        }
+    }
+
     function openCheckoutModal(order) {
         currentOrder = order;
+        clearStkPoll();
         const modal = getModal();
         if (!modal) return;
         modal.style.display = 'flex';
@@ -245,13 +364,14 @@
         const nameEl = document.getElementById('checkoutReceiverName');
         const amountEl = document.getElementById('checkoutTotalAmount');
         const tierEl = document.getElementById('checkoutTierBadge');
-        if (nameEl) nameEl.textContent = order.mpesa_display_name || '';
+        if (nameEl) nameEl.textContent = order.mpesa_display_name || 'EventHub';
         if (amountEl) amountEl.textContent = `KES ${Number(order.total_amount).toLocaleString()}`;
         if (tierEl) {
             tierEl.textContent = order.ticket_type;
             tierEl.className = `checkout-tier-badge ${tierBadgeClass(order.ticket_type)}`;
         }
 
+        configureCheckoutSections(order);
         renderPaymentOptions(order);
         showStep(1);
 
@@ -265,9 +385,15 @@
         if (manualBox) manualBox.style.display = 'none';
         const pendingName = document.getElementById('checkoutPendingMpesaName');
         if (pendingName) pendingName.value = '';
+        const stkPhone = document.getElementById('checkoutStkPhone');
+        if (stkPhone && !stkPhone.value) {
+            const profilePhone = localStorage.getItem('attendee_phone') || '';
+            if (profilePhone) stkPhone.value = profilePhone;
+        }
     }
 
     function closeCheckoutModal() {
+        clearStkPoll();
         const modal = getModal();
         if (modal) modal.style.display = 'none';
         currentOrder = null;
@@ -291,6 +417,43 @@
     function bindCheckoutEvents() {
         const closeBtn = document.getElementById('checkoutClose');
         if (closeBtn) closeBtn.addEventListener('click', closeCheckoutModal);
+
+        const manualInsteadBtn = document.getElementById('checkoutManualInsteadBtn');
+        if (manualInsteadBtn) {
+            manualInsteadBtn.addEventListener('click', () => {
+                const manualSection = document.getElementById('checkoutManualSection');
+                if (manualSection) manualSection.style.display = 'block';
+                manualInsteadBtn.style.display = 'none';
+            });
+        }
+
+        const stkBtn = document.getElementById('checkoutStkBtn');
+        if (stkBtn) {
+            stkBtn.addEventListener('click', async () => {
+                if (!currentOrder) return;
+                const phoneInput = document.getElementById('checkoutStkPhone');
+                const phone = phoneInput?.value.trim();
+                if (!phone) {
+                    showToast('Please enter your M-Pesa phone number.', 'error');
+                    return;
+                }
+                stkBtn.disabled = true;
+                try {
+                    const result = await initiateStkPush(currentOrder.id, phone);
+                    currentOrder = result.order || currentOrder;
+                    const waitMsg = document.getElementById('checkoutStkWaitMessage');
+                    if (waitMsg) {
+                        waitMsg.textContent = result.message || 'Enter your M-Pesa PIN on the prompt we sent to your phone.';
+                    }
+                    showStep('stk');
+                    startStkPolling(currentOrder.id);
+                } catch (e) {
+                    showToast(e.message, 'error');
+                } finally {
+                    stkBtn.disabled = false;
+                }
+            });
+        }
 
         const paidBtn = document.getElementById('checkoutPaidBtn');
         if (paidBtn) paidBtn.addEventListener('click', () => showStep(2));
@@ -338,12 +501,17 @@
 
         const retryBtn = document.getElementById('checkoutRetryBtn');
         if (retryBtn) retryBtn.addEventListener('click', () => {
+            clearStkPoll();
             if (screenshotInput) screenshotInput.value = '';
             const preview = document.getElementById('checkoutScreenshotPreview');
             if (preview) preview.innerHTML = '';
             const manualBox = document.getElementById('checkoutManualNameBox');
             if (manualBox) manualBox.style.display = 'none';
-            showStep(2);
+            if (currentOrder?.stk_available) {
+                showStep(1);
+            } else {
+                showStep(2);
+            }
         });
 
         const manualBtn = document.getElementById('checkoutManualBtn');
@@ -379,6 +547,14 @@
 
         const pendingCloseBtn = document.getElementById('checkoutPendingCloseBtn');
         if (pendingCloseBtn) pendingCloseBtn.addEventListener('click', closeCheckoutModal);
+
+        const successCloseBtn = document.getElementById('checkoutSuccessCloseBtn');
+        if (successCloseBtn) {
+            successCloseBtn.addEventListener('click', () => {
+                closeCheckoutModal();
+                window.location.href = '/tickets/';
+            });
+        }
 
         const pendingNameBtn = document.getElementById('checkoutPendingNameBtn');
         if (pendingNameBtn) {

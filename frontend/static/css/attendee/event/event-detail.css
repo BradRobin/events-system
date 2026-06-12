@@ -1544,6 +1544,19 @@ textarea.form-control {
     margin: 0.5rem 0 1rem;
     box-sizing: border-box;
 }
+.checkout-stk-section {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+.checkout-stk-section .checkout-secondary-btn {
+    width: 100%;
+    margin: 0.75rem 0 0;
+}
+.checkout-stk-sandbox {
+    font-size: 0.85rem;
+    margin-top: -0.5rem;
+}
 .checkout-tier-badge, .ticket-tier-vip, .ticket-tier-vvip, .ticket-tier-regular {
     display: inline-block;
     padding: 0.2rem 0.6rem;
