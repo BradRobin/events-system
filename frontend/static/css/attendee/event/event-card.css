@@ -67,8 +67,11 @@
 .card-image-container {
     position: relative;
     width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 180px;
     overflow: hidden;
     background: #f1f5f9;
+    flex-shrink: 0;
 }
 
 /* Gradient overlay at bottom of image (visually extends image into content area) */
@@ -380,7 +383,8 @@
 /* Responsive */
 @media (max-width: 768px) {
     .card-image-container {
-        height: auto;
+        aspect-ratio: 16 / 9;
+        min-height: 160px;
     }
     
     .card-image-container::after {

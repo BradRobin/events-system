@@ -7,7 +7,7 @@ let filteredEvents = [];
 let eventsCatalog = [];
 let debounceTimer = null;
 let isLoadingMore = false;
-let currentOffset = 0;
+let currentPage = 1;
 const PAGE_SIZE = 12;
 let hasMoreEvents = true;
 let observer = null;
@@ -87,6 +87,24 @@ function getEventImageUrl(event) {
     return (event.image || event.banner_image || '').trim();
 }
 
+function showImageFallback(img) {
+    const container = img.closest('.card-image-container');
+    if (!container) return;
+
+    img.remove();
+    if (!container.querySelector('.card-image-fallback')) {
+        const fallback = document.createElement('div');
+        fallback.className = 'card-image-fallback';
+        fallback.setAttribute('aria-hidden', 'true');
+        fallback.innerHTML = '<i class="fas fa-calendar-alt"></i>';
+        const overlay = container.querySelector('.card-gradient-overlay');
+        container.insertBefore(fallback, overlay);
+    }
+
+    const skeleton = container.querySelector('.card-image-skeleton');
+    if (skeleton) skeleton.classList.add('is-hidden');
+}
+
 function markEventImageLoaded(img) {
     img.classList.remove('is-loading');
     img.classList.add('is-loaded');
@@ -103,12 +121,11 @@ function initEventCardImages() {
         }
         img.addEventListener('load', finish, { once: true });
         img.addEventListener('error', () => {
-            img.src = '/static/images/placeholder.jpg';
+            showImageFallback(img);
         }, { once: true });
     });
 }
 
-<<<<<<< HEAD
 function getPrefetchedCatalog() {
     if (!window.EventhubEventsPrefetch) return null;
     const cached = EventhubEventsPrefetch.getCached();
@@ -116,6 +133,7 @@ function getPrefetchedCatalog() {
     return {
         events: cached.events || [],
         categories: cached.categories || [],
+        timestamp: cached.timestamp || 0,
     };
 }
 
@@ -123,32 +141,29 @@ function canUsePrefetchedCatalog() {
     return currentCategory === 'all' && !currentSearch;
 }
 
-async function loadEventsFromAPI(options = {}) {
-    const preferPrefetch = options.preferPrefetch !== false;
+async function loadEventsFromAPI(reset = true) {
+    if (reset) {
+        currentPage = 1;
+        eventsCatalog = [];
+        hasMoreEvents = true;
 
-    if (preferPrefetch && canUsePrefetchedCatalog()) {
-        const prefetched = getPrefetchedCatalog();
-        if (prefetched && prefetched.events.length) {
-            eventsCatalog = prefetched.events;
-            return;
+        if (canUsePrefetchedCatalog()) {
+            const prefetched = getPrefetchedCatalog();
+            if (prefetched && prefetched.events.length) {
+                eventsCatalog = prefetched.events;
+                hasMoreEvents = prefetched.events.length >= PAGE_SIZE;
+                currentPage = 2;
+                return true;
+            }
         }
     }
 
-=======
-async function loadEventsFromAPI(reset = true) {
-    if (reset) {
-        currentOffset = 0;
-        eventsCatalog = [];
-        hasMoreEvents = true;
-    }
-    
-    if (!hasMoreEvents && !reset) return;
-    
->>>>>>> e18de46fcc6ab63658203963ee9ef44187808bfe
+    if (!hasMoreEvents && !reset) return false;
+
     try {
         const params = new URLSearchParams();
-        params.set('offset', currentOffset);
-        params.set('limit', PAGE_SIZE);
+        params.set('page', String(currentPage));
+        params.set('limit', currentSearch ? '200' : String(PAGE_SIZE));
 
         if (currentCategory !== 'all') {
             params.set('category', currentCategory);
@@ -156,12 +171,6 @@ async function loadEventsFromAPI(reset = true) {
 
         if (currentSearch) {
             params.set('search', currentSearch);
-<<<<<<< HEAD
-            params.set('limit', '200');
-        } else if (currentCategory === 'all') {
-            params.set('limit', '200');
-=======
->>>>>>> e18de46fcc6ab63658203963ee9ef44187808bfe
         }
 
         const url = API.events + (params.toString() ? '?' + params.toString() : '');
@@ -169,56 +178,48 @@ async function loadEventsFromAPI(reset = true) {
         const data = await response.json();
 
         if (data.success) {
-<<<<<<< HEAD
-            eventsCatalog = data.events || data.results || [];
+            const batch = data.events || data.results || [];
+            if (reset) {
+                eventsCatalog = batch;
+            } else {
+                eventsCatalog.push(...batch);
+            }
+
             if (canUsePrefetchedCatalog() && window.EventhubEventsPrefetch && eventsCatalog.length) {
                 const existing = getPrefetchedCatalog();
-                EventhubEventsPrefetch.seed(eventsCatalog, existing ? existing.categories : []);
+                EventhubEventsPrefetch.seed(eventsCatalog, existing ? existing.categories : cachedCategories || []);
             }
-=======
-            if (reset) {
-                eventsCatalog = data.events || [];
-            } else {
-                eventsCatalog.push(...(data.events || []));
-            }
-            currentOffset += data.events?.length || 0;
-            hasMoreEvents = (data.events?.length || 0) === PAGE_SIZE;
+
+            hasMoreEvents = batch.length === PAGE_SIZE && !currentSearch;
+            currentPage += 1;
             return true;
->>>>>>> e18de46fcc6ab63658203963ee9ef44187808bfe
-        } else {
-            console.error('Failed to load events:', data.message);
-            return false;
         }
+
+        console.error('Failed to load events:', data.message);
+        return false;
     } catch (error) {
         console.error('Error loading events:', error);
         return false;
     }
 }
 
-<<<<<<< HEAD
-async function loadCategoriesFromAPI(options = {}) {
-    const preferPrefetch = options.preferPrefetch !== false;
-
-    if (preferPrefetch) {
-        const prefetched = getPrefetchedCatalog();
-        if (prefetched && prefetched.categories.length) {
-            return prefetched.categories;
-        }
+async function loadCategoriesFromAPI() {
+    const prefetched = getPrefetchedCatalog();
+    if (prefetched && prefetched.categories.length) {
+        cachedCategories = prefetched.categories;
+        return cachedCategories;
     }
 
-=======
-async function loadCategoriesFromAPI() {
     if (cachedCategories) {
         return cachedCategories;
     }
-    
->>>>>>> e18de46fcc6ab63658203963ee9ef44187808bfe
+
     try {
         const response = await fetch(API.categories);
         const data = await response.json();
         
         if (data.success && data.categories) {
-<<<<<<< HEAD
+            cachedCategories = data.categories;
             if (window.EventhubEventsPrefetch) {
                 const existing = getPrefetchedCatalog();
                 const events = existing ? existing.events : eventsCatalog;
@@ -226,11 +227,7 @@ async function loadCategoriesFromAPI() {
                     EventhubEventsPrefetch.seed(events || [], data.categories);
                 }
             }
-            return data.categories;
-=======
-            cachedCategories = data.categories;
             return cachedCategories;
->>>>>>> e18de46fcc6ab63658203963ee9ef44187808bfe
         }
         return [];
     } catch (error) {
@@ -406,82 +403,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-<<<<<<< HEAD
-async function renderFromPrefetchedCatalog(prefetched) {
-    eventsCatalog = prefetched.events || [];
-    const categoriesData = prefetched.categories || [];
-
-    await addFilters(categoriesData);
-
-    filteredEvents = [...eventsCatalog];
-    const stats = document.getElementById('searchStats');
-    if (stats) {
-        stats.innerHTML = `📅 ${filteredEvents.length} upcoming event${filteredEvents.length !== 1 ? 's' : ''}`;
-    }
-    renderEvents();
-
-    if (window.EventhubEventsPrefetch) {
-        EventhubEventsPrefetch.start().then((fresh) => {
-            if (!fresh || !Array.isArray(fresh.events) || !fresh.events.length) return;
-            if (!canUsePrefetchedCatalog()) return;
-            if (fresh.timestamp <= (prefetched.timestamp || 0)) return;
-            eventsCatalog = fresh.events;
-            filteredEvents = [...eventsCatalog];
-            if (stats) {
-                stats.innerHTML = `📅 ${filteredEvents.length} upcoming event${filteredEvents.length !== 1 ? 's' : ''}`;
-            }
-            renderEvents();
-        });
-    }
-}
-
-async function filterEvents(isInitialLoad = false) {
-    if (isInitialLoad) {
-        const prefetched = canUsePrefetchedCatalog() ? getPrefetchedCatalog() : null;
-        const hasInstantCatalog = Boolean(prefetched && prefetched.events && prefetched.events.length);
-
-        if (hasInstantCatalog) {
-            await renderFromPrefetchedCatalog(prefetched);
-            return;
-        } else {
-            renderStreamLoader(false);
-            updateStep('step-connect', 'active');
-
-            if (window.EventhubEventsPrefetch) {
-                EventhubEventsPrefetch.start();
-            }
-
-            const categoriesPromise = loadCategoriesFromAPI({ preferPrefetch: true });
-            const eventsPromise = loadEventsFromAPI({ preferPrefetch: true });
-
-            updateStep('step-connect', 'completed');
-            updateStep('step-categories', 'active');
-            updateStep('step-events', 'active');
-
-            const categoriesData = await categoriesPromise;
-            updateStep('step-categories', 'completed');
-
-            await addFilters(categoriesData);
-
-            await eventsPromise;
-            updateStep('step-events', 'completed');
-            updateStep('step-render', 'active');
-
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
-    } else {
-        const grid = document.getElementById('eventsGrid');
-        if (grid) {
-            grid.innerHTML = `
-                <div class="stream-loader">
-                    <div class="stream-loader-spinner"></div>
-                    <h3 class="stream-loader-title">Updating stream...</h3>
-                </div>
-            `;
-        }
-        await loadEventsFromAPI();
-    }
-=======
 async function resetAndReload() {
     if (observer) observer.disconnect();
     showSkeletonCards(6);
@@ -489,7 +410,18 @@ async function resetAndReload() {
     setupInfiniteScroll();
     await filterAndDisplay();
 }
->>>>>>> e18de46fcc6ab63658203963ee9ef44187808bfe
+
+async function refreshPrefetchedCatalogInBackground(prefetched) {
+    if (!window.EventhubEventsPrefetch) return;
+
+    const fresh = await EventhubEventsPrefetch.start();
+    if (!fresh || !Array.isArray(fresh.events) || !fresh.events.length) return;
+    if (!canUsePrefetchedCatalog()) return;
+    if ((fresh.timestamp || 0) <= (prefetched.timestamp || 0)) return;
+
+    eventsCatalog = fresh.events;
+    await filterAndDisplay();
+}
 
 async function loadMoreEvents() {
     if (isLoadingMore || !hasMoreEvents) return;
@@ -786,7 +718,24 @@ window.resetFilters = resetFilters;
 window.goToNewsletter = goToNewsletter;
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', async () => { 
+document.addEventListener('DOMContentLoaded', async () => {
+    if (window.EventhubEventsPrefetch) {
+        EventhubEventsPrefetch.start();
+    }
+
+    const prefetched = canUsePrefetchedCatalog() ? getPrefetchedCatalog() : null;
+    const hasInstantCatalog = Boolean(prefetched && prefetched.events && prefetched.events.length);
+
+    if (hasInstantCatalog) {
+        eventsCatalog = prefetched.events;
+        cachedCategories = prefetched.categories || null;
+        await addFilters(prefetched.categories || null);
+        setupInfiniteScroll();
+        await filterAndDisplay();
+        refreshPrefetchedCatalogInBackground(prefetched);
+        return;
+    }
+
     showSkeletonCards(6);
     await loadCategoriesFromAPI();
     await addFilters();

@@ -288,6 +288,19 @@ def _events_with_image_first(queryset):
         )
     ).order_by('-_has_image', 'start_date')
 
+
+def resolve_banner_image(value):
+    """Return a browser-loadable banner URL for API responses."""
+    if not value:
+        return ''
+    value = value.strip()
+    if value.startswith(('data:', 'http://', 'https://', '/')):
+        return value
+    from django.conf import settings
+    if value.startswith(settings.MEDIA_URL):
+        return value
+    return settings.MEDIA_URL + value.lstrip('/')
+
 def api_event_list(request):
     """API endpoint to list and search events for attendees"""
     from django.core.cache import cache
@@ -378,8 +391,8 @@ def api_event_list(request):
             'total_seats': e.total_seats,
             'available_seats': e.available_seats,
             'available_tickets': e.available_seats,
-            'image': e.banner_image,
-            'banner_image': e.banner_image,
+            'image': resolve_banner_image(e.banner_image),
+            'banner_image': resolve_banner_image(e.banner_image),
             'category': e.category.name if e.category else 'General',
             'category_name': e.category.name if e.category else 'General',
             'is_featured': e.is_featured,
@@ -446,8 +459,8 @@ def api_event_detail(request, event_id):
             'total_seats': e.total_seats,
             'available_seats': e.available_seats,
             'available_tickets': e.available_seats,
-            'image': e.banner_image,
-            'banner_image': e.banner_image,
+            'image': resolve_banner_image(e.banner_image),
+            'banner_image': resolve_banner_image(e.banner_image),
             'category': e.category.name if e.category else 'General',
             'category_name': e.category.name if e.category else 'General',
             'is_featured': e.is_featured,
@@ -537,7 +550,7 @@ def api_dashboard_recommendations(request):
             'date': e.start_date.isoformat(),
             'location': e.venue,
             'price': float(e.price),
-            'image': e.banner_image,
+            'image': resolve_banner_image(e.banner_image),
         })
     return JsonResponse(results, safe=False)
 
@@ -585,8 +598,8 @@ def api_featured_events(request):
             'location': e.venue,
             'venue': e.venue,
             'price': float(e.price),
-            'image': e.banner_image,
-            'banner_image': e.banner_image,
+            'image': resolve_banner_image(e.banner_image),
+            'banner_image': resolve_banner_image(e.banner_image),
             'category': e.category.name if e.category else 'General',
             'category_name': e.category.name if e.category else 'General',
             'attendees_count': e.total_seats - e.available_seats,
