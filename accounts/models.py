@@ -84,6 +84,12 @@ class TeamMember(models.Model):
             models.Index(fields=['organizer']),
             models.Index(fields=['email']),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['organizer', 'email'],
+                name='unique_team_member_per_organizer_email',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.email} ({self.role}) - Org: {self.organizer.username}"
@@ -131,7 +137,12 @@ class APIToken(models.Model):
 
 
 class AdminNotificationState(models.Model):
-    """Tracks read/dismissed state for dynamically generated admin notifications."""
+    """
+    Tracks read/dismissed state for dynamically generated admin notifications.
+
+    Intentionally has no FK — admin notifications are computed at runtime from
+    events/tickets/users; this table only stores per-key UI state (see admin_store.py).
+    """
     notification_key = models.CharField(max_length=64, unique=True, db_index=True)
     is_read = models.BooleanField(default=False)
     is_dismissed = models.BooleanField(default=False)

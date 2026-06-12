@@ -3,14 +3,33 @@
    EventHub Admin Portal - Core Functionality
    ============================================ */
 
+function getAdminAccessToken() {
+    try {
+        return localStorage.getItem('admin_access_token') || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function getAdminAuthHeaders() {
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCSRFToken()
+    };
+    const token = getAdminAccessToken();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
 // Global API Request Function
 async function apiRequest(url, method = 'GET', data = null) {
     const options = {
         method: method,
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        }
+        headers: getAdminAuthHeaders(),
+        credentials: 'same-origin'
     };
     
     if (data && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
@@ -511,9 +530,14 @@ function initPendingCount() {
 async function fetchPendingCount() {
     const badge = document.getElementById('pendingBadge');
     if (!badge) return;
-    
+    if (!getAdminAccessToken() && !getCSRFToken()) return;
+
     try {
-        const response = await fetch('/api/admin/events/pending/count/');
+        const response = await fetch('/api/admin/events/pending/count/', {
+            headers: getAdminAuthHeaders(),
+            credentials: 'same-origin'
+        });
+        if (response.status === 403) return;
         const contentType = response.headers.get('content-type');
         if (response.ok && contentType && contentType.includes('application/json')) {
             const data = await response.json();

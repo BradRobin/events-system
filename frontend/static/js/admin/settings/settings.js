@@ -92,18 +92,19 @@ async function saveGeneralSettings() {
 
 async function loadPaymentSettings() {
     try {
-        const data = await apiRequest('/api/admin/settings/payment/');
-        if (data.settings) {
-            document.getElementById('platformFee').value = data.settings.platform_fee || '5';
-            document.getElementById('processingFee').value = data.settings.processing_fee || '0';
-            document.getElementById('minPayout').value = data.settings.min_payout || '500';
+        const data = await apiRequest('/api/admin/settings/');
+        const settings = data.settings || data;
+        if (settings) {
+            document.getElementById('platformFee').value = settings.platform_fee || '5';
+            document.getElementById('processingFee').value = settings.processing_fee || '0';
+            document.getElementById('minPayout').value = settings.min_payout || '500';
             
-            document.getElementById('mpesaEnv').value = data.settings.mpesa_env || 'sandbox';
-            document.getElementById('mpesaShortcode').value = data.settings.mpesa_shortcode || '174379';
-            document.getElementById('mpesaPasskey').value = data.settings.mpesa_passkey || '';
-            document.getElementById('mpesaConsumerKey').value = data.settings.mpesa_consumer_key || '';
-            document.getElementById('mpesaConsumerSecret').value = data.settings.mpesa_consumer_secret || '';
-            document.getElementById('mpesaCallbackUrl').value = data.settings.mpesa_callback_url || 'https://eventhub.co.ke/api/mpesa/callback/';
+            document.getElementById('mpesaEnv').value = settings.mpesa_env || 'sandbox';
+            document.getElementById('mpesaShortcode').value = settings.mpesa_shortcode || '174379';
+            document.getElementById('mpesaPasskey').value = settings.mpesa_passkey || '';
+            document.getElementById('mpesaConsumerKey').value = settings.mpesa_consumer_key || '';
+            document.getElementById('mpesaConsumerSecret').value = settings.mpesa_consumer_secret || '';
+            document.getElementById('mpesaCallbackUrl').value = settings.mpesa_callback_url || 'https://eventhub.co.ke/api/mpesa/callback/';
         }
     } catch (error) {
         console.error('Error loading payment settings:', error);
@@ -126,7 +127,7 @@ async function savePaymentSettings() {
     Loader.show('Saving payment settings...');
     
     try {
-        await apiRequest('/api/admin/settings/payment/', 'POST', formData);
+        await apiRequest('/api/admin/settings/general/', 'POST', formData);
         showSuccessMessage('Payment settings saved successfully');
     } catch (error) {
         console.error('Error saving payment settings:', error);

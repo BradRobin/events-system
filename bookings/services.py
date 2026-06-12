@@ -48,8 +48,11 @@ def fulfill_payment_order(order):
     if order.ticket_id:
         raise FulfillmentError('This order has already been fulfilled.', 'already_fulfilled')
 
-    if order.status not in ('pending_payment', 'failed', 'manual_review', 'verifying'):
-        raise FulfillmentError('Order cannot be fulfilled in its current state.', 'invalid_status')
+    fulfillable_statuses = ('pending_payment', 'failed', 'manual_review', 'verifying')
+    if order.status not in fulfillable_statuses:
+        # Allow repair when an order was marked completed without issuing a ticket.
+        if not (order.status == 'completed' and not order.ticket_id):
+            raise FulfillmentError('Order cannot be fulfilled in its current state.', 'invalid_status')
 
     event = Event.objects.select_for_update().get(pk=order.event_id)
 
@@ -65,7 +68,9 @@ def fulfill_payment_order(order):
     unit_price = compute_tier_price(event, order.ticket_type)
     attendee = order.attendee
     billing_name = attendee.get_full_name() or attendee.username
-    billing_email = attendee.email
+    billing_email = (attendee.email or '').strip()
+    if not billing_email:
+        billing_email = f'{attendee.username}@users.eventhub.local'
     billing_phone = getattr(attendee, 'phone', '') or ''
 
     ticket = Ticket.objects.create(

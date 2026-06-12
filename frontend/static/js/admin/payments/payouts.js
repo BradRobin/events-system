@@ -88,9 +88,10 @@ async function loadPayouts() {
         if (!response.ok) throw new Error('Failed to load payouts');
         
         const data = await response.json();
-        currentPayouts = data.results || data;
+        currentPayouts = data.payouts || data.results || [];
+        const totalItems = data.pagination?.total_items || currentPayouts.length;
         renderPayouts();
-        renderPagination(data.count || data.length || 0);
+        renderPagination(totalItems);
     } catch (error) {
         console.error('Error loading payouts:', error);
         showError(elements.payoutsList, 'Failed to load payouts');
@@ -106,12 +107,13 @@ async function loadStats() {
         
         if (!response.ok) throw new Error('Failed to load stats');
         
-        const stats = await response.json();
+        const data = await response.json();
+        const stats = data.stats || data;
         
         document.getElementById('pendingPayouts').textContent = stats.pending_count || 0;
-        document.getElementById('totalPendingAmount').textContent = `Kes ${formatNumber(stats.total_pending_amount || 0)}`;
-        document.getElementById('totalPaid').textContent = `Kes ${formatNumber(stats.total_paid_amount || 0)}`;
-        document.getElementById('paidThisMonth').textContent = `Kes ${formatNumber(stats.paid_this_month || 0)}`;
+        document.getElementById('totalPendingAmount').textContent = `Kes ${formatNumber(stats.pending_payout || stats.total_pending_amount || 0)}`;
+        document.getElementById('totalPaid').textContent = `Kes ${formatNumber(stats.total_payout || stats.total_paid_amount || 0)}`;
+        document.getElementById('paidThisMonth').textContent = `Kes ${formatNumber(stats.total_payout || stats.paid_this_month || 0)}`;
     } catch (error) {
         console.error('Error loading stats:', error);
     }
@@ -128,11 +130,11 @@ function renderPayouts() {
     elements.payoutsList.innerHTML = currentPayouts.map(payout => `
         <tr>
             <td><strong>${escapeHtml(payout.organizer_name || payout.organizer?.name || 'N/A')}</strong>${payout.organizer_email ? `<br><small class="text-muted">${escapeHtml(payout.organizer_email)}</small>` : ''}</td>
-            <td>${escapeHtml(payout.period || '-')}</td>
-            <td>${payout.events_count || 0}</td>
-            <td>Kes ${formatNumber(payout.ticket_sales || 0)}</td>
-            <td>Kes ${formatNumber(payout.platform_fee || 0)}</td>
-            <td><strong class="amount">Kes ${formatNumber(payout.payout_amount || 0)}</strong></td>
+            <td>${escapeHtml(payout.period || payout.event_title || '-')}</td>
+            <td>${payout.events_count || 1}</td>
+            <td>Kes ${formatNumber(payout.ticket_sales || payout.amount || 0)}</td>
+            <td>Kes ${formatNumber(payout.platform_fee || (payout.amount ? payout.amount * 0.05 : 0))}</td>
+            <td><strong class="amount">Kes ${formatNumber(payout.payout_amount || payout.amount || 0)}</strong></td>
             <td>${getStatusBadge(payout.status)}</td>
             <td>${formatDate(payout.requested_date)}</td>
             <td class="action-buttons">
@@ -223,11 +225,12 @@ async function openProcessModal(payoutId) {
         
         if (!response.ok) throw new Error('Failed to load payout details');
         
-        selectedPayout = await response.json();
+        const payload = await response.json();
+        selectedPayout = payload.payout || payload;
         
         elements.payoutInfo.innerHTML = `
             <p><strong>Organizer:</strong> ${escapeHtml(selectedPayout.organizer_name || selectedPayout.organizer?.name)}</p>
-            <p><strong>Amount:</strong> Kes ${formatNumber(selectedPayout.payout_amount)}</p>
+            <p><strong>Amount:</strong> Kes ${formatNumber(selectedPayout.payout_amount || selectedPayout.amount)}</p>
             <p><strong>Period:</strong> ${escapeHtml(selectedPayout.period || '-')}</p>
             <p><strong>Events:</strong> ${selectedPayout.events_count || 0}</p>
         `;
@@ -329,7 +332,8 @@ async function viewPayoutDetails(payoutId) {
         
         if (!response.ok) throw new Error('Failed to load payout details');
         
-        const payout = await response.json();
+        const payload = await response.json();
+        const payout = payload.payout || payload;
         
         elements.payoutInfo.innerHTML = `
             <div class="detail-row">

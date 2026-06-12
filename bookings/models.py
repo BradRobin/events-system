@@ -13,10 +13,16 @@ class Ticket(models.Model):
         ('refunded', 'Refunded'),
     ]
 
+    TICKET_TYPE_CHOICES = [
+        ('Regular', 'Regular'),
+        ('VIP', 'VIP'),
+        ('VVIP', 'VVIP'),
+    ]
+
     ticket_number = models.CharField(max_length=50, unique=True, blank=True)
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tickets')
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='tickets')
-    ticket_type = models.CharField(max_length=50, default='Standard')
+    ticket_type = models.CharField(max_length=50, choices=TICKET_TYPE_CHOICES, default='Regular')
     quantity = models.IntegerField(default=1)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     

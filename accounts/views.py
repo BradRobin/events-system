@@ -145,6 +145,9 @@ def login(request):
 
         django_login(request, user)
 
+        from events.prefetch import schedule_events_catalog_warm
+        schedule_events_catalog_warm()
+
         return JsonResponse({
             'message': 'Login successful.',
             'user': user_payload(user),

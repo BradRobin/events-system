@@ -47,6 +47,13 @@ PAYMENT_REQUIRED_TABLES = (
     'payments_attendeenotification',
 )
 
+CORE_REQUIRED_TABLES = (
+    'bookings_ticket',
+    'reviews_eventreview',
+    'accounts_adminnotificationstate',
+    'events_event',
+)
+
 PAYMENTS_0002 = '0002_remove_payment_event_id_payment_event_and_more'
 PAYMENTS_0003 = '0003_remove_payment_legacy_event_id'
 PAYMENTS_0004 = '0004_paymentorder_organizernotification_attendeentification'
@@ -361,6 +368,7 @@ def apply_payment_order_tables_hotfix() -> list[str]:
                     'ADD COLUMN IF NOT EXISTS screenshot_verified boolean NULL'
                 )
             applied.append('added payments_paymentorder.screenshot_verified')
+            payment_cols = _table_columns('payments_paymentorder')
         if PAYMENTS_0004 not in _applied_migrations('payments'):
             if _record_migration('payments', PAYMENTS_0004):
                 applied.append(f'recorded payments.{PAYMENTS_0004}')
@@ -417,6 +425,29 @@ def apply_mpesa_column_hotfixes() -> list[str]:
         logger.exception('M-Pesa column hotfix failed')
         raise
     return applied
+
+
+def _core_schema_status() -> dict[str, Any]:
+    status: dict[str, Any] = {
+        'tables': {},
+        'ready': False,
+        'error': None,
+    }
+    try:
+        for table_name in CORE_REQUIRED_TABLES:
+            status['tables'][table_name] = _table_exists(table_name)
+        status['ready'] = all(status['tables'].values())
+    except Exception as exc:
+        status['error'] = str(exc)
+    return status
+
+
+def _schema_ready() -> bool:
+    return (
+        bool(_auth_schema_status().get('ready'))
+        and bool(_payment_schema_status().get('ready'))
+        and bool(_core_schema_status().get('ready'))
+    )
 
 
 def _payment_schema_status() -> dict[str, Any]:
@@ -479,7 +510,7 @@ def run_migrations() -> dict[str, Any]:
         hotfixes = apply_auth_column_hotfixes()
         hotfixes.extend(apply_mpesa_column_hotfixes())
         payment_actions = ensure_payment_schema()
-        success = _auth_schema_status().get('ready') and _payment_schema_status().get('ready')
+        success = _schema_ready()
         if not success:
             error_msg = 'Schema incomplete after migrate'
     except Exception as exc:
@@ -493,7 +524,7 @@ def run_migrations() -> dict[str, Any]:
             hotfixes = apply_auth_column_hotfixes()
             hotfixes.extend(apply_mpesa_column_hotfixes())
             payment_actions = ensure_payment_schema()
-            success = _auth_schema_status().get('ready') and _payment_schema_status().get('ready')
+            success = _schema_ready()
             error_msg = None if success else 'Schema incomplete after migrate retry'
         except Exception as retry_exc:
             error_msg = str(retry_exc)
@@ -501,7 +532,7 @@ def run_migrations() -> dict[str, Any]:
                 hotfixes = apply_auth_column_hotfixes()
                 hotfixes.extend(apply_mpesa_column_hotfixes())
                 payment_actions = ensure_payment_schema()
-                success = _auth_schema_status().get('ready') and _payment_schema_status().get('ready')
+                success = _schema_ready()
                 if success:
                     error_msg = None
             except Exception as hotfix_exc:
@@ -518,6 +549,7 @@ def run_migrations() -> dict[str, Any]:
     payments_migrations = sorted(_applied_migrations('payments'))
     auth_tables = _auth_schema_status()
     payment_tables = _payment_schema_status()
+    core_tables = _core_schema_status()
 
     return {
         'success': success,
@@ -530,6 +562,7 @@ def run_migrations() -> dict[str, Any]:
         'payments_migrations': payments_migrations,
         'auth_schema': auth_tables,
         'payment_schema': payment_tables,
+        'core_schema': core_tables,
     }
 
 

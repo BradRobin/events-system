@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (userId) {
         loadUserDetail();
+    } else {
+        showToast('No user ID provided', 'error');
     }
 });
 
@@ -20,8 +22,19 @@ async function loadUserDetail() {
     if (typeof Loader !== 'undefined') Loader.show('Loading user details...');
     
     try {
-        const data = await apiRequest(`/api/admin/users/${userId}/`);
-        const user = data.user;
+        const endpoint = userType === 'organizer'
+            ? `/api/admin/organizers/${userId}/`
+            : `/api/admin/users/${userId}/`;
+        const data = await apiRequest(endpoint);
+        let user = data.user || data.organizer;
+        if (data.organizer) {
+            user = {
+                ...data.organizer,
+                role: 'organizer',
+                full_name: data.organizer.contact_name || data.organizer.business_name,
+                status: data.organizer.status || 'active',
+            };
+        }
         
         const userTypeLabel = document.getElementById('userTypeLabel');
         if (userTypeLabel) {
@@ -157,7 +170,7 @@ async function reactivateUser() {
     if (typeof Loader !== 'undefined') Loader.show('Reactivating user...');
     
     try {
-        await apiRequest(`/api/admin/users/${userId}/reactivate/`, 'POST');
+        await apiRequest(`/api/admin/users/${userId}/activate/`, 'POST');
         showToast('User reactivated successfully', 'success');
         setTimeout(() => location.reload(), 1500);
     } catch (error) {

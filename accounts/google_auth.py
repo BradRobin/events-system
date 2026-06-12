@@ -131,6 +131,9 @@ def _complete_google_login(request, User, google_id, email, first_name, last_nam
         
     # Generate token pair
     tokens = issue_token_pair(user)
+
+    from events.prefetch import schedule_events_catalog_warm
+    schedule_events_catalog_warm()
     
     return JsonResponse({
         'message': 'Login successful.',

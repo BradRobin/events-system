@@ -35,7 +35,11 @@
         #f59e0b, #ec6408, #f59e0b, #ec6408, #f59e0b);
     background-size: 400% 400%;
     border-radius: 18px;
+<<<<<<< HEAD
     z-index: 1;
+=======
+    z-index: -1;
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
     animation: borderGlow 3s ease infinite;
     opacity: 1;
 }
@@ -49,15 +53,26 @@
     bottom: 0;
     background: #ffffff;
     border-radius: 15px;
+<<<<<<< HEAD
     z-index: 2;
+=======
+    z-index: -0;
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 }
 
 @keyframes borderGlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
+<<<<<<< HEAD
 /* Image container - FIXED for mobile */
 .card-image-container {
     position: relative;
@@ -79,6 +94,30 @@
     object-fit: cover;
     opacity: 1;
     transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+=======
+/* Image container - height will be increased by gradient overlay */
+.card-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 180px;
+    overflow: hidden;
+    background: #f1f5f9;
+    flex-shrink: 0;
+}
+
+/* Gradient overlay at bottom of image (visually extends image into content area) */
+.card-image-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px; /* 10-11% of content area (~180px content = ~18-20px) */
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
+    pointer-events: none;
+    z-index: 5;
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 }
 
 /* FIXED: Images always visible - removed opacity:0 issue */
@@ -140,7 +179,11 @@
     100% { background-position: -120% 0; }
 }
 
+<<<<<<< HEAD
 /* Content section */
+=======
+/* Content section below gradient - fully white background */
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 .card-content {
     padding: 16px;
     background: #ffffff;
@@ -148,7 +191,7 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    z-index: 10;
+    z-index: 2;
 }
 
 .card-category {
@@ -248,16 +291,23 @@
     font-weight: 400;
 }
 
+<<<<<<< HEAD
 /* FIXED: Action buttons - always visible on hover */
+=======
+/* Action buttons at the very bottom */
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 .card-actions {
     display: flex;
     gap: 8px;
     padding: 12px 16px 16px 16px;
     background: #ffffff;
     border-top: 1px solid #f1f5f9;
+<<<<<<< HEAD
     position: relative;
     z-index: 10;
     transition: all 0.3s ease;
+=======
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 }
 
 /* FIXED: Buttons never disappear - always visible */
@@ -312,7 +362,7 @@
     border-radius: 6px;
     font-size: 0.65rem;
     font-weight: 700;
-    z-index: 20;
+    z-index: 10;
     text-transform: uppercase;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -322,30 +372,34 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(255, 255, 255, 0.9);
     border: none;
-    padding: 6px 12px;
+    padding: 6px 10px;
     border-radius: 20px;
-    color: white;
+    color: #1e293b;
     font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 6px;
-    z-index: 20;
+    gap: 4px;
+    z-index: 10;
     transition: all 0.2s ease;
-    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 .wishlist-btn i {
     transition: transform 0.2s ease;
-    color: white;
 }
 
 .wishlist-btn:hover {
+<<<<<<< HEAD
     background: #ef4444;
     color: white;
+=======
+    background: #ffffff;
+    color: #ef4444;
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 }
 
 .wishlist-btn:hover i {
@@ -354,6 +408,7 @@
 }
 
 .wishlist-btn.active {
+<<<<<<< HEAD
     background: #ef4444;
     color: white;
     border: none;
@@ -361,6 +416,11 @@
 
 .wishlist-btn.active i {
     color: white;
+=======
+    background: #fef2f2;
+    color: #ef4444;
+    border: 1px solid #fee2e2;
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 }
 
 /* Card Animations */
@@ -387,10 +447,15 @@
 .premium-card:nth-child(5) { animation-delay: 0.25s; }
 .premium-card:nth-child(6) { animation-delay: 0.3s; }
 
+<<<<<<< HEAD
 /* FIXED: Responsive - images always visible on mobile/tablet */
+=======
+/* Responsive */
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 @media (max-width: 768px) {
     .card-image-container {
-        height: 180px;
+        aspect-ratio: 16 / 9;
+        min-height: 160px;
     }
     
     /* Ensure images load properly on mobile */
@@ -436,13 +501,10 @@
 }
 
 @media (max-width: 480px) {
-    .card-image-container {
-        height: 160px;
-    }
-    
     .card-image-container::after {
         height: 15px;
     }
+<<<<<<< HEAD
     
     .wishlist-btn {
         padding: 4px 8px;
@@ -459,4 +521,6 @@
     .card-bg-image {
         object-fit: cover;
     }
+=======
+>>>>>>> df146b60ff9b84e1bb990f601931434b93456438
 }

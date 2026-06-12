@@ -318,6 +318,7 @@
     
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{% static 'js/shared/context-framework.js' %}"></script>
+    <script src="{% static 'js/shared/events-prefetch.service.js' %}"></script>
     <script src="{% static 'js/attendee/api.config.js' %}"></script>
     <script src="{% static 'js/attendee/api.service.js' %}"></script>
     <script src="{% static 'js/attendee/api.endpoints.js' %}"></script>
@@ -357,6 +358,9 @@
         // Global logout function
         window.logout = function() {
             try {
+                if (window.EventhubEventsPrefetch) {
+                    window.EventhubEventsPrefetch.invalidate();
+                }
                 localStorage.removeItem('attendee_access_token');
                 localStorage.removeItem('attendee_refresh_token');
                 localStorage.removeItem('attendee_user');

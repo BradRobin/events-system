@@ -525,6 +525,63 @@ def organizer_reject_order(request, order_id):
     })
 
 
+def _serialize_organizer_notification(notification):
+    return {
+        'id': notification.id,
+        'title': notification.title,
+        'message': notification.message,
+        'notification_type': notification.notification_type,
+        'is_read': notification.is_read,
+        'requires_action': notification.requires_action,
+        'action_type': notification.action_type,
+        'payment_order_id': notification.payment_order_id,
+        'created_at': notification.created_at.isoformat(),
+    }
+
+
+@csrf_exempt
+@organizer_required
+@require_http_methods(["GET"])
+def organizer_notifications_list(request):
+    notifications = OrganizerNotification.objects.filter(
+        organizer=request.user,
+    ).order_by('-created_at')[:50]
+    results = [_serialize_organizer_notification(n) for n in notifications]
+    return JsonResponse({'success': True, 'notifications': results})
+
+
+@csrf_exempt
+@organizer_required
+@require_http_methods(["GET"])
+def organizer_notifications_unread(request):
+    count = OrganizerNotification.objects.filter(
+        organizer=request.user, is_read=False,
+    ).count()
+    return JsonResponse({'success': True, 'unread_count': count})
+
+
+@csrf_exempt
+@organizer_required
+@require_http_methods(["POST"])
+def organizer_notification_mark_read(request, notification_id):
+    updated = OrganizerNotification.objects.filter(
+        pk=notification_id, organizer=request.user,
+    ).update(is_read=True)
+    if not updated:
+        return JsonResponse({'success': False, 'message': 'Notification not found.'}, status=404)
+    return JsonResponse({'success': True})
+
+
+@csrf_exempt
+@organizer_required
+@require_http_methods(["POST"])
+def organizer_notifications_mark_all_read(request):
+    OrganizerNotification.objects.filter(
+        organizer=request.user, is_read=False,
+    ).update(is_read=True)
+    return JsonResponse({'success': True})
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 def attendee_notifications_list(request):

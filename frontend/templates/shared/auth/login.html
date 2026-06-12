@@ -159,6 +159,10 @@
                 localStorage.setItem(`${prefix}_access_token`, body.access);
                 localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
                 localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
+
+                if (window.EventhubAuthLoginHooks) {
+                    EventhubAuthLoginHooks.onLoginSuccess(prefix, body.user);
+                }
                 
                 if (userRole === 'admin') {
                     showToast('Welcome back Admin! Redirecting to admin portal...', 'success');
@@ -336,6 +340,10 @@
                 localStorage.setItem(`${prefix}_access_token`, body.access);
                 localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
                 localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
+
+                if (window.EventhubAuthLoginHooks) {
+                    EventhubAuthLoginHooks.onLoginSuccess(prefix, body.user);
+                }
                 
                 if (userRole === 'admin') {
                     showToast('Welcome back Admin! Redirecting to admin portal...', 'success');

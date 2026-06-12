@@ -667,7 +667,7 @@ def api_organizer_event_analytics(request, event_id):
         # Calculate ticket type distribution
         distribution = {}
         for t in valid_tickets:
-            ttype = t.ticket_type or 'Standard'
+            ttype = t.ticket_type or 'Regular'
             distribution[ttype] = distribution.get(ttype, 0) + t.quantity
             
         return JsonResponse({

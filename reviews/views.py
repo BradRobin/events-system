@@ -28,14 +28,14 @@ def _user_can_review_event(user, event):
     """Attendee may review only past events they attended (valid ticket)."""
     if event.end_date >= timezone.now():
         return False, 'You can only review events that have ended.'
-    has_ticket = Ticket.objects.filter(
+    ticket = Ticket.objects.filter(
         attendee=user,
         event=event,
         status__in=['valid', 'checked_in'],
-    ).exists()
-    if not has_ticket:
+    ).order_by('-purchase_date').first()
+    if not ticket:
         return False, 'You need a ticket for this event to leave a review.'
-    return True, None
+    return True, None, ticket
 
 
 @csrf_exempt
@@ -91,7 +91,7 @@ def api_create_review(request, event_id):
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found.'}, status=404)
 
-    allowed, reason = _user_can_review_event(user, event)
+    allowed, reason, ticket = _user_can_review_event(user, event)
     if not allowed:
         return JsonResponse({'success': False, 'message': reason}, status=403)
 
@@ -117,6 +117,7 @@ def api_create_review(request, event_id):
     review = EventReview.objects.create(
         user=user,
         event=event,
+        ticket=ticket,
         rating=rating,
         comment=comment,
     )
