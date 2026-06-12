@@ -5,6 +5,7 @@
 let currentPage = 1;
 let totalPages = 1;
 let currentQuery = '';
+let lastSearchResults = [];
 let currentFilters = {
     category: '',
     city: '',
@@ -227,6 +228,8 @@ async function loadSearchResults(isInitialLoad = false) {
 
 function displayResults(events) {
     if (!searchResultsGrid) return;
+
+    lastSearchResults = events || [];
     
     if (!events || events.length === 0) {
         searchResultsGrid.innerHTML = `
@@ -261,7 +264,7 @@ function displayResults(events) {
                 <button class="card-action-btn view-details-btn" onclick="event.stopPropagation(); window.location.href='/events/detail/?id=${event.id}'">
                     <i class="fas fa-info-circle"></i> Details
                 </button>
-                <button class="card-action-btn add-to-cart-btn" onclick="event.stopPropagation(); addToCart(${event.id}, '${escapeHtml(event.title)}', ${event.price || 0}, '${event.image || ''}')">
+                <button class="card-action-btn add-to-cart-btn" data-event-id="${event.id}" onclick="event.stopPropagation(); addToCart(${event.id})">
                     <i class="fas fa-cart-plus"></i> Book Now
                 </button>
             </div>
@@ -336,13 +339,19 @@ function showToast(message, type) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-function addToCart(eventId, title, price, image) {
+function addToCart(eventId) {
+    const event = lastSearchResults.find((e) => e.id == eventId);
+    if (!event) {
+        showToast('Event not found. Please refresh and try again.', 'error');
+        return;
+    }
+
     const token = localStorage.getItem('attendee_access_token');
     
     if (!token) {
         showToast('Please login to book tickets', 'info');
         setTimeout(() => {
-            localStorage.setItem('redirect_after_login', window.location.pathname);
+            localStorage.setItem('redirect_after_login', window.location.pathname + window.location.search);
             window.location.href = '/login/';
         }, 1500);
         return;
@@ -353,27 +362,27 @@ function addToCart(eventId, title, price, image) {
 
     const existingItem = cart.items.find(i => i.id == eventId);
     if (existingItem) {
-        showToast(`${title} is already in your cart!`, 'info');
+        showToast(`${event.title} is already in your cart!`, 'info');
         return;
     }
 
     const item = storage
         ? storage.slimCartItem({
-            id: eventId,
-            title: title,
-            price: price,
+            id: event.id,
+            title: event.title,
+            price: event.price || 0,
             quantity: 1,
-            image: image,
-            location: 'Event Venue',
-            date: new Date().toISOString(),
+            image: event.image || event.banner_image || '',
+            location: event.location || event.venue || 'Event Venue',
+            date: event.date || event.start_date || new Date().toISOString(),
         })
         : {
-            id: eventId,
-            title: title,
-            price: price,
+            id: event.id,
+            title: event.title,
+            price: event.price || 0,
             quantity: 1,
-            location: 'Event Venue',
-            date: new Date().toISOString(),
+            location: event.location || event.venue || 'Event Venue',
+            date: event.date || event.start_date || new Date().toISOString(),
         };
 
     cart.items.push(item);
@@ -388,7 +397,7 @@ function addToCart(eventId, title, price, image) {
             localStorage.setItem('eventhub_cart', JSON.stringify(cart));
         }
         window.dispatchEvent(new Event('cart-updated'));
-        showToast(`${title} added to cart!`, 'success');
+        showToast(`${event.title} added to cart!`, 'success');
     } catch (error) {
         console.error('Failed to save cart:', error);
         showToast('Could not save cart. Please clear site data or book from the event page.', 'error');

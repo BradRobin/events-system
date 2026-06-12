@@ -9,20 +9,21 @@ let currentBookingId = null;
 let userReviewsByEvent = {};
 let reviewModalState = { eventId: null, reviewId: null, rating: 0 };
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const urlParams = new URLSearchParams(window.location.search);
     currentBookingId = urlParams.get('booking_id');
     applyInitialTabFromUrl(urlParams.get('tab'));
 
-    loadTickets();
     setupEventListeners();
     setupReviewModal();
-    
+
+    await loadTickets();
+
     const path = window.location.pathname;
     if (path.includes('/detail/')) {
-        loadTicketDetail();
+        await loadTicketDetail();
     } else if (path.includes('/qr/')) {
-        loadQRCode();
+        await loadQRCode();
     }
 });
 
@@ -515,22 +516,43 @@ function viewQRCode(ticketCode) {
     window.location.href = `/tickets/qr/?code=${encodeURIComponent(ticketCode)}`;
 }
 
-function loadTicketDetail() {
+async function fetchTicketFromApi(ticketNumber) {
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) return null;
+    try {
+        const res = await fetch(`/api/attendee/tickets/${encodeURIComponent(ticketNumber)}/`, {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'same-origin',
+        });
+        if (!res.ok) return null;
+        const t = await res.json();
+        if (!t.ticket_number) return null;
+        return mapApiTicket(t);
+    } catch (error) {
+        console.error('Error fetching ticket:', error);
+        return null;
+    }
+}
+
+async function loadTicketDetail() {
     const container = document.getElementById('ticketDetailContent');
     if (!container) return;
     
     const urlParams = new URLSearchParams(window.location.search);
-    const ticketId = urlParams.get('id');
+    const ticketId = urlParams.get('id') || urlParams.get('ticket');
     
     if (!ticketId) {
         container.innerHTML = '<div class="error-state">Ticket ID not provided</div>';
         return;
     }
     
-    let ticket = allTickets.find(t => t.id === ticketId);
+    let ticket = allTickets.find(t => t.id === ticketId || t.ticket_code === ticketId);
+
+    if (!ticket) {
+        ticket = await fetchTicketFromApi(ticketId);
+    }
     
     if (!ticket) {
-        // Try to find in bookings if not in tickets
         const savedBookings = localStorage.getItem('eventhub_bookings');
         if (savedBookings) {
             const bookings = JSON.parse(savedBookings);
@@ -649,7 +671,7 @@ function renderTicketDetail(ticket) {
     `;
 }
 
-function loadQRCode() {
+async function loadQRCode() {
     const container = document.getElementById('qrCodeDisplay');
     const ticketInfoDiv = document.getElementById('ticketInfo');
     
@@ -664,6 +686,10 @@ function loadQRCode() {
     }
     
     let ticket = allTickets.find(t => t.ticket_code === ticketCode);
+
+    if (!ticket) {
+        ticket = await fetchTicketFromApi(ticketCode);
+    }
     
     if (!ticket) {
         const savedBookings = localStorage.getItem('eventhub_bookings');

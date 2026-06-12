@@ -162,7 +162,7 @@ async function loadRecentActivity() {
         }
         
         container.innerHTML = activities.slice(0, 5).map(activity => `
-            <div class="activity-item activity-${activity.type || 'booking'}" onclick="window.location.href='${activity.action_url || '#'}'" style="cursor: pointer;">
+            <div class="activity-item activity-${activity.type || 'booking'}" ${activity.action_url ? `onclick="window.location.href='${activity.action_url}'" style="cursor: pointer;"` : ''}>
                 <div class="activity-icon">
                     <i class="fas ${getActivityIcon(activity.type)}"></i>
                 </div>
@@ -270,7 +270,7 @@ function getActivityIcon(type) {
 }
 
 function viewTicket(ticketId) {
-    window.location.href = `/tickets/detail/?ticket=${ticketId}`;
+    window.location.href = `/tickets/detail/?id=${encodeURIComponent(ticketId)}`;
 }
 
 function viewEvent(eventId) {

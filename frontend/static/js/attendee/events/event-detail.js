@@ -45,13 +45,32 @@ function formatDate(dateString) {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function getEventReviews(eventId) {
+let eventReviewsCache = [];
+
+async function loadEventReviewsFromApi(id) {
     try {
-        return JSON.parse(localStorage.getItem(`reviews_${eventId}`) || '[]');
-    } catch (e) {
-        console.error('Error reading reviews from localStorage:', e);
-        return [];
+        const response = await fetch(`/api/attendee/events/${id}/reviews/`);
+        if (!response.ok) {
+            eventReviewsCache = [];
+            return;
+        }
+        const data = await response.json();
+        eventReviewsCache = (data.results || []).map((review) => ({
+            id: review.id,
+            userName: review.user_name || 'Attendee',
+            rating: review.rating,
+            title: '',
+            content: review.comment || '',
+            created_at: review.created_at,
+        }));
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+        eventReviewsCache = [];
     }
+}
+
+function getEventReviews(eventId) {
+    return eventReviewsCache;
 }
 
 function getAverageRating(eventId) {
@@ -203,52 +222,50 @@ function resetReviewForm() {
     resetRatingStars();
 }
 
-function submitReview(eventId) {
-    const rating = parseInt(document.getElementById('reviewRating')?.value || 0);
+async function submitReview(eventId) {
+    const rating = parseInt(document.getElementById('reviewRating')?.value || 0, 10);
     const title = document.getElementById('reviewTitle')?.value.trim();
     const content = document.getElementById('reviewText')?.value.trim();
-    
-    if (!title) {
-        showToast('Please enter a review title', 'error');
+
+    if (rating < 1 || rating > 5) {
+        showToast('Please select a rating between 1 and 5', 'error');
         return;
     }
-    if (!content) {
-        showToast('Please enter your review', 'error');
+
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) {
+        showToast('Please login to write a review', 'info');
         return;
     }
-    if (rating === 0) {
-        showToast('Please select a rating', 'error');
-        return;
-    }
-    
-    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
-    const userName = user.name || user.full_name || 'Guest User';
-    const userInitial = userName.charAt(0).toUpperCase();
-    
-    const newReview = {
-        id: Date.now(),
-        userName: userName,
-        userInitial: userInitial,
-        rating: rating,
-        title: title,
-        content: content,
-        created_at: new Date().toISOString()
-    };
-    
+
+    const comment = [title, content].filter(Boolean).join('\n\n');
+
     try {
-        const localReviews = JSON.parse(localStorage.getItem(`reviews_${eventId}`) || '[]');
-        localReviews.push(newReview);
-        localStorage.setItem(`reviews_${eventId}`, JSON.stringify(localReviews));
-    } catch (e) {
-        console.error('Error writing review to localStorage:', e);
+        const response = await fetch(`/api/attendee/reviews/create/${eventId}/`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ rating, comment }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Could not submit review');
+        }
+
+        await loadEventReviewsFromApi(eventId);
+        updateReviewsUI(eventId);
+
+        const modal = document.getElementById('reviewModal');
+        if (modal) modal.style.display = 'none';
+        resetReviewForm();
+        showToast('Thank you for your review!', 'success');
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        showToast(error.message || 'Could not submit review', 'error');
     }
-    
-    updateReviewsUI(eventId);
-    
-    const modal = document.getElementById('reviewModal');
-    if (modal) modal.style.display = 'none';
-    resetReviewForm();
-    showToast('⭐ Thank you for your review!', 'success');
 }
 
 function renderEventDetails(event) {
@@ -258,9 +275,9 @@ function renderEventDetails(event) {
     const avgRating = getAverageRating(event.id);
     const reviewsCount = getEventReviews(event.id).length;
     
-    // Get wishlist from localStorage (will be synced with API on page load)
-    let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
-    const isInWishlist = wishlist.includes(event.id);
+    const isInWishlist = window.EventhubWishlistStorage
+        ? EventhubWishlistStorage.isInWishlist(event.id)
+        : false;
     
     container.innerHTML = `
         <div class="event-content-wrapper">
@@ -568,22 +585,28 @@ function renderEventDetails(event) {
                 return;
             }
             
-            let updatedWishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
-            const idx = updatedWishlist.indexOf(event.id);
-            
-            if (idx === -1) {
-                updatedWishlist.push(event.id);
+            if (!window.EventhubWishlistStorage) return;
+
+            const { added } = EventhubWishlistStorage.toggleWishlist({
+                id: event.id,
+                title: event.title,
+                price: event.price,
+                image: event.image,
+                location: event.location,
+                date: event.date,
+                category: event.category_name || event.category,
+            });
+
+            if (added) {
                 wishlistBtn.classList.add('active');
                 wishlistBtn.innerHTML = '<i class="fas fa-heart"></i> Remove';
                 showToast('❤️ Event saved to wishlist!', 'success');
             } else {
-                updatedWishlist.splice(idx, 1);
                 wishlistBtn.classList.remove('active');
                 wishlistBtn.innerHTML = '<i class="fas fa-heart"></i> Add to wish list';
                 showToast('🗑️ Event removed from wishlist', 'info');
             }
-            
-            localStorage.setItem('event_wishlist', JSON.stringify(updatedWishlist));
+
             window.dispatchEvent(new Event('wishlist-updated'));
         };
     }
@@ -633,6 +656,7 @@ async function loadEventDetails() {
                 event.organizer = event.organizer_name || 'Organizer';
             }
             
+            await loadEventReviewsFromApi(eventId);
             renderEventDetails(event);
         } else {
             container.innerHTML = `

@@ -488,8 +488,9 @@ function renderEvents() {
         return; 
     }
     
-    const wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
-    const wishlistIds = wishlist.map(item => item.id);
+    const wishlistIds = window.EventhubWishlistStorage
+        ? EventhubWishlistStorage.getWishlistIds()
+        : [];
     
     const fragment = document.createDocumentFragment();
     const tempDiv = document.createElement('div');
@@ -589,38 +590,37 @@ function toggleWishlist(id, btn) {
     const event = eventsCatalog.find(e => e.id == id);
     if (!event) return;
     
-    let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
-    const exists = wishlist.some(item => item.id == id);
-    
-    if (!exists) {
-        wishlist.push({
-            id: event.id,
-            title: event.title,
-            price: event.price,
-            image: event.image,
-            location: event.location,
-            date: event.date,
-            category: event.category_name,
-            original_price: event.original_price,
-            added_at: new Date().toISOString()
-        });
+    const storage = window.EventhubWishlistStorage;
+    if (!storage) return;
+
+    const { list, added } = storage.toggleWishlist({
+        id: event.id,
+        title: event.title,
+        price: event.price,
+        image: event.image,
+        location: event.location,
+        date: event.date,
+        category: event.category_name,
+        original_price: event.original_price,
+        added_at: new Date().toISOString(),
+    });
+
+    if (added) {
         btn.innerHTML = '<i class="fas fa-heart"></i> Remove';
         btn.style.background = '#f59e0b';
         showToast('❤️ Event saved to wishlist!', 'success');
     } else {
-        wishlist = wishlist.filter(item => item.id != id);
         btn.innerHTML = '<i class="far fa-heart"></i> Add to wish list';
         btn.style.background = 'rgba(0,0,0,0.5)';
         showToast('🗑️ Removed from wishlist', 'info');
     }
-    
-    localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
+
     window.dispatchEvent(new Event('wishlist-updated'));
-    
+
     const badge = document.getElementById('wishlistBadgeDropdown');
     if (badge) {
-        badge.textContent = wishlist.length;
-        badge.style.display = wishlist.length > 0 ? 'inline-block' : 'none';
+        badge.textContent = list.length;
+        badge.style.display = list.length > 0 ? 'inline-block' : 'none';
     }
 }
 

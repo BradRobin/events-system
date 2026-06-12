@@ -114,14 +114,9 @@ function setupModalClose() {
 
 async function loadWishlist() {
     try {
-        const saved = localStorage.getItem('event_wishlist');
-        console.log('Raw wishlist IDs:', saved);
-        
-        if (saved) {
-            wishlistIds = JSON.parse(saved);
-        } else {
-            wishlistIds = [];
-        }
+        wishlistIds = window.EventhubWishlistStorage
+            ? EventhubWishlistStorage.getWishlistIds()
+            : [];
         
         wishlistItems = [];
         
@@ -247,8 +242,12 @@ function displayWishlist(items) {
 }
 
 async function removeFromWishlist(eventId) {
-    wishlistIds = wishlistIds.filter(id => id != eventId);
-    localStorage.setItem('event_wishlist', JSON.stringify(wishlistIds));
+    if (window.EventhubWishlistStorage) {
+        wishlistIds = EventhubWishlistStorage.removeFromWishlist(eventId).map((item) => item.id);
+    } else {
+        wishlistIds = wishlistIds.filter(id => id != eventId);
+        localStorage.setItem('event_wishlist', JSON.stringify(wishlistIds));
+    }
     
     wishlistItems = wishlistItems.filter(item => item.id != eventId);
     
@@ -265,7 +264,11 @@ async function clearAllWishlist() {
     
     wishlistIds = [];
     wishlistItems = [];
-    localStorage.setItem('event_wishlist', JSON.stringify([]));
+    if (window.EventhubWishlistStorage) {
+        EventhubWishlistStorage.clearWishlist();
+    } else {
+        localStorage.setItem('event_wishlist', JSON.stringify([]));
+    }
     
     filterAndDisplay();
     updateEmptyState();

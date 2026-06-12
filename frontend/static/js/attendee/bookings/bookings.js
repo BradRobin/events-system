@@ -39,6 +39,9 @@ async function loadBookingsFromAPI() {
             fetch('/api/attendee/tickets/upcoming/', { headers, credentials: 'same-origin' }),
             fetch('/api/attendee/tickets/past/', { headers, credentials: 'same-origin' }),
         ]);
+        if (!upRes.ok || !pastRes.ok) {
+            throw new Error('Failed to load bookings');
+        }
         const up = await upRes.json();
         const past = await pastRes.json();
         const tickets = [...(up.results || []), ...(past.results || [])];

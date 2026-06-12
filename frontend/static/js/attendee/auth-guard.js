@@ -15,7 +15,8 @@ const AuthGuard = {
         '/settings/',
         '/cart/',
         '/wishlist/',
-        '/checkout/'
+        '/checkout/',
+        '/notifications/'
     ],
     
     // Check if current path is protected

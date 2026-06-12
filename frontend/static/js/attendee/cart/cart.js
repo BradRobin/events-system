@@ -28,38 +28,23 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCart();
     setupEventListeners();
     
-    // Clear cart badge since user is viewing the cart page
-    clearCartBadgeOnView();
+    updateNavBadgesFromCart();
 });
 
-function clearCartBadgeOnView() {
-    // Clear cart badge
+function updateNavBadgesFromCart() {
     const navCartBadge = document.getElementById('navCartBadge');
-    const myTicketsBadge = document.getElementById('myTicketsBadge');
-    
-    if (navCartBadge) navCartBadge.style.display = 'none';
-    
-    // Update My Tickets badge to only show wishlist count (not cart)
-    try {
-        const savedWishlist = localStorage.getItem('event_wishlist');
-        const wishlist = savedWishlist ? JSON.parse(savedWishlist) : [];
-        const wishlistCount = wishlist.length;
-        
-        if (myTicketsBadge) {
-            if (wishlistCount > 0) {
-                myTicketsBadge.textContent = wishlistCount;
-                myTicketsBadge.style.display = 'inline-flex';
-                myTicketsBadge.style.animation = 'badgePulse 0.5s ease-in-out';
-                setTimeout(() => {
-                    if (myTicketsBadge) myTicketsBadge.style.animation = '';
-                }, 500);
-            } else {
-                myTicketsBadge.style.display = 'none';
-            }
+    const cartCount = cartData?.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0;
+
+    if (navCartBadge) {
+        if (cartCount > 0) {
+            navCartBadge.textContent = cartCount;
+            navCartBadge.style.display = 'inline-flex';
+        } else {
+            navCartBadge.style.display = 'none';
         }
-    } catch (error) {
-        console.error("Error updating badge on view:", error);
     }
+
+    updateCartCount(cartCount);
 }
 
 function setupEventListeners() {
@@ -371,7 +356,11 @@ function onCartCheckoutSuccess() {
 }
 
 window.addEventListener('checkout-success', onCartCheckoutSuccess);
-window.addEventListener('checkout-submitted', onCartCheckoutSuccess);
+window.addEventListener('checkout-submitted', onCartCheckoutSubmitted);
+
+function onCartCheckoutSubmitted() {
+    showToast('Payment submitted for approval. Your cart is unchanged until your ticket is issued.', 'info');
+}
 
 function cancelPayment() {
     if (paymentTimeout) {
