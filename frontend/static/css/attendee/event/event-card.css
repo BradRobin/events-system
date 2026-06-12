@@ -1,6 +1,5 @@
 /* ============================================
-   EVENT CARD CSS - Premium Card with Gradient Overlay
-   FIXED: Mobile images, button visibility, wishlist button contrast
+   EVENT CARD CSS - Premium Card 
    ============================================ */
 
 .premium-card {
@@ -19,44 +18,12 @@
 
 .premium-card:hover {
     transform: translateY(-6px);
-    box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-    border-color: #e2e8f0;
+    /* FIXED: Use box-shadow instead of pseudo-elements that block buttons */
+    box-shadow: 0 0 0 2px #f59e0b, 0 12px 20px -8px rgba(0, 0, 0, 0.08);
+    border-color: #f59e0b;
 }
 
-/* Animated border on hover - orange circulating effect */
-.premium-card:hover::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(45deg, 
-        #f59e0b, #ec6408, #f59e0b, #ec6408, #f59e0b);
-    background-size: 400% 400%;
-    border-radius: 18px;
-    z-index: 1;
-    animation: borderGlow 3s ease infinite;
-    opacity: 1;
-}
-
-.premium-card:hover::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #ffffff;
-    border-radius: 15px;
-    z-index: 2;
-}
-
-@keyframes borderGlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+/* REMOVED: The ::before and ::after pseudo-elements were blocking the buttons */
 
 /* Image container - FIXED for mobile */
 .card-image-container {
@@ -66,7 +33,7 @@
     overflow: hidden;
     background: #f1f5f9;
     flex-shrink: 0;
-    z-index: 3;
+    z-index: 1;
 }
 
 /* Ensure images are visible on all devices */
@@ -256,8 +223,7 @@
     background: #ffffff;
     border-top: 1px solid #f1f5f9;
     position: relative;
-    z-index: 10;
-    transition: all 0.3s ease;
+    z-index: 100;
 }
 
 /* FIXED: Buttons never disappear - always visible */
@@ -275,6 +241,8 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
+    position: relative;
+    z-index: 101;
 }
 
 .view-details-btn {
@@ -317,7 +285,7 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* FIXED: Wishlist button - better visibility with white text */
+/* FIXED: Wishlist button - white text with !important for visibility */
 .wishlist-btn {
     position: absolute;
     top: 12px;
@@ -326,41 +294,46 @@
     border: none;
     padding: 6px 12px;
     border-radius: 20px;
-    color: white;
+    color: #ffffff !important;
     font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
-    z-index: 20;
+    z-index: 100;
     transition: all 0.2s ease;
     backdrop-filter: blur(4px);
 }
 
 .wishlist-btn i {
     transition: transform 0.2s ease;
-    color: white;
+    color: #ffffff !important;
+}
+
+.wishlist-btn .btn-text,
+.wishlist-btn span {
+    color: #ffffff !important;
 }
 
 .wishlist-btn:hover {
     background: #ef4444;
-    color: white;
+    color: #ffffff !important;
 }
 
 .wishlist-btn:hover i {
     transform: scale(1.1);
-    color: white;
+    color: #ffffff !important;
 }
 
 .wishlist-btn.active {
     background: #ef4444;
-    color: white;
+    color: #ffffff !important;
     border: none;
 }
 
 .wishlist-btn.active i {
-    color: white;
+    color: #ffffff !important;
 }
 
 /* Card Animations */
@@ -432,6 +405,11 @@
         padding: 4px 10px;
         font-size: 0.65rem;
         background: rgba(0, 0, 0, 0.7);
+        color: #ffffff !important;
+    }
+    
+    .wishlist-btn i {
+        color: #ffffff !important;
     }
 }
 
@@ -447,6 +425,11 @@
     .wishlist-btn {
         padding: 4px 8px;
         font-size: 0.6rem;
+        color: #ffffff !important;
+    }
+    
+    .wishlist-btn i {
+        color: #ffffff !important;
     }
 }
 

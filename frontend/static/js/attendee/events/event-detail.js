@@ -1,11 +1,11 @@
 // EVENT DETAIL MODULE - Live Reviews, Organizer Details, Directions
-// FIXED: Authentication issues, unified wishlist
+// FIXED: Venue information moved to separate tab, not duplicated in Details tab
 console.log('Event detail loaded');
 
 const urlParams = new URLSearchParams(window.location.search);
 const eventId = urlParams.get('id');
 
-// API endpoints
+// API endpoints (unchanged)
 const API = {
     wishlist: '/api/attendee/wishlist/',
     events: '/api/attendee/events/',
@@ -38,7 +38,6 @@ function getCurrentUser() {
         if (user && user !== 'undefined') {
             return JSON.parse(user);
         }
-        // Try to decode from token
         const token = getAuthToken();
         if (token) {
             const payload = JSON.parse(atob(token.split('.')[1]));
@@ -53,7 +52,7 @@ function showToast(message, type = 'success') {
     if (existing) existing.remove();
     const toast = document.createElement('div');
     toast.className = `custom-toast toast-${type}`;
-    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i><span>${message}</span>`;
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i><span>${escapeHtml(message)}</span>`;
     document.body.appendChild(toast);
     setTimeout(() => {
         toast.style.animation = 'fadeOut 0.3s ease';
@@ -83,7 +82,7 @@ function formatDate(dateString) {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// FIXED: Reviews using localStorage (kept simple)
+// Reviews functions
 function getEventReviews(eventId) {
     try {
         return JSON.parse(localStorage.getItem(`reviews_${eventId}`) || '[]');
@@ -114,7 +113,7 @@ function renderReviewsList(eventId) {
             <div class="review-header">
                 <div class="reviewer-info">
                     <div class="reviewer-avatar">${review.userName.charAt(0)}</div>
-                    <div>
+                    <div class="reviewer-details">
                         <div class="reviewer-name">${escapeHtml(review.userName)}</div>
                         <div class="review-date">${new Date(review.created_at).toLocaleDateString()}</div>
                     </div>
@@ -141,7 +140,7 @@ function updateReviewsUI(eventId) {
     if (reviewsList) reviewsList.innerHTML = renderReviewsList(eventId);
 }
 
-// FIXED: Check if event is in wishlist via API
+// Wishlist functions
 async function isInWishlist(eventId) {
     const token = getAuthToken();
     if (!token) return false;
@@ -156,12 +155,10 @@ async function isInWishlist(eventId) {
         }
     } catch(e) {}
     
-    // Fallback to localStorage
     const wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
     return wishlist.includes(eventId);
 }
 
-// FIXED: Toggle wishlist with API
 async function toggleWishlist(eventId, btnElement) {
     const token = getAuthToken();
     if (!token) {
@@ -185,10 +182,9 @@ async function toggleWishlist(eventId, btnElement) {
             
             if (response.ok) {
                 btnElement.classList.add('active');
-                btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove';
+                btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove from Wishlist';
                 showToast('Added to wishlist!', 'success');
                 
-                // Update localStorage
                 let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
                 if (!wishlist.includes(eventId)) wishlist.push(eventId);
                 localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
@@ -203,10 +199,9 @@ async function toggleWishlist(eventId, btnElement) {
             
             if (response.ok) {
                 btnElement.classList.remove('active');
-                btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to wishlist';
+                btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to Wishlist';
                 showToast('Removed from wishlist', 'info');
                 
-                // Update localStorage
                 let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
                 wishlist = wishlist.filter(id => id != eventId);
                 localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
@@ -222,13 +217,13 @@ async function toggleWishlist(eventId, btnElement) {
     // Fallback for offline
     if (!wasActive) {
         btnElement.classList.add('active');
-        btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove';
+        btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove from Wishlist';
         let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
         if (!wishlist.includes(eventId)) wishlist.push(eventId);
         localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
     } else {
         btnElement.classList.remove('active');
-        btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to wishlist';
+        btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to Wishlist';
         let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
         wishlist = wishlist.filter(id => id != eventId);
         localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
@@ -237,6 +232,7 @@ async function toggleWishlist(eventId, btnElement) {
     return !wasActive;
 }
 
+// Review Modal functions
 function setupReviewModal(eventId) {
     const modal = document.getElementById('reviewModal');
     const writeBtn = document.getElementById('writeReviewBtn');
@@ -384,7 +380,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// FIXED: Book ticket with proper auth check
+// Book ticket function
 function bookTicket(event, quantity = 1, tier = 'Regular') {
     if (!isAuthenticated()) {
         showToast('Please login to book tickets', 'info');
@@ -397,12 +393,10 @@ function bookTicket(event, quantity = 1, tier = 'Regular') {
         return false;
     }
     
-    // Get price based on tier
     let price = event.price;
     if (tier === 'VIP' && event.vip_price) price = event.vip_price;
     if (tier === 'VVIP' && event.vvip_price) price = event.vvip_price;
     
-    // Add to cart
     const cart = JSON.parse(localStorage.getItem('eventhub_cart') || '{"items":[]}');
     const existingIndex = cart.items.findIndex(i => i.id === event.id && i.tier === tier);
     
@@ -435,6 +429,7 @@ function bookTicket(event, quantity = 1, tier = 'Regular') {
     return true;
 }
 
+// Render Event Details - FIXED: No Venue info in Details tab
 async function renderEventDetails(event) {
     const container = document.getElementById('eventDetailContainer');
     if (!container) return;
@@ -444,7 +439,7 @@ async function renderEventDetails(event) {
     const inWishlist = await isInWishlist(event.id);
     
     // Ensure event has required fields
-    event.features = event.features || ['General Admission', 'Standard Entry'];
+    event.features = event.features || ['General Admission', 'Standard Entry', 'Free Wi-Fi', 'Parking Available'];
     event.original_price = event.original_price || Math.round(event.price * 1.2);
     event.parking_available = event.parking_available !== false;
     event.wheelchair_accessible = event.wheelchair_accessible !== false;
@@ -452,18 +447,25 @@ async function renderEventDetails(event) {
     event.organizer = event.organizer || event.organizer_name || 'EventHub Organizer';
     event.available_tickets = event.available_tickets || event.available_seats || 100;
     
+    // Build amenities array for Venue tab
+    const amenities = [];
+    if (event.parking_available) amenities.push({ icon: 'fa-parking', name: 'Free Parking' });
+    if (event.wheelchair_accessible) amenities.push({ icon: 'fa-wheelchair', name: 'Wheelchair Accessible' });
+    amenities.push({ icon: 'fa-wifi', name: 'Free Wi-Fi' });
+    amenities.push({ icon: 'fa-restroom', name: 'Restrooms Available' });
+    
     container.innerHTML = `
         <div class="event-content-wrapper">
             <div class="event-main">
                 <div class="event-breadcrumb">
                     <a href="/">Home</a> / 
                     <a href="/events/">Events</a> / 
-                    <span>${escapeHtml(event.title)}</span>
+                    <span class="current">${escapeHtml(event.title)}</span>
                 </div>
                 
                 <div class="event-image-container">
                     <img src="${event.image || '/static/images/placeholder.jpg'}" alt="${escapeHtml(event.title)}" class="event-main-image" onerror="this.src='/static/images/placeholder.jpg'">
-                    ${event.is_featured ? '<div class="event-featured-badge">Featured</div>' : ''}
+                    ${event.is_featured ? '<div class="event-featured-badge">Featured Event</div>' : ''}
                 </div>
                 
                 <div class="event-title-section">
@@ -475,21 +477,25 @@ async function renderEventDetails(event) {
                 </div>
                 
                 <div class="event-meta">
-                    <span><i class="fas fa-calendar"></i> ${formatDate(event.date)} at ${event.time || 'TBA'}</span>
-                    <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(event.location)}</span>
-                    <span><i class="fas fa-ticket-alt"></i> ${event.available_tickets} tickets left</span>
+                    <div class="meta-item"><i class="fas fa-calendar"></i> ${formatDate(event.date)} at ${event.time || 'TBA'}</div>
+                    <div class="meta-item"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(event.location)}</div>
+                    <div class="meta-item"><i class="fas fa-ticket-alt"></i> ${event.available_tickets} tickets left</div>
                 </div>
                 
-                <a href="https://maps.google.com/?q=${encodeURIComponent(event.location)}" target="_blank" class="directions-btn">
+                <!-- Directions button - opens in same tab -->
+                <button class="directions-btn" id="directionsBtn">
                     <i class="fas fa-directions"></i> Get Directions
-                </a>
+                </button>
                 
+                <!-- Tabs with separate Venue tab -->
                 <div class="event-tabs">
                     <button class="tab-btn active" data-tab="details">Details</button>
+                    <button class="tab-btn" data-tab="venue">Venue</button>
                     <button class="tab-btn" data-tab="organizer">Organizer</button>
                     <button class="tab-btn" data-tab="reviews">Reviews</button>
                 </div>
                 
+                <!-- DETAILS TAB - FIXED: No Venue information here -->
                 <div id="detailsTab" class="tab-content active">
                     <div class="event-description">
                         <h3><i class="fas fa-info-circle"></i> About This Event</h3>
@@ -502,40 +508,85 @@ async function renderEventDetails(event) {
                             ${event.features.map(f => `<li><i class="fas fa-check-circle"></i> ${escapeHtml(f)}</li>`).join('')}
                         </ul>
                     </div>
-                    
-                    <div class="event-venue">
-                        <h3><i class="fas fa-map-marker-alt"></i> Venue Information</h3>
-                        <p><strong>Venue:</strong> ${escapeHtml(event.venue || event.location)}</p>
-                        <p><strong>Address:</strong> ${escapeHtml(event.location)}</p>
-                        ${event.parking_available ? '<p><i class="fas fa-parking"></i> Free parking available</p>' : '<p><i class="fas fa-parking"></i> Limited street parking</p>'}
-                        ${event.wheelchair_accessible ? '<p><i class="fas fa-wheelchair"></i> Wheelchair accessible</p>' : ''}
-                        <a href="https://maps.google.com/?q=${encodeURIComponent(event.location)}" target="_blank" class="map-link">
-                            <i class="fas fa-external-link-alt"></i> View on Google Maps
-                        </a>
-                    </div>
                 </div>
                 
+                <!-- VENUE TAB - All venue information here -->
+                <div id="venueTab" class="tab-content">
+                    <div class="event-venue-details">
+                        <div class="venue-header">
+                            <div class="venue-icon">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <h3>Venue Information</h3>
+                        </div>
+                        
+                        <div class="venue-name">
+                            <i class="fas fa-building"></i> ${escapeHtml(event.venue || event.location.split(',')[0] || 'Venue')}
+                        </div>
+                        
+                        <div class="venue-address">
+                            <i class="fas fa-location-dot"></i>
+                            <span>${escapeHtml(event.location)}</span>
+                        </div>
+                        
+                        <div class="venue-amenities">
+                            ${amenities.map(a => `
+                                <div class="amenity-item">
+                                    <i class="fas ${a.icon}"></i>
+                                    <span>${a.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <button class="venue-map-link" id="venueDirectionsBtn">
+                            <i class="fas fa-map"></i> View on Google Maps
+                        </button>
+                    </div>
+                    
+                    ${event.is_virtual ? `
+                    <div class="virtual-event">
+                        <div class="virtual-event-info">
+                            <i class="fas fa-video"></i>
+                            <p>This is a virtual event</p>
+                            <a href="${event.virtual_link}" target="_blank" class="virtual-event-link">Join Online →</a>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                <!-- ORGANIZER TAB -->
                 <div id="organizerTab" class="tab-content">
                     <div class="organizer-info">
-                        <h3><i class="fas fa-building"></i> About the Organizer</h3>
-                        <p><strong>${escapeHtml(event.organizer)}</strong></p>
-                        ${event.organizer_email ? `<p><i class="fas fa-envelope"></i> <a href="mailto:${escapeHtml(event.organizer_email)}">${escapeHtml(event.organizer_email)}</a></p>` : ''}
-                        ${event.organizer_phone ? `<p><i class="fas fa-phone"></i> <a href="tel:${escapeHtml(event.organizer_phone)}">${escapeHtml(event.organizer_phone)}</a></p>` : ''}
+                        <div class="organizer-header">
+                            <div class="organizer-avatar">
+                                ${event.organizer.charAt(0).toUpperCase()}
+                            </div>
+                            <h3>About the Organizer</h3>
+                        </div>
+                        
+                        <div class="organizer-contact">
+                            <p><i class="fas fa-building"></i> <strong>${escapeHtml(event.organizer)}</strong></p>
+                            ${event.organizer_email ? `<p><i class="fas fa-envelope"></i> <a href="mailto:${escapeHtml(event.organizer_email)}">${escapeHtml(event.organizer_email)}</a></p>` : ''}
+                            ${event.organizer_phone ? `<p><i class="fas fa-phone"></i> <a href="tel:${escapeHtml(event.organizer_phone)}">${escapeHtml(event.organizer_phone)}</a></p>` : ''}
+                        </div>
+                        
                         <div class="refund-policy">
-                            <i class="fas fa-ticket-alt"></i>
-                            <strong>Refund Policy:</strong> ${escapeHtml(event.refund_policy)}
+                            <p><i class="fas fa-ticket-alt"></i> <strong>Refund Policy:</strong> ${escapeHtml(event.refund_policy)}</p>
                         </div>
                     </div>
                 </div>
                 
+                <!-- REVIEWS TAB -->
                 <div id="reviewsTab" class="tab-content">
                     <div class="reviews-summary">
                         <div class="average-rating">
                             <div class="rating-number">${avgRating.toFixed(1)}</div>
                             <div class="stars-large">${renderStars(avgRating)}</div>
-                            <div class="review-count">Based on ${reviewsCount} reviews</div>
+                            <div class="total-reviews">Based on ${reviewsCount} reviews</div>
                         </div>
-                        <button id="writeReviewBtn" class="write-review-btn">Write a Review</button>
+                        <button id="writeReviewBtn" class="write-review-btn">
+                            <i class="fas fa-pen"></i> Write a Review
+                        </button>
                     </div>
                     <div id="reviewsList" class="reviews-list">
                         ${renderReviewsList(event.id)}
@@ -543,17 +594,18 @@ async function renderEventDetails(event) {
                 </div>
             </div>
             
+            <!-- SIDEBAR - TICKET CARD -->
             <div class="event-sidebar">
                 <div class="ticket-card">
-                    <h3>Get Your Tickets</h3>
+                    <h3><i class="fas fa-ticket-alt"></i> Get Your Tickets</h3>
                     
                     ${(event.vip_price || event.vvip_price) ? `
-                    <div class="ticket-tier-selector mb-3">
-                        <label class="form-label">Ticket Tier</label>
+                    <div class="ticket-tier-selector">
+                        <label><i class="fas fa-layer-group"></i> Select Ticket Tier</label>
                         <select id="ticketTier" class="form-select">
-                            <option value="Regular" data-price="${event.price}">Regular (KES ${event.price.toLocaleString()})</option>
-                            ${event.vip_price ? `<option value="VIP" data-price="${event.vip_price}">VIP (KES ${event.vip_price.toLocaleString()})</option>` : ''}
-                            ${event.vvip_price ? `<option value="VVIP" data-price="${event.vvip_price}">VVIP (KES ${event.vvip_price.toLocaleString()})</option>` : ''}
+                            <option value="Regular" data-price="${event.price}">🎟️ Regular - KES ${event.price.toLocaleString()}</option>
+                            ${event.vip_price ? `<option value="VIP" data-price="${event.vip_price}">✨ VIP - KES ${event.vip_price.toLocaleString()}</option>` : ''}
+                            ${event.vvip_price ? `<option value="VVIP" data-price="${event.vvip_price}">👑 VVIP - KES ${event.vvip_price.toLocaleString()}</option>` : ''}
                         </select>
                     </div>
                     ` : ''}
@@ -561,36 +613,40 @@ async function renderEventDetails(event) {
                     <div class="ticket-price-info">
                         <span class="current-price" id="displayPrice">KES ${event.price.toLocaleString()}</span>
                         ${event.original_price ? `<span class="original-price">KES ${event.original_price.toLocaleString()}</span>` : ''}
+                        <div class="price-label">per ticket</div>
                     </div>
+                    
                     <div class="ticket-availability">
-                        <i class="fas fa-check-circle"></i> ${event.available_tickets} tickets available
+                        <i class="fas ${event.available_tickets > 50 ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> 
+                        ${event.available_tickets} tickets available
                     </div>
                     
                     <div class="ticket-quantity">
-                        <label>Quantity</label>
+                        <label><i class="fas fa-sort-amount-up"></i> Quantity</label>
                         <div class="quantity-selector">
-                            <button class="qty-btn" id="decreaseQty">-</button>
+                            <button class="qty-btn" id="decreaseQty">−</button>
                             <input type="number" id="ticketQuantity" value="1" min="1" max="${event.available_tickets}">
                             <button class="qty-btn" id="increaseQty">+</button>
                         </div>
                     </div>
                     
                     <div class="ticket-total">
-                        <span>Total:</span>
+                        <span>Total Amount:</span>
                         <span class="total-amount" id="totalAmount">KES ${event.price.toLocaleString()}</span>
                     </div>
                     
                     <button id="bookNowBtn" class="book-now-btn">
-                        <i class="fas fa-ticket-alt"></i> Book Ticket
+                        <i class="fas fa-bolt"></i> Book Ticket Now
                     </button>
                     
                     <button id="wishlistBtn" class="wishlist-sidebar-btn ${inWishlist ? 'active' : ''}">
-                        <i class="fas fa-heart"></i> ${inWishlist ? 'Remove' : 'Add to wishlist'}
+                        <i class="fas fa-heart"></i> ${inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
                     </button>
                     
                     <div class="ticket-info">
-                        <p><i class="fas fa-shield-alt"></i> Secure booking</p>
-                        <p><i class="fas fa-envelope"></i> E-tickets sent instantly</p>
+                        <p><i class="fas fa-shield-alt"></i> Secure booking guaranteed</p>
+                        <p><i class="fas fa-envelope"></i> E-tickets sent to your email</p>
+                        <p><i class="fas fa-mobile-alt"></i> Mobile tickets available</p>
                     </div>
                 </div>
             </div>
@@ -599,16 +655,42 @@ async function renderEventDetails(event) {
     
     // Setup tabs
     const tabs = document.querySelectorAll('.tab-btn');
-    const contents = document.querySelectorAll('.tab-content');
+    const tabContents = {
+        details: document.getElementById('detailsTab'),
+        venue: document.getElementById('venueTab'),
+        organizer: document.getElementById('organizerTab'),
+        reviews: document.getElementById('reviewsTab')
+    };
+    
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const tabId = tab.dataset.tab;
             tabs.forEach(t => t.classList.remove('active'));
-            contents.forEach(c => c.classList.remove('active'));
+            Object.values(tabContents).forEach(content => {
+                if (content) content.classList.remove('active');
+            });
             tab.classList.add('active');
-            document.getElementById(`${tabId}Tab`).classList.add('active');
+            if (tabContents[tabId]) tabContents[tabId].classList.add('active');
         });
     });
+    
+    // Directions button - opens Google Maps in same tab
+    const directionsBtn = document.getElementById('directionsBtn');
+    if (directionsBtn) {
+        directionsBtn.onclick = () => {
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(event.location)}`;
+            window.location.href = mapsUrl;
+        };
+    }
+    
+    // Venue map button - also same tab
+    const venueDirectionsBtn = document.getElementById('venueDirectionsBtn');
+    if (venueDirectionsBtn) {
+        venueDirectionsBtn.onclick = () => {
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`;
+            window.location.href = mapsUrl;
+        };
+    }
     
     // Setup quantity selector
     let quantity = 1;
@@ -621,7 +703,7 @@ async function renderEventDetails(event) {
     
     function getSelectedPrice() {
         const tierSelect = document.getElementById('ticketTier');
-        if (tierSelect) {
+        if (tierSelect && tierSelect.selectedIndex >= 0) {
             const selectedOpt = tierSelect.options[tierSelect.selectedIndex];
             return parseFloat(selectedOpt.dataset.price) || event.price;
         }
@@ -678,14 +760,12 @@ async function renderEventDetails(event) {
         };
     }
     
-    // FIXED: Book button with proper auth
     if (bookBtn) {
         bookBtn.onclick = () => {
             bookTicket(event, quantity, getSelectedTier());
         };
     }
     
-    // FIXED: Wishlist button with API
     if (wishlistBtn) {
         wishlistBtn.onclick = async () => {
             await toggleWishlist(event.id, wishlistBtn);
