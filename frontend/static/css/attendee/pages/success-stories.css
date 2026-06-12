@@ -1,5 +1,6 @@
 /* ============================================
    SUCCESS STORIES PAGE - COMPLETE STYLING
+   FIXED: Removed overflow-causing animations
    ============================================ */
 
 * {
@@ -9,44 +10,15 @@
 }
 
 .success-stories-page {
-    padding: 2rem 1rem;
+    padding: 2rem 1rem 4rem;
     background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-    min-height: 100vh;
+    min-height: calc(100vh - 70px - 300px);
     position: relative;
     overflow-x: hidden;
 }
 
-/* Animated background */
-.success-stories-page::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(245, 158, 11, 0.04) 0%, transparent 70%);
-    border-radius: 50%;
-    z-index: 0;
-    animation: float 20s ease-in-out infinite;
-}
-
-.success-stories-page::after {
-    content: '';
-    position: absolute;
-    bottom: -30%;
-    left: -10%;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(245, 158, 11, 0.04) 0%, transparent 70%);
-    border-radius: 50%;
-    z-index: 0;
-    animation: float 15s ease-in-out infinite reverse;
-}
-
-@keyframes float {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(30px, 20px); }
-}
+/* FIXED: Removed animated background that caused overflow */
+/* Removed ::before and ::after pseudo-elements with float animations */
 
 .container {
     max-width: 1400px;
@@ -581,7 +553,7 @@
     border-left-color: #ef4444;
 }
 
-/* Animations */
+/* Animations - Keep only essential ones */
 @keyframes slideIn {
     from {
         transform: translateY(-30px);

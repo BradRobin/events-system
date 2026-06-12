@@ -1,5 +1,6 @@
 /**
- * Footer interactions: newsletter signup & language preference
+ * Footer interactions: newsletter signup only
+ * REMOVED: language selector, 3rd party payment logos
  */
 (function () {
     'use strict';
@@ -80,28 +81,13 @@
         });
 
         emailInput.addEventListener('input', function () {
-            if (messageEl.classList.contains('error')) {
+            if (messageEl && messageEl.classList.contains('error')) {
                 showMessage('', '');
             }
         });
     }
 
-    function initLanguageSelector() {
-        const select = document.getElementById('footerLanguageSelect');
-        if (!select) return;
-
-        const stored = localStorage.getItem('eventhub_language');
-        if (stored && select.querySelector('option[value="' + stored + '"]')) {
-            select.value = stored;
-        }
-
-        select.addEventListener('change', function () {
-            localStorage.setItem('eventhub_language', select.value);
-        });
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
         initNewsletterForm();
-        initLanguageSelector();
     });
 })();
