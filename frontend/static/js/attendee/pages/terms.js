@@ -1,5 +1,6 @@
 // ============================================
 // TERMS OF SERVICE PAGE - Interactive Elements
+// FIXED: PDF download functionality
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -7,25 +8,102 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadBtn = document.getElementById('downloadTerms');
     
     if (downloadBtn) {
-        downloadBtn.addEventListener('click', function() {
+        downloadBtn.addEventListener('click', async function() {
             // Show loading state
             const originalText = downloadBtn.innerHTML;
             downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
             downloadBtn.disabled = true;
             
-            // Simulate PDF generation (replace with actual PDF generation)
-            setTimeout(() => {
-                // In a real implementation, you would generate or fetch the PDF
-                // For now, we'll show a toast message
-                showToast('PDF download will be available soon. Please check back later.', 'info');
+            try {
+                // Get the terms content element
+                const termsContent = document.querySelector('.terms-content');
                 
+                if (termsContent) {
+                    // Method 1: Use html2pdf library (if available)
+                    if (typeof html2pdf !== 'undefined') {
+                        const opt = {
+                            margin: [0.5, 0.5, 0.5, 0.5],
+                            filename: 'eventhub-terms-of-service.pdf',
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: { scale: 2, letterRendering: true, useCORS: true },
+                            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                        };
+                        await html2pdf().set(opt).from(termsContent).save();
+                        showToast('PDF downloaded successfully!', 'success');
+                    } 
+                    // Method 2: Use browser print to PDF (fallback)
+                    else {
+                        // Create a new window for printing
+                        const printWindow = window.open('', '_blank');
+                        const title = document.title;
+                        const styles = document.querySelectorAll('link[rel="stylesheet"]');
+                        let stylesHTML = '';
+                        
+                        styles.forEach(style => {
+                            if (style.href) {
+                                stylesHTML += `<link rel="stylesheet" href="${style.href}">`;
+                            }
+                        });
+                        
+                        printWindow.document.write(`
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <title>${title}</title>
+                                ${stylesHTML}
+                                <style>
+                                    body {
+                                        padding: 20px;
+                                        font-family: 'Manrope', 'Inter', sans-serif;
+                                    }
+                                    .btn-download, .toast-notification, .terms-nav, .copy-btn {
+                                        display: none !important;
+                                    }
+                                    .terms-content {
+                                        margin: 0;
+                                        padding: 0;
+                                        border: none;
+                                    }
+                                    .terms-content::before,
+                                    .terms-content::after {
+                                        display: none !important;
+                                    }
+                                    @media print {
+                                        body {
+                                            margin: 0;
+                                            padding: 0;
+                                        }
+                                        .terms-section {
+                                            page-break-inside: avoid;
+                                        }
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                ${termsContent.outerHTML}
+                            </body>
+                            </html>
+                        `);
+                        
+                        printWindow.document.close();
+                        printWindow.print();
+                        printWindow.onafterprint = function() {
+                            printWindow.close();
+                        };
+                        
+                        showToast('Print window opened. Use "Save as PDF" to download.', 'info');
+                    }
+                } else {
+                    showToast('Could not find terms content to download.', 'error');
+                }
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                showToast('Error generating PDF. Please try again.', 'error');
+            } finally {
                 // Reset button
                 downloadBtn.innerHTML = originalText;
                 downloadBtn.disabled = false;
-                
-                // You can also trigger actual PDF download using jsPDF or similar library
-                // generatePDF();
-            }, 1500);
+            }
         });
     }
     
@@ -113,46 +191,6 @@ document.addEventListener('DOMContentLoaded', function() {
         block.appendChild(copyBtn);
     });
     
-    // Add print functionality
-    const printBtn = document.createElement('button');
-    printBtn.className = 'btn-print';
-    printBtn.innerHTML = '<i class="fas fa-print"></i> Print Terms';
-    printBtn.style.cssText = `
-        background: transparent;
-        border: 1px solid #e2e8f0;
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        margin-left: 1rem;
-        transition: all 0.2s ease;
-    `;
-    
-    printBtn.addEventListener('mouseenter', () => {
-        printBtn.style.borderColor = '#f59e0b';
-        printBtn.style.color = '#f59e0b';
-    });
-    
-    printBtn.addEventListener('mouseleave', () => {
-        printBtn.style.borderColor = '#e2e8f0';
-        printBtn.style.color = '#64748b';
-    });
-    
-    printBtn.addEventListener('click', () => {
-        window.print();
-    });
-    
-    // Add print button next to download button if exists
-    if (downloadBtn && downloadBtn.parentElement) {
-        const container = downloadBtn.parentElement;
-        container.style.display = 'flex';
-        container.style.gap = '1rem';
-        container.style.justifyContent = 'center';
-        container.style.flexWrap = 'wrap';
-        
-        // Uncomment to add print button
-        // container.appendChild(printBtn);
-    }
-    
     // Add last modified date
     const lastModified = document.lastModified;
     const lastModifiedSpan = document.createElement('span');
@@ -187,9 +225,15 @@ function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
     toast.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
         <span>${escapeHtml(message)}</span>
     `;
+    
+    if (type === 'error') {
+        toast.style.borderLeftColor = '#ef4444';
+    } else if (type === 'info') {
+        toast.style.borderLeftColor = '#3b82f6';
+    }
     
     document.body.appendChild(toast);
     
@@ -209,26 +253,5 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// PDF generation function (placeholder - can be implemented with jsPDF)
-function generatePDF() {
-    // This function would use a library like jsPDF or html2pdf
-    // Example using html2pdf (needs to be installed)
-    /*
-    const element = document.querySelector('.terms-content');
-    const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: 'eventhub-terms-of-service.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, letterRendering: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-    html2pdf().set(opt).from(element).save();
-    */
-    
-    // For now, show message
-    showToast('PDF generation feature coming soon!', 'info');
-}
-
 // Make functions global for debugging
 window.showToast = showToast;
-window.generatePDF = generatePDF;

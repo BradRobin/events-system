@@ -1,42 +1,18 @@
 /* ============================================
-   PRIVACY POLICY PAGE - Readable Legal Layout
-   Uses explicit colors so dark-mode CSS variable
-   overrides (--np-white) cannot break contrast.
+   PRIVACY POLICY PAGE - Modern Styling
+   Matches Terms of Service page styling
+   FIXED: Font families, removed overflow-causing animations
    ============================================ */
 
 .privacy-page {
-    padding: 5rem 0;
+    padding: 3rem 0 5rem;
     background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
     position: relative;
-    overflow: hidden;
-    color-scheme: light;
+    min-height: calc(100vh - 70px - 300px);
 }
 
-.privacy-page::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%);
-    border-radius: 50%;
-    z-index: 0;
-    pointer-events: none;
-}
-
-.privacy-page::after {
-    content: '';
-    position: absolute;
-    bottom: -30%;
-    left: -10%;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(245, 158, 11, 0.03) 0%, transparent 70%);
-    border-radius: 50%;
-    z-index: 0;
-    pointer-events: none;
-}
+/* FIXED: Removed animated background that caused overflow */
+/* Removed ::before and ::after pseudo-elements with animations */
 
 .privacy-page .container {
     max-width: 960px;
@@ -73,20 +49,15 @@
 
 /* Last Updated Banner */
 .privacy-page .last-updated-banner {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 2rem;
-}
-
-.privacy-page .last-updated-banner span {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     background: linear-gradient(135deg, #f59e0b, #ec6408);
-    color: #ffffff;
+    color: white;
     padding: 0.5rem 1rem;
     border-radius: 2rem;
     font-size: 0.8rem;
+    margin-bottom: 2rem;
     font-family: 'Manrope', 'Inter', sans-serif;
 }
 
@@ -126,10 +97,10 @@
 }
 
 .privacy-page .toc-list a {
+    font-family: 'Manrope', 'Inter', sans-serif;
     color: #d97706;
     text-decoration: none;
     font-size: 0.9rem;
-    font-family: 'Manrope', 'Inter', sans-serif;
     line-height: 1.5;
     transition: color 0.2s ease;
 }
@@ -139,15 +110,42 @@
     text-decoration: underline;
 }
 
-/* Main Content Card */
+/* Main Content Card - Same as Terms */
 .privacy-page .privacy-content {
     background: #ffffff;
     border-radius: 1.5rem;
     padding: 3rem;
     border: 2px solid #e2e8f0;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    position: relative;
+    margin-bottom: 2rem;
 }
 
+/* Border effect - Same as Terms */
+.privacy-page .privacy-content::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    border-radius: 1.5rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: -1;
+}
+
+.privacy-page .privacy-content::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: #ffffff;
+    border-radius: calc(1.5rem - 2px);
+    z-index: -1;
+}
+
+.privacy-page .privacy-content:hover::before {
+    opacity: 1;
+}
+
+/* Privacy Sections - Same styling as Terms sections */
 .privacy-page .privacy-section {
     margin-bottom: 2rem;
     padding-bottom: 2rem;
@@ -167,11 +165,8 @@
     font-weight: 700;
     margin-bottom: 1rem;
     color: #1e293b;
-    text-align: left;
     position: relative;
     display: inline-block;
-    padding-bottom: 0;
-    border-bottom: none;
 }
 
 .privacy-page .privacy-section h2::after {
@@ -189,43 +184,40 @@
     font-family: 'Manrope', 'Inter', sans-serif;
     font-size: 1.1rem;
     font-weight: 600;
-    margin: 1.25rem 0 0.5rem;
+    margin: 1rem 0 0.5rem;
     color: #1e293b;
-    text-align: left;
-}
-
-.privacy-page .privacy-section h3:first-of-type {
-    margin-top: 0;
 }
 
 .privacy-page .privacy-section p {
     font-family: 'Manrope', 'Inter', sans-serif;
     font-size: 0.95rem;
-    line-height: 1.75;
-    color: #475569;
+    line-height: 1.7;
+    color: #64748b;
     margin-bottom: 1rem;
 }
 
 .privacy-page .privacy-section ul,
 .privacy-page .privacy-section ol {
-    padding-left: 1.5rem;
-    margin: 0.5rem 0 1rem;
-    list-style: disc;
+    margin: 0.5rem 0 1rem 2rem;
+    padding-left: 0;
 }
 
 .privacy-page .privacy-section li {
     font-family: 'Manrope', 'Inter', sans-serif;
     font-size: 0.95rem;
-    color: #475569;
-    margin-bottom: 0.5rem;
     line-height: 1.7;
+    color: #64748b;
+    margin-bottom: 0.5rem;
 }
 
 .privacy-page .privacy-section li strong {
+    font-family: 'Manrope', 'Inter', sans-serif;
     color: #1e293b;
+    font-weight: 600;
 }
 
 .privacy-page .privacy-section a {
+    font-family: 'Manrope', 'Inter', sans-serif;
     color: #d97706;
     text-decoration: underline;
     text-underline-offset: 2px;
@@ -237,14 +229,21 @@
 }
 
 .privacy-page .privacy-section strong {
+    font-family: 'Manrope', 'Inter', sans-serif;
     color: #1e293b;
     font-weight: 600;
 }
 
-/* Responsive */
+/* Responsive - Same as Terms */
+@media (max-width: 1024px) {
+    .privacy-page .privacy-content {
+        padding: 2rem;
+    }
+}
+
 @media (max-width: 768px) {
     .privacy-page {
-        padding: 3rem 0;
+        padding: 2rem 0 3rem;
     }
 
     .privacy-page .container {
@@ -282,6 +281,10 @@
         font-size: 1.5rem;
     }
 
+    .privacy-page .page-header p {
+        font-size: 0.85rem;
+    }
+
     .privacy-page .privacy-content {
         padding: 1rem;
     }
@@ -291,7 +294,11 @@
     }
 
     .privacy-page .privacy-section ul {
-        padding-left: 1.25rem;
+        margin-left: 1rem;
+    }
+
+    .privacy-page .last-updated-banner {
+        font-size: 0.7rem;
     }
 }
 
@@ -317,6 +324,6 @@
 
     .privacy-page .privacy-section p,
     .privacy-page .privacy-section li {
-        color: #475569;
+        color: #64748b;
     }
 }
