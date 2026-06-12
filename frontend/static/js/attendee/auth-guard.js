@@ -81,6 +81,9 @@ const AuthGuard = {
     
     // Logout
     logout: function(redirectTo = '/') {
+        if (window.EventhubEventsPrefetch) {
+            window.EventhubEventsPrefetch.invalidate();
+        }
         localStorage.removeItem('attendee_access_token');
         localStorage.removeItem('attendee_refresh_token');
         localStorage.removeItem('attendee_user');
@@ -174,6 +177,11 @@ const AuthGuard = {
         
         // Update UI based on auth state
         this.updateUI();
+
+        // Warm events catalog in the background for logged-in attendees
+        if (this.isAuthenticated() && window.EventhubEventsPrefetch) {
+            window.EventhubEventsPrefetch.start();
+        }
         
         // Listen for auth state changes
         window.addEventListener('auth-state-changed', () => {

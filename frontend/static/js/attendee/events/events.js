@@ -123,7 +123,31 @@ function initEventCardImages() {
     });
 }
 
-async function loadEventsFromAPI() {
+function getPrefetchedCatalog() {
+    if (!window.EventhubEventsPrefetch) return null;
+    const cached = EventhubEventsPrefetch.getCached();
+    if (!cached) return null;
+    return {
+        events: cached.events || [],
+        categories: cached.categories || [],
+    };
+}
+
+function canUsePrefetchedCatalog() {
+    return currentCategory === 'all' && !currentSearch;
+}
+
+async function loadEventsFromAPI(options = {}) {
+    const preferPrefetch = options.preferPrefetch !== false;
+
+    if (preferPrefetch && canUsePrefetchedCatalog()) {
+        const prefetched = getPrefetchedCatalog();
+        if (prefetched && prefetched.events.length) {
+            eventsCatalog = prefetched.events;
+            return;
+        }
+    }
+
     try {
         const params = new URLSearchParams();
 
@@ -134,6 +158,8 @@ async function loadEventsFromAPI() {
         if (currentSearch) {
             params.set('search', currentSearch);
             params.set('limit', '200');
+        } else if (currentCategory === 'all') {
+            params.set('limit', '200');
         }
 
         const url = API.events + (params.toString() ? '?' + params.toString() : '');
@@ -141,7 +167,11 @@ async function loadEventsFromAPI() {
         const data = await response.json();
 
         if (data.success) {
-            eventsCatalog = data.events || [];
+            eventsCatalog = data.events || data.results || [];
+            if (canUsePrefetchedCatalog() && window.EventhubEventsPrefetch && eventsCatalog.length) {
+                const existing = getPrefetchedCatalog();
+                EventhubEventsPrefetch.seed(eventsCatalog, existing ? existing.categories : []);
+            }
         } else {
             console.error('Failed to load events:', data.message);
             eventsCatalog = [];
@@ -152,12 +182,28 @@ async function loadEventsFromAPI() {
     }
 }
 
-async function loadCategoriesFromAPI() {
+async function loadCategoriesFromAPI(options = {}) {
+    const preferPrefetch = options.preferPrefetch !== false;
+
+    if (preferPrefetch) {
+        const prefetched = getPrefetchedCatalog();
+        if (prefetched && prefetched.categories.length) {
+            return prefetched.categories;
+        }
+    }
+
     try {
         const response = await fetch(API.categories);
         const data = await response.json();
         
         if (data.success && data.categories) {
+            if (window.EventhubEventsPrefetch) {
+                const existing = getPrefetchedCatalog();
+                const events = existing ? existing.events : eventsCatalog;
+                if ((events && events.length) || data.categories.length) {
+                    EventhubEventsPrefetch.seed(events || [], data.categories);
+                }
+            }
             return data.categories;
         }
         return [];
@@ -340,30 +386,68 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+async function renderFromPrefetchedCatalog(prefetched) {
+    eventsCatalog = prefetched.events || [];
+    const categoriesData = prefetched.categories || [];
+
+    await addFilters(categoriesData);
+
+    filteredEvents = [...eventsCatalog];
+    const stats = document.getElementById('searchStats');
+    if (stats) {
+        stats.innerHTML = `📅 ${filteredEvents.length} upcoming event${filteredEvents.length !== 1 ? 's' : ''}`;
+    }
+    renderEvents();
+
+    if (window.EventhubEventsPrefetch) {
+        EventhubEventsPrefetch.start().then((fresh) => {
+            if (!fresh || !Array.isArray(fresh.events) || !fresh.events.length) return;
+            if (!canUsePrefetchedCatalog()) return;
+            if (fresh.timestamp <= (prefetched.timestamp || 0)) return;
+            eventsCatalog = fresh.events;
+            filteredEvents = [...eventsCatalog];
+            if (stats) {
+                stats.innerHTML = `📅 ${filteredEvents.length} upcoming event${filteredEvents.length !== 1 ? 's' : ''}`;
+            }
+            renderEvents();
+        });
+    }
+}
+
 async function filterEvents(isInitialLoad = false) {
     if (isInitialLoad) {
-        renderStreamLoader(false);
-        updateStep('step-connect', 'active');
-        
-        // Start both fetches concurrently
-        const categoriesPromise = loadCategoriesFromAPI();
-        const eventsPromise = loadEventsFromAPI();
-        
-        updateStep('step-connect', 'completed');
-        updateStep('step-categories', 'active');
-        updateStep('step-events', 'active');
-        
-        const categoriesData = await categoriesPromise;
-        updateStep('step-categories', 'completed');
-        
-        await addFilters(categoriesData);
-        
-        await eventsPromise;
-        updateStep('step-events', 'completed');
-        updateStep('step-render', 'active');
-        
-        // Minimal visual transition delay
-        await new Promise(resolve => setTimeout(resolve, 50));
+        const prefetched = canUsePrefetchedCatalog() ? getPrefetchedCatalog() : null;
+        const hasInstantCatalog = Boolean(prefetched && prefetched.events && prefetched.events.length);
+
+        if (hasInstantCatalog) {
+            await renderFromPrefetchedCatalog(prefetched);
+            return;
+        } else {
+            renderStreamLoader(false);
+            updateStep('step-connect', 'active');
+
+            if (window.EventhubEventsPrefetch) {
+                EventhubEventsPrefetch.start();
+            }
+
+            const categoriesPromise = loadCategoriesFromAPI({ preferPrefetch: true });
+            const eventsPromise = loadEventsFromAPI({ preferPrefetch: true });
+
+            updateStep('step-connect', 'completed');
+            updateStep('step-categories', 'active');
+            updateStep('step-events', 'active');
+
+            const categoriesData = await categoriesPromise;
+            updateStep('step-categories', 'completed');
+
+            await addFilters(categoriesData);
+
+            await eventsPromise;
+            updateStep('step-events', 'completed');
+            updateStep('step-render', 'active');
+
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
     } else {
         const grid = document.getElementById('eventsGrid');
         if (grid) {
