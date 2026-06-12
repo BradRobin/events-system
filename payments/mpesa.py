@@ -75,7 +75,7 @@ class MpesaClient:
         self.env = config("MPESA_ENVIRONMENT", default="sandbox")
         self.consumer_key = config("MPESA_CONSUMER_KEY")
         self.consumer_secret = config("MPESA_CONSUMER_SECRET")
-        self.shortcode = config("MPESA_SHORTCODE")
+        self.shortcode = config("MPESA_SHORTCODE", default="174379")
         self.passkey = config("MPESA_PASSKEY")
         self.callback_url = config("MPESA_CALLBACK_URL")
 
@@ -83,6 +83,29 @@ class MpesaClient:
             self.base_url = "https://api.safaricom.co.ke"
         else:
             self.base_url = "https://sandbox.safaricom.co.ke"
+
+    @classmethod
+    def is_configured(cls):
+        """True when platform STK credentials are present in environment."""
+        client = cls()
+        return bool(
+            client.consumer_key
+            and client.consumer_secret
+            and client.passkey
+            and client.shortcode
+            and client.callback_url
+        )
+
+    @staticmethod
+    def normalize_phone(phone_number):
+        phone = str(phone_number).strip().replace(' ', '')
+        if phone.startswith('+'):
+            phone = phone[1:]
+        if phone.startswith('0'):
+            phone = '254' + phone[1:]
+        if phone.startswith('7') and len(phone) == 9:
+            phone = '254' + phone
+        return phone
 
     def get_access_token(self):
         url = f"{self.base_url}/oauth/v1/generate?grant_type=client_credentials"
@@ -97,24 +120,33 @@ class MpesaClient:
         return encoded, timestamp
 
     def stk_push(self, phone_number, amount, account_ref, description):
+        if not self.is_configured():
+            return {
+                'errorMessage': 'M-Pesa STK is not configured on the server.',
+            }
+
         access_token = self.get_access_token()
         password, timestamp = self.get_password()
+        phone = self.normalize_phone(phone_number)
 
-        phone = str(phone_number).strip()
-        if phone.startswith("0"):
-            phone = "254" + phone[1:]
-        elif phone.startswith("+"):
-            phone = phone[1:]
+        account_ref = str(account_ref)[:12]
+        description = str(description)[:13]
 
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
         }
+        # Sandbox shortcode 174379 uses Pay Bill; production till uses Buy Goods.
+        transaction_type = (
+            "CustomerBuyGoodsOnline"
+            if self.env == "production"
+            else "CustomerPayBillOnline"
+        )
         payload = {
             "BusinessShortCode": self.shortcode,
             "Password": password,
             "Timestamp": timestamp,
-            "TransactionType": "CustomerPayBillOnline",
+            "TransactionType": transaction_type,
             "Amount": int(amount),
             "PartyA": phone,
             "PartyB": self.shortcode,
@@ -126,4 +158,10 @@ class MpesaClient:
 
         url = f"{self.base_url}/mpesa/stkpush/v1/processrequest"
         response = urllib_request("POST", url, data=payload, headers=headers)
-        return response.json()
+        try:
+            return response.json()
+        except Exception:
+            logger.exception('M-Pesa STK push returned non-JSON response: %s', response.text)
+            return {
+                'errorMessage': response.text or 'M-Pesa STK push failed.',
+            }
