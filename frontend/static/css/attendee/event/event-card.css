@@ -1,5 +1,6 @@
 /* ============================================
    EVENT CARD CSS - Premium Card with Gradient Overlay
+   FIXED: Mobile images, button visibility, wishlist button contrast
    ============================================ */
 
 .premium-card {
@@ -22,7 +23,7 @@
     border-color: #e2e8f0;
 }
 
-/* Animated border on hover - orange circulating effect - FIXED Z-INDEX */
+/* Animated border on hover - orange circulating effect */
 .premium-card:hover::before {
     content: '';
     position: absolute;
@@ -34,7 +35,7 @@
         #f59e0b, #ec6408, #f59e0b, #ec6408, #f59e0b);
     background-size: 400% 400%;
     border-radius: 18px;
-    z-index: 0;
+    z-index: 1;
     animation: borderGlow 3s ease infinite;
     opacity: 1;
 }
@@ -48,7 +49,7 @@
     bottom: 0;
     background: #ffffff;
     border-radius: 15px;
-    z-index: 1;
+    z-index: 2;
 }
 
 @keyframes borderGlow {
@@ -57,43 +58,52 @@
     100% { background-position: 0% 50%; }
 }
 
-/* Image container - FIXED HEIGHT FOR ALL DEVICES */
+/* Image container - FIXED for mobile */
 .card-image-container {
     position: relative;
     width: 100%;
-    height: 220px;
+    height: 200px;
     overflow: hidden;
     background: #f1f5f9;
     flex-shrink: 0;
-    z-index: 5;
+    z-index: 3;
 }
 
-/* Gradient overlay at bottom of image */
-.card-image-container::after {
-    content: '';
+/* Ensure images are visible on all devices */
+.card-bg-image {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 30px;
-    background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
-    pointer-events: none;
-    z-index: 5;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 1;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* FIXED: Images always visible - removed opacity:0 issue */
+.card-bg-image.is-loaded {
+    opacity: 1;
+}
+
+/* FIXED: Skeleton loader doesn't hide images */
 .card-image-skeleton {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 45%, #f8fafc 55%, #f1f5f9 100%);
+    background: linear-gradient(
+        90deg,
+        #f1f5f9 0%,
+        #e2e8f0 45%,
+        #f8fafc 55%,
+        #f1f5f9 100%
+    );
     background-size: 220% 100%;
     animation: cardImageShimmer 1.35s ease-in-out infinite;
 }
 
 .card-image-skeleton.is-hidden {
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.35s ease, visibility 0.35s ease;
+    display: none;
 }
 
 .card-image-fallback {
@@ -108,19 +118,17 @@
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
-.card-bg-image {
+/* Gradient overlay at bottom of image */
+.card-image-container::after {
+    content: '';
     position: absolute;
-    inset: 0;
-    z-index: 2;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-bg-image.is-loaded {
-    opacity: 1;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
+    pointer-events: none;
+    z-index: 5;
 }
 
 .premium-card:hover .card-bg-image.is-loaded {
@@ -132,7 +140,7 @@
     100% { background-position: -120% 0; }
 }
 
-/* Content section - stays above hover overlay */
+/* Content section */
 .card-content {
     padding: 16px;
     background: #ffffff;
@@ -240,7 +248,7 @@
     font-weight: 400;
 }
 
-/* Action buttons - stays visible on hover */
+/* FIXED: Action buttons - always visible on hover */
 .card-actions {
     display: flex;
     gap: 8px;
@@ -248,9 +256,11 @@
     background: #ffffff;
     border-top: 1px solid #f1f5f9;
     position: relative;
-    z-index: 15;
+    z-index: 10;
+    transition: all 0.3s ease;
 }
 
+/* FIXED: Buttons never disappear - always visible */
 .card-action-btn {
     flex: 1;
     padding: 9px 12px;
@@ -291,7 +301,7 @@
     background: linear-gradient(135deg, #ec6408, #d97706);
 }
 
-/* Badges - FIXED WISHLIST BUTTON VISIBILITY */
+/* Badges */
 .featured-badge {
     position: absolute;
     top: 12px;
@@ -307,6 +317,7 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* FIXED: Wishlist button - better visibility with white text */
 .wishlist-btn {
     position: absolute;
     top: 12px;
@@ -333,16 +344,22 @@
 }
 
 .wishlist-btn:hover {
-    background: #f59e0b;
-    transform: scale(1.05);
+    background: #ef4444;
+    color: white;
 }
 
 .wishlist-btn:hover i {
     transform: scale(1.1);
+    color: white;
 }
 
 .wishlist-btn.active {
-    background: #f59e0b;
+    background: #ef4444;
+    color: white;
+    border: none;
+}
+
+.wishlist-btn.active i {
     color: white;
 }
 
@@ -370,20 +387,21 @@
 .premium-card:nth-child(5) { animation-delay: 0.25s; }
 .premium-card:nth-child(6) { animation-delay: 0.3s; }
 
-/* Responsive - ALL DEVICES HAVE IMAGES */
-@media (max-width: 1024px) {
-    .card-image-container {
-        height: 200px;
-    }
-}
-
+/* FIXED: Responsive - images always visible on mobile/tablet */
 @media (max-width: 768px) {
     .card-image-container {
         height: 180px;
     }
     
+    /* Ensure images load properly on mobile */
+    .card-bg-image {
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+    }
+    
     .card-image-container::after {
-        height: 20px;
+        height: 18px;
     }
     
     .card-content {
@@ -408,6 +426,13 @@
         font-size: 0.7rem;
         border-radius: 6px;
     }
+    
+    /* FIXED: Wishlist button on mobile - visible and readable */
+    .wishlist-btn {
+        padding: 4px 10px;
+        font-size: 0.65rem;
+        background: rgba(0, 0, 0, 0.7);
+    }
 }
 
 @media (max-width: 480px) {
@@ -420,7 +445,18 @@
     }
     
     .wishlist-btn {
-        padding: 4px 10px;
+        padding: 4px 8px;
         font-size: 0.6rem;
+    }
+}
+
+/* Ensure images don't disappear on tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .card-image-container {
+        height: 190px;
+    }
+    
+    .card-bg-image {
+        object-fit: cover;
     }
 }

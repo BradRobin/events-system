@@ -1,4 +1,5 @@
 // EVENTS MODULE - Live API Integration (Optimized with Infinite Scroll)
+// FIXED: Unified wishlist with API, fixed auth issues
 console.log('Events.js loaded');
 
 let currentCategory = "all";
@@ -21,7 +22,7 @@ const API = {
 
 // Cache for categories
 let cachedCategories = null;
-let wishlistIds = [];
+let currentUserWishlist = new Set();
 
 // DOM cache
 const domCache = {
@@ -37,24 +38,156 @@ const domCache = {
     }
 };
 
-// Throttle function for scroll events
-function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
+// Helper: Get auth token
+function getAuthToken() {
+    return localStorage.getItem('attendee_access_token') || localStorage.getItem('access_token');
+}
+
+// Helper: Check if user is authenticated
+function isAuthenticated() {
+    const token = getAuthToken();
+    if (!token) return false;
+    
+    // Check if token is expired
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const exp = payload.exp * 1000;
+        return Date.now() < exp;
+    } catch(e) {
+        return !!token;
+    }
+}
+
+// Helper: Get current user
+function getCurrentUser() {
+    try {
+        const user = localStorage.getItem('attendee_user');
+        if (user && user !== 'undefined') {
+            return JSON.parse(user);
         }
-    };
+    } catch(e) {}
+    return null;
+}
+
+// FIXED: Load wishlist from API (unified)
+async function loadWishlistFromAPI() {
+    const token = getAuthToken();
+    if (!token) {
+        currentUserWishlist.clear();
+        return;
+    }
+    
+    try {
+        const response = await fetch(API.wishlist, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.wishlist) {
+                currentUserWishlist.clear();
+                data.wishlist.forEach(item => {
+                    currentUserWishlist.add(item.event_id || item.id);
+                });
+                // Also update localStorage for compatibility
+                localStorage.setItem('event_wishlist', JSON.stringify(Array.from(currentUserWishlist)));
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading wishlist from API:', error);
+    }
+    
+    // Fallback to localStorage
+    const localWishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
+    currentUserWishlist = new Set(localWishlist);
+}
+
+// FIXED: Toggle wishlist with API
+async function toggleWishlistAPI(eventId) {
+    const token = getAuthToken();
+    if (!token) {
+        showToast('🔐 Please login to save to wishlist', 'info');
+        setTimeout(() => window.location.href = '/login/', 1500);
+        return false;
+    }
+    
+    const isInWishlist = currentUserWishlist.has(eventId);
+    
+    try {
+        if (!isInWishlist) {
+            // Add to wishlist
+            const response = await fetch(API.wishlist, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ event_id: eventId })
+            });
+            
+            if (response.ok) {
+                currentUserWishlist.add(eventId);
+                localStorage.setItem('event_wishlist', JSON.stringify(Array.from(currentUserWishlist)));
+                showToast('❤️ Added to wishlist!', 'success');
+                return true;
+            } else {
+                const data = await response.json();
+                if (data.message === 'already in wishlist') {
+                    currentUserWishlist.add(eventId);
+                    showToast('Already in wishlist', 'info');
+                    return true;
+                }
+                throw new Error(data.message || 'Failed to add to wishlist');
+            }
+        } else {
+            // Remove from wishlist
+            const response = await fetch(`${API.wishlist}${eventId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                currentUserWishlist.delete(eventId);
+                localStorage.setItem('event_wishlist', JSON.stringify(Array.from(currentUserWishlist)));
+                showToast('🗑️ Removed from wishlist', 'info');
+                return false;
+            } else {
+                throw new Error('Failed to remove from wishlist');
+            }
+        }
+    } catch (error) {
+        console.error('Wishlist API error:', error);
+        // Fallback to localStorage only
+        if (!isInWishlist) {
+            currentUserWishlist.add(eventId);
+            showToast('❤️ Added to wishlist (offline)', 'success');
+        } else {
+            currentUserWishlist.delete(eventId);
+            showToast('🗑️ Removed from wishlist', 'info');
+        }
+        localStorage.setItem('event_wishlist', JSON.stringify(Array.from(currentUserWishlist)));
+        return !isInWishlist;
+    }
 }
 
 function showToast(message, type) {
+    const existing = document.querySelector('.custom-toast');
+    if (existing) existing.remove();
     const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${type}`;
+    toast.className = `custom-toast toast-${type}`;
     toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i><span>${escapeHtml(message)}</span>`;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 function showSkeletonCards(count = 6) {
@@ -89,77 +222,11 @@ function getEventImageUrl(event) {
     return (event.image || event.banner_image || '').trim();
 }
 
-function markEventImageLoaded(img) {
-    img.classList.remove('is-loading');
-    img.classList.add('is-loaded');
-    const skeleton = img.closest('.card-image-container')?.querySelector('.card-image-skeleton');
-    if (skeleton) skeleton.classList.add('is-hidden');
-}
-
-function initEventCardImages() {
-    document.querySelectorAll('.card-bg-image.is-loading').forEach(img => {
-        const finish = () => markEventImageLoaded(img);
-        if (img.complete && img.naturalWidth > 0) {
-            finish();
-            return;
-        }
-        img.addEventListener('load', finish, { once: true });
-        img.addEventListener('error', () => {
-            img.src = '/static/images/placeholder.jpg';
-        }, { once: true });
-    });
-}
-
-// Load wishlist from API
-async function loadWishlistFromAPI() {
-    const token = localStorage.getItem('attendee_access_token');
-    if (!token) {
-        wishlistIds = [];
-        return;
-    }
-    
-    try {
-        const response = await fetch(API.wishlist, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const data = await response.json();
-        if (data.success && data.wishlist) {
-            wishlistIds = data.wishlist.map(item => item.event_id || item.id);
-        } else {
-            wishlistIds = [];
-        }
-    } catch (error) {
-        console.error('Error loading wishlist:', error);
-        wishlistIds = [];
-    }
-}
-
-// Toggle wishlist via API
-async function toggleWishlistAPI(eventId, action) {
-    const token = localStorage.getItem('attendee_access_token');
-    if (!token) {
-        showToast('🔐 Please login to save to wishlist', 'info');
-        setTimeout(() => window.location.href = '/login/', 1500);
-        return false;
-    }
-    
-    try {
-        const response = await fetch(API.wishlist, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ event_id: eventId, action: action })
-        });
-        const data = await response.json();
-        return data.success;
-    } catch (error) {
-        console.error('Error updating wishlist:', error);
-        return false;
-    }
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 async function loadEventsFromAPI(reset = true) {
@@ -169,7 +236,7 @@ async function loadEventsFromAPI(reset = true) {
         hasMoreEvents = true;
     }
     
-    if (!hasMoreEvents && !reset) return;
+    if (!hasMoreEvents && !reset) return false;
     
     try {
         const params = new URLSearchParams();
@@ -270,29 +337,8 @@ async function addFilters(categoriesData = null) {
 function setupPageSearchListener() {
     const pageSearchInput = document.getElementById('searchInput');
     if (pageSearchInput) {
-        const wrapper = pageSearchInput.closest('.search-wrapper');
-        let suggestionsContainer = document.getElementById('searchSuggestions');
-        if (wrapper && !suggestionsContainer) {
-            suggestionsContainer = document.createElement('div');
-            suggestionsContainer.id = 'searchSuggestions';
-            suggestionsContainer.className = 'search-suggestions';
-            wrapper.appendChild(suggestionsContainer);
-        }
-
         pageSearchInput.removeEventListener('input', handleSearchInput);
         pageSearchInput.addEventListener('input', handleSearchInput);
-
-        pageSearchInput.removeEventListener('focus', showSuggestions);
-        pageSearchInput.addEventListener('focus', showSuggestions);
-
-        document.addEventListener('click', (e) => {
-            if (suggestionsContainer && !pageSearchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                suggestionsContainer.classList.remove('show');
-            }
-        });
-
-        pageSearchInput.removeEventListener('keydown', handleSearchKeydown);
-        pageSearchInput.addEventListener('keydown', handleSearchKeydown);
     }
 }
 
@@ -301,103 +347,13 @@ function handleSearchInput(e) {
     debounceTimer = setTimeout(() => {
         currentSearch = e.target.value.toLowerCase().trim();
         resetAndReload();
-        showSuggestions();
     }, 300);
-}
-
-function showSuggestions() {
-    const suggestionsContainer = document.getElementById('searchSuggestions');
-    if (!suggestionsContainer) return;
-
-    const recentSearches = JSON.parse(localStorage.getItem('recent_searches') || '[]');
-    if (recentSearches.length === 0) {
-        suggestionsContainer.classList.remove('show');
-        return;
-    }
-
-    const input = document.getElementById('searchInput');
-    const typed = input ? input.value.trim().toLowerCase() : '';
-    
-    const filteredSearches = typed 
-        ? recentSearches.filter(q => q.toLowerCase().includes(typed))
-        : recentSearches;
-
-    if (filteredSearches.length === 0) {
-        suggestionsContainer.classList.remove('show');
-        return;
-    }
-
-    suggestionsContainer.innerHTML = `
-        <div class="suggestion-header">
-            <span>Recent Searches</span>
-            <button class="suggestion-clear-btn" id="clearRecentBtn">Clear</button>
-        </div>
-        ${filteredSearches.map(query => `
-            <div class="suggestion-item" data-query="${escapeHtml(query)}">
-                <i class="fas fa-history"></i>
-                <span>${escapeHtml(query)}</span>
-            </div>
-        `).join('')}
-    `;
-
-    suggestionsContainer.classList.add('show');
-
-    suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const query = item.dataset.query;
-            if (input) {
-                input.value = query;
-                currentSearch = query.toLowerCase();
-                saveSearchQuery(query);
-                resetAndReload();
-            }
-            suggestionsContainer.classList.remove('show');
-        });
-    });
-
-    const clearBtn = document.getElementById('clearRecentBtn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            localStorage.setItem('recent_searches', JSON.stringify([]));
-            suggestionsContainer.classList.remove('show');
-        });
-    }
-}
-
-function handleSearchKeydown(e) {
-    if (e.key === 'Enter') {
-        const query = e.target.value.trim();
-        if (query) {
-            saveSearchQuery(query);
-        }
-        const suggestionsContainer = document.getElementById('searchSuggestions');
-        if (suggestionsContainer) suggestionsContainer.classList.remove('show');
-    }
-}
-
-function saveSearchQuery(query) {
-    if (!query) return;
-    let recentSearches = JSON.parse(localStorage.getItem('recent_searches') || '[]');
-    recentSearches = recentSearches.filter(q => q.toLowerCase() !== query.toLowerCase());
-    recentSearches.unshift(query);
-    if (recentSearches.length > 5) {
-        recentSearches = recentSearches.slice(0, 5);
-    }
-    localStorage.setItem('recent_searches', JSON.stringify(recentSearches));
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 async function resetAndReload() {
     if (observer) observer.disconnect();
-    await loadWishlistFromAPI();
     showSkeletonCards(6);
+    await loadWishlistFromAPI();
     await loadEventsFromAPI(true);
     setupInfiniteScroll();
     await filterAndDisplay();
@@ -435,48 +391,12 @@ async function filterAndDisplay(updateStats = true) {
                 const categoryName = document.querySelector(`.category-btn[data-category="${currentCategory}"] span`)?.textContent || currentCategory;
                 stats.innerHTML = `📂 ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} in ${categoryName}`;
             } else {
-                stats.innerHTML = `📅 ${filteredEvents.length} upcoming event${filteredEvents.length !== 1 ? 's' : ''}`;
+                stats.innerHTML = `✨ ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} available`;
             }
         }
     }
     
     renderEvents();
-}
-
-function goToNewsletter() {
-    window.location.href = '/#newsletterSection';
-}
-
-async function toggleWishlist(id, btn) {
-    const token = localStorage.getItem('attendee_access_token');
-    if (!token) {
-        showToast('🔐 Please login to save to wishlist', 'info');
-        setTimeout(() => window.location.href = '/login/', 1500);
-        return;
-    }
-    
-    const isInWishlist = wishlistIds.includes(id);
-    const action = isInWishlist ? 'remove' : 'add';
-    
-    const success = await toggleWishlistAPI(id, action);
-    
-    if (success) {
-        if (action === 'add') {
-            wishlistIds.push(id);
-            btn.innerHTML = '<i class="fas fa-heart"></i> Saved';
-            btn.style.background = '#f59e0b';
-            showToast('❤️ Event saved to wishlist!', 'success');
-        } else {
-            wishlistIds = wishlistIds.filter(i => i !== id);
-            btn.innerHTML = '<i class="far fa-heart"></i> Save';
-            btn.style.background = 'rgba(0,0,0,0.6)';
-            showToast('🗑️ Removed from wishlist', 'info');
-        }
-        
-        window.dispatchEvent(new Event('wishlist-updated'));
-    } else {
-        showToast('Failed to update wishlist. Please try again.', 'error');
-    }
 }
 
 function renderEvents() {
@@ -489,10 +409,10 @@ function renderEvents() {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-calendar-times"></i>
-                <h3>No events found</h3>
-                <p>Try adjusting your search or browse all events</p>
+                <h3>No Events Available</h3>
+                <p>We don't have any events matching your criteria right now.</p>
                 <button onclick="resetFilters()" class="btn-browse">
-                    <i class="fas fa-redo-alt"></i> Browse All Events
+                    <i class="fas fa-redo"></i> Reset Filters
                 </button>
             </div>
         `; 
@@ -503,25 +423,23 @@ function renderEvents() {
     const tempDiv = document.createElement('div');
     
     filteredEvents.forEach(e => {
-        const inWishlist = wishlistIds.includes(e.id);
+        const inWishlist = currentUserWishlist.has(e.id);
         const imageUrl = getEventImageUrl(e);
         const imageBlock = imageUrl
-            ? `<img src="${escapeHtml(imageUrl)}" class="card-bg-image is-loading" alt="" loading="lazy" decoding="async">`
+            ? `<img src="${escapeHtml(imageUrl)}" class="card-bg-image" alt="${escapeHtml(e.title)}" loading="lazy" decoding="async" onerror="this.src='/static/images/placeholder.jpg'">`
             : `<div class="card-image-fallback" aria-hidden="true"><i class="fas fa-calendar-alt"></i></div>`;
-        const imageContainerClass = imageUrl ? 'card-image-container' : 'card-image-container card-image-container--no-image';
         
         tempDiv.innerHTML = `
-            <div class="event-card premium-card" onclick="window.location.href='/events/detail/?id=${e.id}'">
-                <div class="${imageContainerClass}">
-                    <div class="card-image-skeleton" aria-hidden="true"></div>
+            <div class="event-card premium-card">
+                <div class="card-image-container">
                     ${imageBlock}
-                    <div class="card-gradient-overlay"></div>
+                    <div class="card-image-skeleton is-hidden" aria-hidden="true"></div>
                     ${e.featured || e.is_featured ? '<span class="featured-badge">Featured</span>' : ''}
-                    <button class="wishlist-btn" data-id="${e.id}" style="background:${inWishlist ? '#f59e0b' : 'rgba(0,0,0,0.6)'}">
-                        <i class="${inWishlist ? 'fas' : 'far'} fa-heart"></i> ${inWishlist ? 'Saved' : 'Save'}
+                    <button class="wishlist-btn ${inWishlist ? 'active' : ''}" data-id="${e.id}">
+                        <i class="${inWishlist ? 'fas' : 'far'} fa-heart"></i> ${inWishlist ? 'Remove' : 'Wishlist'}
                     </button>
                 </div>
-                <div class="card-content">
+                <div class="card-content" onclick="window.location.href='/events/detail/?id=${e.id}'">
                     <span class="card-category">${escapeHtml(e.category_name || 'Event')}</span>
                     <h3 class="card-title">${escapeHtml(e.title)}</h3>
                     <div class="card-meta">
@@ -534,7 +452,7 @@ function renderEvents() {
                     <button class="card-action-btn view-details-btn" onclick="event.stopPropagation();window.location.href='/events/detail/?id=${e.id}'">
                         <i class="fas fa-info-circle"></i> Details
                     </button>
-                    <button class="card-action-btn book-ticket-btn add-to-cart-btn" data-id="${e.id}">
+                    <button class="card-action-btn book-ticket-btn" data-id="${e.id}" data-title="${escapeHtml(e.title)}" data-price="${e.price}">
                         <i class="fas fa-ticket-alt"></i> Book Ticket
                     </button>
                 </div>
@@ -546,6 +464,7 @@ function renderEvents() {
     grid.innerHTML = '';
     grid.appendChild(fragment);
     
+    // Attach event listeners
     document.querySelectorAll('.book-ticket-btn').forEach(btn => {
         btn.removeEventListener('click', handleBookClick);
         btn.addEventListener('click', handleBookClick);
@@ -555,8 +474,6 @@ function renderEvents() {
         btn.removeEventListener('click', handleWishlistClick);
         btn.addEventListener('click', handleWishlistClick);
     });
-
-    initEventCardImages();
 }
 
 function setupInfiniteScroll() {
@@ -586,21 +503,51 @@ function setupInfiniteScroll() {
     observer.observe(sentinel);
 }
 
+async function handleWishlistClick(e) {
+    e.stopPropagation();
+    const btn = this;
+    const eventId = parseInt(btn.dataset.id);
+    
+    // Optimistic UI update
+    const wasActive = btn.classList.contains('active');
+    btn.classList.toggle('active');
+    btn.innerHTML = btn.classList.contains('active') 
+        ? '<i class="fas fa-heart"></i> Remove' 
+        : '<i class="far fa-heart"></i> Wishlist';
+    
+    const result = await toggleWishlistAPI(eventId);
+    
+    // Revert if API call failed
+    if ((result && wasActive) || (!result && !wasActive)) {
+        btn.classList.toggle('active');
+        btn.innerHTML = btn.classList.contains('active') 
+            ? '<i class="fas fa-heart"></i> Remove' 
+            : '<i class="far fa-heart"></i> Wishlist';
+    }
+    
+    // Update badge
+    updateWishlistBadge();
+}
+
+function updateWishlistBadge() {
+    const badge = document.getElementById('wishlistBadgeDropdown');
+    if (badge) {
+        const count = currentUserWishlist.size;
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+}
+
 function handleBookClick(e) {
     e.stopPropagation();
     const id = parseInt(this.dataset.id);
-    bookTicket(id);
+    const title = this.dataset.title;
+    const price = parseFloat(this.dataset.price);
+    bookTicket(id, title, price);
 }
 
-function handleWishlistClick(e) {
-    e.stopPropagation();
-    const id = parseInt(this.dataset.id);
-    const btn = this;
-    toggleWishlist(id, btn);
-}
-
-function bookTicket(id) {
-    const token = localStorage.getItem('attendee_access_token');
+function bookTicket(id, title, price) {
+    const token = getAuthToken();
     if (!token) {
         showToast('🔐 Please login to book tickets', 'info');
         setTimeout(() => window.location.href = '/login/', 1500);
@@ -610,20 +557,12 @@ function bookTicket(id) {
     const event = eventsCatalog.find(e => e.id == id);
     if (!event) return;
     
-    let cart = localStorage.getItem('eventhub_cart');
-    if (cart) {
-        try {
-            cart = JSON.parse(cart);
-        } catch(e) {
-            cart = { items: [], subtotal: 0, platform_fee: 0, total: 0 };
-        }
-    } else {
-        cart = { items: [], subtotal: 0, platform_fee: 0, total: 0 };
-    }
-    
+    // Add to cart
+    const cart = JSON.parse(localStorage.getItem('eventhub_cart') || '{"items":[]}');
     const existingItem = cart.items.find(i => i.id == id);
+    
     if (existingItem) {
-        showToast('🎟️ Ticket already in your booking cart!', 'info');
+        window.location.href = '/cart/';
         return;
     }
     
@@ -634,17 +573,16 @@ function bookTicket(id) {
         date: event.date,
         location: event.location,
         price: event.price,
-        image: event.image,
-        quantity: 1
+        quantity: 1,
+        image: event.image
     });
     
     cart.subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    cart.platform_fee = 0;
     cart.total = cart.subtotal;
     
     localStorage.setItem('eventhub_cart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cart-updated'));
-    showToast('✅ Ticket added to cart! Proceed to checkout', 'success');
+    window.location.href = '/cart/';
 }
 
 function resetFilters() {
@@ -663,17 +601,17 @@ function resetFilters() {
     resetAndReload();
 }
 
-// Make functions available globally
+// Make functions global
 window.resetFilters = resetFilters;
-window.goToNewsletter = goToNewsletter;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => { 
-    await loadWishlistFromAPI();
     showSkeletonCards(6);
+    await loadWishlistFromAPI();
     await loadCategoriesFromAPI();
     await addFilters();
     await loadEventsFromAPI(true);
     await filterAndDisplay();
     setupInfiniteScroll();
+    updateWishlistBadge();
 });
