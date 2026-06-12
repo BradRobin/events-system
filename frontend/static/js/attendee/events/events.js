@@ -1,4 +1,5 @@
 // EVENTS MODULE - Live API Integration (Optimized with Infinite Scroll)
+// FIXED: Storage quota exceeded error, auth issues
 console.log('Events.js loaded');
 
 let currentCategory = "all";
@@ -7,7 +8,7 @@ let filteredEvents = [];
 let eventsCatalog = [];
 let debounceTimer = null;
 let isLoadingMore = false;
-let currentPage = 1;
+let currentOffset = 0;
 const PAGE_SIZE = 12;
 let hasMoreEvents = true;
 let observer = null;
@@ -16,10 +17,12 @@ let observer = null;
 const API = {
     events: '/api/attendee/events/',
     categories: '/api/attendee/categories/',
+    wishlist: '/api/attendee/wishlist/',
 };
 
 // Cache for categories
 let cachedCategories = null;
+let currentUserWishlist = new Set();
 
 // DOM cache
 const domCache = {
@@ -35,24 +38,90 @@ const domCache = {
     }
 };
 
-// Throttle function for scroll events
-function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
+// Helper: Safe storage operations (prevents quota exceeded errors)
+const safeStorage = {
+    setItem: function(key, value) {
+        try {
+            // Check if value is too large (estimate ~5MB limit)
+            const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
+            if (valueStr.length > 4 * 1024 * 1024) { // 4MB limit
+                console.warn(`Storage item ${key} too large, skipping`);
+                return false;
+            }
+            localStorage.setItem(key, valueStr);
+            return true;
+        } catch(e) {
+            if (e.name === 'QuotaExceededError') {
+                console.warn(`Storage quota exceeded for ${key}, clearing old data`);
+                this.clearOldData();
+                try {
+                    localStorage.setItem(key, valueStr);
+                    return true;
+                } catch(e2) {
+                    console.error('Still cannot save after cleanup');
+                    return false;
+                }
+            }
+            return false;
         }
-    };
+    },
+    getItem: function(key) {
+        try {
+            const value = localStorage.getItem(key);
+            return value ? JSON.parse(value) : null;
+        } catch(e) {
+            return null;
+        }
+    },
+    clearOldData: function() {
+        // Remove old/unused storage items
+        const keysToRemove = [
+            'eventhub_events_prefetch_v1',
+            'eventhub_events_prefetch_old',
+            'eventhub_cart_backup',
+            'eventhub_old_searches'
+        ];
+        keysToRemove.forEach(key => {
+            try { localStorage.removeItem(key); } catch(e) {}
+        });
+        // Also clear sessionStorage for the prefetch service
+        try { sessionStorage.clear(); } catch(e) {}
+    }
+};
+
+// Helper: Get auth token
+function getAuthToken() {
+    return localStorage.getItem('attendee_access_token') || localStorage.getItem('access_token');
+}
+
+// Helper: Check if user is authenticated
+function isAuthenticated() {
+    const token = getAuthToken();
+    if (!token) return false;
+    
+    // Quick check if token looks valid
+    if (token.split('.').length !== 3) return false;
+    
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const exp = payload.exp * 1000;
+        return Date.now() < exp;
+    } catch(e) {
+        return !!token;
+    }
 }
 
 function showToast(message, type) {
+    const existing = document.querySelector('.custom-toast');
+    if (existing) existing.remove();
     const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${type}`;
+    toast.className = `custom-toast toast-${type}`;
     toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i><span>${escapeHtml(message)}</span>`;
     document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 function showSkeletonCards(count = 6) {
@@ -87,83 +156,27 @@ function getEventImageUrl(event) {
     return (event.image || event.banner_image || '').trim();
 }
 
-function showImageFallback(img) {
-    const container = img.closest('.card-image-container');
-    if (!container) return;
-
-    img.remove();
-    if (!container.querySelector('.card-image-fallback')) {
-        const fallback = document.createElement('div');
-        fallback.className = 'card-image-fallback';
-        fallback.setAttribute('aria-hidden', 'true');
-        fallback.innerHTML = '<i class="fas fa-calendar-alt"></i>';
-        const overlay = container.querySelector('.card-gradient-overlay');
-        container.insertBefore(fallback, overlay);
-    }
-
-    const skeleton = container.querySelector('.card-image-skeleton');
-    if (skeleton) skeleton.classList.add('is-hidden');
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
-function markEventImageLoaded(img) {
-    img.classList.remove('is-loading');
-    img.classList.add('is-loaded');
-    const skeleton = img.closest('.card-image-container')?.querySelector('.card-image-skeleton');
-    if (skeleton) skeleton.classList.add('is-hidden');
-}
-
-function initEventCardImages() {
-    document.querySelectorAll('.card-bg-image.is-loading').forEach(img => {
-        const finish = () => markEventImageLoaded(img);
-        if (img.complete && img.naturalWidth > 0) {
-            finish();
-            return;
-        }
-        img.addEventListener('load', finish, { once: true });
-        img.addEventListener('error', () => {
-            showImageFallback(img);
-        }, { once: true });
-    });
-}
-
-function getPrefetchedCatalog() {
-    if (!window.EventhubEventsPrefetch) return null;
-    const cached = EventhubEventsPrefetch.getCached();
-    if (!cached) return null;
-    return {
-        events: cached.events || [],
-        categories: cached.categories || [],
-        timestamp: cached.timestamp || 0,
-    };
-}
-
-function canUsePrefetchedCatalog() {
-    return currentCategory === 'all' && !currentSearch;
-}
-
+// FIXED: Load events with better error handling and no storage quota issues
 async function loadEventsFromAPI(reset = true) {
     if (reset) {
-        currentPage = 1;
+        currentOffset = 0;
         eventsCatalog = [];
         hasMoreEvents = true;
-
-        if (canUsePrefetchedCatalog()) {
-            const prefetched = getPrefetchedCatalog();
-            if (prefetched && prefetched.events.length) {
-                eventsCatalog = prefetched.events;
-                hasMoreEvents = prefetched.events.length >= PAGE_SIZE;
-                currentPage = 2;
-                return true;
-            }
-        }
     }
-
+    
     if (!hasMoreEvents && !reset) return false;
-
+    
     try {
         const params = new URLSearchParams();
-        params.set('page', String(currentPage));
-        params.set('limit', currentSearch ? '200' : String(PAGE_SIZE));
+        params.set('offset', currentOffset);
+        params.set('limit', PAGE_SIZE);
 
         if (currentCategory !== 'all') {
             params.set('category', currentCategory);
@@ -178,25 +191,18 @@ async function loadEventsFromAPI(reset = true) {
         const data = await response.json();
 
         if (data.success) {
-            const batch = data.events || data.results || [];
             if (reset) {
-                eventsCatalog = batch;
+                eventsCatalog = data.events || [];
             } else {
-                eventsCatalog.push(...batch);
+                eventsCatalog.push(...(data.events || []));
             }
-
-            if (canUsePrefetchedCatalog() && window.EventhubEventsPrefetch && eventsCatalog.length) {
-                const existing = getPrefetchedCatalog();
-                EventhubEventsPrefetch.seed(eventsCatalog, existing ? existing.categories : cachedCategories || []);
-            }
-
-            hasMoreEvents = batch.length === PAGE_SIZE && !currentSearch;
-            currentPage += 1;
+            currentOffset += data.events?.length || 0;
+            hasMoreEvents = (data.events?.length || 0) === PAGE_SIZE;
             return true;
+        } else {
+            console.error('Failed to load events:', data.message);
+            return false;
         }
-
-        console.error('Failed to load events:', data.message);
-        return false;
     } catch (error) {
         console.error('Error loading events:', error);
         return false;
@@ -204,35 +210,130 @@ async function loadEventsFromAPI(reset = true) {
 }
 
 async function loadCategoriesFromAPI() {
-    const prefetched = getPrefetchedCatalog();
-    if (prefetched && prefetched.categories.length) {
-        cachedCategories = prefetched.categories;
-        return cachedCategories;
-    }
-
     if (cachedCategories) {
         return cachedCategories;
     }
-
+    
     try {
         const response = await fetch(API.categories);
         const data = await response.json();
         
         if (data.success && data.categories) {
             cachedCategories = data.categories;
-            if (window.EventhubEventsPrefetch) {
-                const existing = getPrefetchedCatalog();
-                const events = existing ? existing.events : eventsCatalog;
-                if ((events && events.length) || data.categories.length) {
-                    EventhubEventsPrefetch.seed(events || [], data.categories);
-                }
-            }
             return cachedCategories;
         }
         return [];
     } catch (error) {
         console.error('Error loading categories:', error);
         return [];
+    }
+}
+
+// FIXED: Load wishlist from API (unified) - no storage issues
+async function loadWishlistFromAPI() {
+    const token = getAuthToken();
+    if (!token) {
+        currentUserWishlist.clear();
+        return;
+    }
+    
+    try {
+        const response = await fetch(API.wishlist, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.wishlist) {
+                currentUserWishlist.clear();
+                data.wishlist.forEach(item => {
+                    currentUserWishlist.add(item.event_id || item.id);
+                });
+                // Only save to localStorage if small enough
+                const wishlistArray = Array.from(currentUserWishlist);
+                if (wishlistArray.length < 1000) {
+                    safeStorage.setItem('event_wishlist', wishlistArray);
+                }
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading wishlist from API:', error);
+    }
+    
+    // Fallback to localStorage
+    const localWishlist = safeStorage.getItem('event_wishlist') || [];
+    currentUserWishlist = new Set(localWishlist);
+}
+
+// FIXED: Toggle wishlist with API
+async function toggleWishlistAPI(eventId) {
+    const token = getAuthToken();
+    if (!token) {
+        showToast('🔐 Please login to save to wishlist', 'info');
+        setTimeout(() => window.location.href = '/login/', 1500);
+        return false;
+    }
+    
+    const isInWishlist = currentUserWishlist.has(eventId);
+    
+    try {
+        if (!isInWishlist) {
+            const response = await fetch(API.wishlist, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ event_id: eventId })
+            });
+            
+            if (response.ok) {
+                currentUserWishlist.add(eventId);
+                safeStorage.setItem('event_wishlist', Array.from(currentUserWishlist));
+                showToast('❤️ Added to wishlist!', 'success');
+                return true;
+            } else {
+                const data = await response.json();
+                if (data.message === 'already in wishlist') {
+                    currentUserWishlist.add(eventId);
+                    return true;
+                }
+                throw new Error(data.message || 'Failed to add to wishlist');
+            }
+        } else {
+            const response = await fetch(`${API.wishlist}${eventId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                currentUserWishlist.delete(eventId);
+                safeStorage.setItem('event_wishlist', Array.from(currentUserWishlist));
+                showToast('🗑️ Removed from wishlist', 'info');
+                return false;
+            } else {
+                throw new Error('Failed to remove from wishlist');
+            }
+        }
+    } catch (error) {
+        console.error('Wishlist API error:', error);
+        // Fallback to localStorage only
+        if (!isInWishlist) {
+            currentUserWishlist.add(eventId);
+            showToast('❤️ Added to wishlist (offline)', 'success');
+        } else {
+            currentUserWishlist.delete(eventId);
+            showToast('🗑️ Removed from wishlist', 'info');
+        }
+        safeStorage.setItem('event_wishlist', Array.from(currentUserWishlist));
+        return !isInWishlist;
     }
 }
 
@@ -279,29 +380,8 @@ async function addFilters(categoriesData = null) {
 function setupPageSearchListener() {
     const pageSearchInput = document.getElementById('searchInput');
     if (pageSearchInput) {
-        const wrapper = pageSearchInput.closest('.search-wrapper');
-        let suggestionsContainer = document.getElementById('searchSuggestions');
-        if (wrapper && !suggestionsContainer) {
-            suggestionsContainer = document.createElement('div');
-            suggestionsContainer.id = 'searchSuggestions';
-            suggestionsContainer.className = 'search-suggestions';
-            wrapper.appendChild(suggestionsContainer);
-        }
-
         pageSearchInput.removeEventListener('input', handleSearchInput);
         pageSearchInput.addEventListener('input', handleSearchInput);
-
-        pageSearchInput.removeEventListener('focus', showSuggestions);
-        pageSearchInput.addEventListener('focus', showSuggestions);
-
-        document.addEventListener('click', (e) => {
-            if (suggestionsContainer && !pageSearchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                suggestionsContainer.classList.remove('show');
-            }
-        });
-
-        pageSearchInput.removeEventListener('keydown', handleSearchKeydown);
-        pageSearchInput.addEventListener('keydown', handleSearchKeydown);
     }
 }
 
@@ -310,116 +390,15 @@ function handleSearchInput(e) {
     debounceTimer = setTimeout(() => {
         currentSearch = e.target.value.toLowerCase().trim();
         resetAndReload();
-        showSuggestions();
     }, 300);
-}
-
-function showSuggestions() {
-    const suggestionsContainer = document.getElementById('searchSuggestions');
-    if (!suggestionsContainer) return;
-
-    const recentSearches = JSON.parse(localStorage.getItem('recent_searches') || '[]');
-    if (recentSearches.length === 0) {
-        suggestionsContainer.classList.remove('show');
-        return;
-    }
-
-    const input = document.getElementById('searchInput');
-    const typed = input ? input.value.trim().toLowerCase() : '';
-    
-    const filteredSearches = typed 
-        ? recentSearches.filter(q => q.toLowerCase().includes(typed))
-        : recentSearches;
-
-    if (filteredSearches.length === 0) {
-        suggestionsContainer.classList.remove('show');
-        return;
-    }
-
-    suggestionsContainer.innerHTML = `
-        <div class="suggestion-header">
-            <span>Recent Searches</span>
-            <button class="suggestion-clear-btn" id="clearRecentBtn">Clear</button>
-        </div>
-        ${filteredSearches.map(query => `
-            <div class="suggestion-item" data-query="${escapeHtml(query)}">
-                <i class="fas fa-history"></i>
-                <span>${escapeHtml(query)}</span>
-            </div>
-        `).join('')}
-    `;
-
-    suggestionsContainer.classList.add('show');
-
-    suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const query = item.dataset.query;
-            if (input) {
-                input.value = query;
-                currentSearch = query.toLowerCase();
-                saveSearchQuery(query);
-                resetAndReload();
-            }
-            suggestionsContainer.classList.remove('show');
-        });
-    });
-
-    const clearBtn = document.getElementById('clearRecentBtn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            localStorage.setItem('recent_searches', JSON.stringify([]));
-            suggestionsContainer.classList.remove('show');
-        });
-    }
-}
-
-function handleSearchKeydown(e) {
-    if (e.key === 'Enter') {
-        const query = e.target.value.trim();
-        if (query) {
-            saveSearchQuery(query);
-        }
-        const suggestionsContainer = document.getElementById('searchSuggestions');
-        if (suggestionsContainer) suggestionsContainer.classList.remove('show');
-    }
-}
-
-function saveSearchQuery(query) {
-    if (!query) return;
-    let recentSearches = JSON.parse(localStorage.getItem('recent_searches') || '[]');
-    recentSearches = recentSearches.filter(q => q.toLowerCase() !== query.toLowerCase());
-    recentSearches.unshift(query);
-    if (recentSearches.length > 5) {
-        recentSearches = recentSearches.slice(0, 5);
-    }
-    localStorage.setItem('recent_searches', JSON.stringify(recentSearches));
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 async function resetAndReload() {
     if (observer) observer.disconnect();
     showSkeletonCards(6);
+    await loadWishlistFromAPI();
     await loadEventsFromAPI(true);
     setupInfiniteScroll();
-    await filterAndDisplay();
-}
-
-async function refreshPrefetchedCatalogInBackground(prefetched) {
-    if (!window.EventhubEventsPrefetch) return;
-
-    const fresh = await EventhubEventsPrefetch.start();
-    if (!fresh || !Array.isArray(fresh.events) || !fresh.events.length) return;
-    if (!canUsePrefetchedCatalog()) return;
-    if ((fresh.timestamp || 0) <= (prefetched.timestamp || 0)) return;
-
-    eventsCatalog = fresh.events;
     await filterAndDisplay();
 }
 
@@ -455,17 +434,12 @@ async function filterAndDisplay(updateStats = true) {
                 const categoryName = document.querySelector(`.category-btn[data-category="${currentCategory}"] span`)?.textContent || currentCategory;
                 stats.innerHTML = `📂 ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} in ${categoryName}`;
             } else {
-                stats.innerHTML = `✨ New events coming soon! Check back later.`;
+                stats.innerHTML = `✨ ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''} available`;
             }
         }
     }
     
     renderEvents();
-}
-
-function goToNewsletter() {
-    // Navigate to homepage and scroll to newsletter section
-    window.location.href = '/#newsletterSection';
 }
 
 function renderEvents() {
@@ -477,44 +451,38 @@ function renderEvents() {
     if (filteredEvents.length === 0) { 
         grid.innerHTML = `
             <div class="empty-state">
-                <i class="fas fa-newspaper"></i>
+                <i class="fas fa-calendar-times"></i>
                 <h3>No Events Available</h3>
-                <p>We don't have any events right now. Stay updated with our newsletter!</p>
-                <button onclick="goToNewsletter()" class="btn-browse">
-                    <i class="fas fa-envelope"></i> Subscribe to Newsletter
+                <p>We don't have any events matching your criteria right now.</p>
+                <button onclick="resetFilters()" class="btn-browse">
+                    <i class="fas fa-redo"></i> Reset Filters
                 </button>
             </div>
         `; 
         return; 
     }
     
-    const wishlistIds = window.EventhubWishlistStorage
-        ? EventhubWishlistStorage.getWishlistIds()
-        : [];
-    
     const fragment = document.createDocumentFragment();
     const tempDiv = document.createElement('div');
     
     filteredEvents.forEach(e => {
-        const inWishlist = wishlistIds.includes(e.id);
+        const inWishlist = currentUserWishlist.has(e.id);
         const imageUrl = getEventImageUrl(e);
         const imageBlock = imageUrl
-            ? `<img src="${escapeHtml(imageUrl)}" class="card-bg-image is-loading" alt="" loading="lazy" decoding="async">`
+            ? `<img src="${escapeHtml(imageUrl)}" class="card-bg-image" alt="${escapeHtml(e.title)}" loading="lazy" decoding="async" onerror="this.src='/static/images/placeholder.jpg'">`
             : `<div class="card-image-fallback" aria-hidden="true"><i class="fas fa-calendar-alt"></i></div>`;
-        const imageContainerClass = imageUrl ? 'card-image-container' : 'card-image-container card-image-container--no-image';
         
         tempDiv.innerHTML = `
-            <div class="event-card premium-card" onclick="window.location.href='/events/detail/?id=${e.id}'">
-                <div class="${imageContainerClass}">
-                    <div class="card-image-skeleton" aria-hidden="true"></div>
+            <div class="event-card premium-card">
+                <div class="card-image-container">
                     ${imageBlock}
-                    <div class="card-gradient-overlay"></div>
+                    <div class="card-image-skeleton is-hidden" aria-hidden="true"></div>
                     ${e.featured || e.is_featured ? '<span class="featured-badge">Featured</span>' : ''}
-                    <button class="wishlist-btn" data-id="${e.id}" style="background:${inWishlist ? '#f59e0b' : 'rgba(0,0,0,0.5)'}">
-                        <i class="${inWishlist ? 'fas' : 'far'} fa-heart"></i> ${inWishlist ? 'Remove' : 'Add to wish list'}
+                    <button class="wishlist-btn ${inWishlist ? 'active' : ''}" data-id="${e.id}">
+                        <i class="${inWishlist ? 'fas' : 'far'} fa-heart"></i> ${inWishlist ? 'Remove' : 'Wishlist'}
                     </button>
                 </div>
-                <div class="card-content">
+                <div class="card-content" onclick="window.location.href='/events/detail/?id=${e.id}'">
                     <span class="card-category">${escapeHtml(e.category_name || 'Event')}</span>
                     <h3 class="card-title">${escapeHtml(e.title)}</h3>
                     <div class="card-meta">
@@ -527,7 +495,7 @@ function renderEvents() {
                     <button class="card-action-btn view-details-btn" onclick="event.stopPropagation();window.location.href='/events/detail/?id=${e.id}'">
                         <i class="fas fa-info-circle"></i> Details
                     </button>
-                    <button class="card-action-btn book-ticket-btn add-to-cart-btn" data-id="${e.id}">
+                    <button class="card-action-btn book-ticket-btn" data-id="${e.id}" data-title="${escapeHtml(e.title)}" data-price="${e.price}">
                         <i class="fas fa-ticket-alt"></i> Book Ticket
                     </button>
                 </div>
@@ -539,6 +507,7 @@ function renderEvents() {
     grid.innerHTML = '';
     grid.appendChild(fragment);
     
+    // Attach event listeners
     document.querySelectorAll('.book-ticket-btn').forEach(btn => {
         btn.removeEventListener('click', handleBookClick);
         btn.addEventListener('click', handleBookClick);
@@ -548,8 +517,6 @@ function renderEvents() {
         btn.removeEventListener('click', handleWishlistClick);
         btn.addEventListener('click', handleWishlistClick);
     });
-
-    initEventCardImages();
 }
 
 function setupInfiniteScroll() {
@@ -579,66 +546,51 @@ function setupInfiniteScroll() {
     observer.observe(sentinel);
 }
 
-function toggleWishlist(id, btn) {
-    const token = localStorage.getItem('attendee_access_token');
-    if (!token) {
-        showToast('🔐 Please login to save to wishlist', 'info');
-        setTimeout(() => window.location.href = '/login/', 1500);
-        return;
+async function handleWishlistClick(e) {
+    e.stopPropagation();
+    const btn = this;
+    const eventId = parseInt(btn.dataset.id);
+    
+    // Optimistic UI update
+    const wasActive = btn.classList.contains('active');
+    btn.classList.toggle('active');
+    btn.innerHTML = btn.classList.contains('active') 
+        ? '<i class="fas fa-heart"></i> Remove' 
+        : '<i class="far fa-heart"></i> Wishlist';
+    
+    const result = await toggleWishlistAPI(eventId);
+    
+    // Revert if API call failed
+    if ((result && wasActive) || (!result && !wasActive)) {
+        btn.classList.toggle('active');
+        btn.innerHTML = btn.classList.contains('active') 
+            ? '<i class="fas fa-heart"></i> Remove' 
+            : '<i class="far fa-heart"></i> Wishlist';
     }
     
-    const event = eventsCatalog.find(e => e.id == id);
-    if (!event) return;
-    
-    const storage = window.EventhubWishlistStorage;
-    if (!storage) return;
+    // Update badge
+    updateWishlistBadge();
+}
 
-    const { list, added } = storage.toggleWishlist({
-        id: event.id,
-        title: event.title,
-        price: event.price,
-        image: event.image,
-        location: event.location,
-        date: event.date,
-        category: event.category_name,
-        original_price: event.original_price,
-        added_at: new Date().toISOString(),
-    });
-
-    if (added) {
-        btn.innerHTML = '<i class="fas fa-heart"></i> Remove';
-        btn.style.background = '#f59e0b';
-        showToast('❤️ Event saved to wishlist!', 'success');
-    } else {
-        btn.innerHTML = '<i class="far fa-heart"></i> Add to wish list';
-        btn.style.background = 'rgba(0,0,0,0.5)';
-        showToast('🗑️ Removed from wishlist', 'info');
-    }
-
-    window.dispatchEvent(new Event('wishlist-updated'));
-
+function updateWishlistBadge() {
     const badge = document.getElementById('wishlistBadgeDropdown');
     if (badge) {
-        badge.textContent = list.length;
-        badge.style.display = list.length > 0 ? 'inline-block' : 'none';
+        const count = currentUserWishlist.size;
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
     }
 }
 
 function handleBookClick(e) {
     e.stopPropagation();
     const id = parseInt(this.dataset.id);
-    bookTicket(id);
+    const title = this.dataset.title;
+    const price = parseFloat(this.dataset.price);
+    bookTicket(id, title, price);
 }
 
-function handleWishlistClick(e) {
-    e.stopPropagation();
-    const id = parseInt(this.dataset.id);
-    const btn = this;
-    toggleWishlist(id, btn);
-}
-
-function bookTicket(id) {
-    const token = localStorage.getItem('attendee_access_token');
+function bookTicket(id, title, price) {
+    const token = getAuthToken();
     if (!token) {
         showToast('🔐 Please login to book tickets', 'info');
         setTimeout(() => window.location.href = '/login/', 1500);
@@ -648,53 +600,32 @@ function bookTicket(id) {
     const event = eventsCatalog.find(e => e.id == id);
     if (!event) return;
     
-    const storage = window.EventhubCartStorage;
-    const cart = storage ? storage.loadEventhubCart() : { items: [], subtotal: 0, platform_fee: 0, total: 0 };
-
+    // Add to cart with safe storage
+    let cart = safeStorage.getItem('eventhub_cart') || { items: [], subtotal: 0, total: 0 };
     const existingItem = cart.items.find(i => i.id == id);
+    
     if (existingItem) {
         window.location.href = '/cart/';
         return;
     }
-
-    const item = storage
-        ? storage.slimCartItem({
-            id: event.id,
-            title: event.title,
-            category: event.category_name,
-            date: event.date,
-            location: event.location,
-            price: event.price,
-            image: event.image,
-            quantity: 1,
-        })
-        : {
-            id: event.id,
-            title: event.title,
-            category: event.category_name,
-            date: event.date,
-            location: event.location,
-            price: event.price,
-            quantity: 1,
-        };
-
-    cart.items.push(item);
+    
+    cart.items.push({
+        id: event.id,
+        title: event.title,
+        category: event.category_name,
+        date: event.date,
+        location: event.location,
+        price: event.price,
+        quantity: 1,
+        image: event.image
+    });
+    
     cart.subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    cart.platform_fee = 0;
     cart.total = cart.subtotal;
-
-    try {
-        if (storage) {
-            storage.saveEventhubCart(cart);
-        } else {
-            localStorage.setItem('eventhub_cart', JSON.stringify(cart));
-        }
-        window.dispatchEvent(new Event('cart-updated'));
-        window.location.href = '/cart/';
-    } catch (error) {
-        console.error('Failed to save cart:', error);
-        showToast('Could not save cart. Please clear site data or book from the event page.', 'error');
-    }
+    
+    safeStorage.setItem('eventhub_cart', cart);
+    window.dispatchEvent(new Event('cart-updated'));
+    window.location.href = '/cart/';
 }
 
 function resetFilters() {
@@ -713,33 +644,20 @@ function resetFilters() {
     resetAndReload();
 }
 
-// Make resetFilters and goToNewsletter available globally
+// Make functions global
 window.resetFilters = resetFilters;
-window.goToNewsletter = goToNewsletter;
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', async () => {
-    if (window.EventhubEventsPrefetch) {
-        EventhubEventsPrefetch.start();
-    }
-
-    const prefetched = canUsePrefetchedCatalog() ? getPrefetchedCatalog() : null;
-    const hasInstantCatalog = Boolean(prefetched && prefetched.events && prefetched.events.length);
-
-    if (hasInstantCatalog) {
-        eventsCatalog = prefetched.events;
-        cachedCategories = prefetched.categories || null;
-        await addFilters(prefetched.categories || null);
-        setupInfiniteScroll();
-        await filterAndDisplay();
-        refreshPrefetchedCatalogInBackground(prefetched);
-        return;
-    }
-
+document.addEventListener('DOMContentLoaded', async () => { 
+    // Clear any problematic storage items first
+    safeStorage.clearOldData();
+    
     showSkeletonCards(6);
+    await loadWishlistFromAPI();
     await loadCategoriesFromAPI();
     await addFilters();
     await loadEventsFromAPI(true);
     await filterAndDisplay();
     setupInfiniteScroll();
+    updateWishlistBadge();
 });
