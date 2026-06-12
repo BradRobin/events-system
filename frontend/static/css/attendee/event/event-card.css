@@ -22,7 +22,7 @@
     border-color: #e2e8f0;
 }
 
-/* Animated border on hover - orange circulating effect */
+/* Animated border on hover - orange circulating effect - FIXED Z-INDEX */
 .premium-card:hover::before {
     content: '';
     position: absolute;
@@ -34,7 +34,7 @@
         #f59e0b, #ec6408, #f59e0b, #ec6408, #f59e0b);
     background-size: 400% 400%;
     border-radius: 18px;
-    z-index: 1;
+    z-index: 0;
     animation: borderGlow 3s ease infinite;
     opacity: 1;
 }
@@ -48,30 +48,24 @@
     bottom: 0;
     background: #ffffff;
     border-radius: 15px;
-    z-index: 2;
+    z-index: 1;
 }
 
 @keyframes borderGlow {
-    0% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-/* Image container */
+/* Image container - FIXED HEIGHT FOR ALL DEVICES */
 .card-image-container {
     position: relative;
     width: 100%;
-    height: 200px;
+    height: 220px;
     overflow: hidden;
     background: #f1f5f9;
     flex-shrink: 0;
-    z-index: 3;
+    z-index: 5;
 }
 
 /* Gradient overlay at bottom of image */
@@ -81,7 +75,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 24px;
+    height: 30px;
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
     pointer-events: none;
     z-index: 5;
@@ -91,13 +85,7 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: linear-gradient(
-        90deg,
-        #f1f5f9 0%,
-        #e2e8f0 45%,
-        #f8fafc 55%,
-        #f1f5f9 100%
-    );
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 45%, #f8fafc 55%, #f1f5f9 100%);
     background-size: 220% 100%;
     animation: cardImageShimmer 1.35s ease-in-out infinite;
 }
@@ -144,7 +132,7 @@
     100% { background-position: -120% 0; }
 }
 
-/* Content section */
+/* Content section - stays above hover overlay */
 .card-content {
     padding: 16px;
     background: #ffffff;
@@ -252,7 +240,7 @@
     font-weight: 400;
 }
 
-/* Action buttons at the very bottom */
+/* Action buttons - stays visible on hover */
 .card-actions {
     display: flex;
     gap: 8px;
@@ -260,7 +248,7 @@
     background: #ffffff;
     border-top: 1px solid #f1f5f9;
     position: relative;
-    z-index: 10;
+    z-index: 15;
 }
 
 .card-action-btn {
@@ -303,7 +291,7 @@
     background: linear-gradient(135deg, #ec6408, #d97706);
 }
 
-/* Badges */
+/* Badges - FIXED WISHLIST BUTTON VISIBILITY */
 .featured-badge {
     position: absolute;
     top: 12px;
@@ -323,29 +311,30 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.6);
     border: none;
-    padding: 6px 10px;
+    padding: 6px 12px;
     border-radius: 20px;
-    color: #1e293b;
+    color: white;
     font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     z-index: 20;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    backdrop-filter: blur(4px);
 }
 
 .wishlist-btn i {
     transition: transform 0.2s ease;
+    color: white;
 }
 
 .wishlist-btn:hover {
-    background: #ffffff;
-    color: #ef4444;
+    background: #f59e0b;
+    transform: scale(1.05);
 }
 
 .wishlist-btn:hover i {
@@ -353,9 +342,8 @@
 }
 
 .wishlist-btn.active {
-    background: #fef2f2;
-    color: #ef4444;
-    border: 1px solid #fee2e2;
+    background: #f59e0b;
+    color: white;
 }
 
 /* Card Animations */
@@ -382,14 +370,20 @@
 .premium-card:nth-child(5) { animation-delay: 0.25s; }
 .premium-card:nth-child(6) { animation-delay: 0.3s; }
 
-/* Responsive */
+/* Responsive - ALL DEVICES HAVE IMAGES */
+@media (max-width: 1024px) {
+    .card-image-container {
+        height: 200px;
+    }
+}
+
 @media (max-width: 768px) {
     .card-image-container {
         height: 180px;
     }
     
     .card-image-container::after {
-        height: 18px;
+        height: 20px;
     }
     
     .card-content {
@@ -423,5 +417,10 @@
     
     .card-image-container::after {
         height: 15px;
+    }
+    
+    .wishlist-btn {
+        padding: 4px 10px;
+        font-size: 0.6rem;
     }
 }
