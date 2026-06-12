@@ -230,6 +230,9 @@ LOGOUT_REDIRECT_URL = '/'
 # Session Settings
 SESSION_COOKIE_AGE = 86400
 SESSION_SAVE_EVERY_REQUEST = True
+if os.environ.get('VERCEL') or not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # Email Settings
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
@@ -249,6 +252,15 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
 ]
+_site_url = (os.environ.get('SITE_URL') or '').strip().rstrip('/')
+if _site_url:
+    CSRF_TRUSTED_ORIGINS.append(_site_url)
+_extra_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if _extra_csrf:
+    CSRF_TRUSTED_ORIGINS.extend(
+        origin.strip().rstrip('/') for origin in _extra_csrf.split(',') if origin.strip()
+    )
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS))
 
 # REST Framework Settings
 REST_FRAMEWORK = {

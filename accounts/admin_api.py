@@ -25,12 +25,33 @@ User = get_user_model()
 
 # ============ HELPER: STAFF REQUIRED CHECK ============
 def is_admin_or_staff(user):
-    return user.is_authenticated and (user.is_staff or user.is_superuser)
+    if not user.is_authenticated:
+        return False
+    role = getattr(user, 'role', None)
+    return user.is_staff or user.is_superuser or role == 'admin'
+
+
+def resolve_admin_user(request):
+    """Resolve admin user from Django session or Bearer token (Vercel/serverless)."""
+    if is_admin_or_staff(request.user):
+        return request.user
+
+    from accounts.auth import authenticate_bearer
+    bearer_user, _error = authenticate_bearer(request)
+    if bearer_user and is_admin_or_staff(bearer_user):
+        return bearer_user
+    return None
+
 
 def admin_required_json(view_func):
     def _wrapped(request, *args, **kwargs):
-        if not is_admin_or_staff(request.user):
-            return JsonResponse({'success': False, 'message': 'Forbidden. Admin privileges required.'}, status=403)
+        admin_user = resolve_admin_user(request)
+        if not admin_user:
+            return JsonResponse(
+                {'success': False, 'message': 'Forbidden. Admin privileges required.'},
+                status=403,
+            )
+        request.user = admin_user
         return view_func(request, *args, **kwargs)
     return _wrapped
 
