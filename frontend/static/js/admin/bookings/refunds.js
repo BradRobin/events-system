@@ -187,8 +187,8 @@ async function rejectRefund() {
     }
 }
 
-function viewRefundDetail(refundId) {
-    window.open(`/admin-portal/refunds/detail/?id=${refundId}`, '_blank');
+async function viewRefundDetail(refundId) {
+    await openProcessModal(refundId);
 }
 
 function closeProcessModal() {

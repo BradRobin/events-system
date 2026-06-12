@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function goBack() {
+    const referrer = document.referrer;
+    if (referrer && referrer.includes('/admin-portal/')) {
+        window.location.href = referrer;
+        return;
+    }
     window.location.href = '/admin-portal/events/pending/';
 }
 

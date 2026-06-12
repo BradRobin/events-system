@@ -100,8 +100,25 @@ def seed_initial_data():
 
     return {
         "support_tickets": support_tickets,
-        "next_support_ticket_id": 4
+        "next_support_ticket_id": 4,
+        "approved_organizer_ids": [],
     }
+
+
+def get_approved_organizer_ids():
+    store = load_store()
+    return store.get("approved_organizer_ids", [])
+
+
+def approve_organizer(organizer_id):
+    store = load_store()
+    approved = store.get("approved_organizer_ids", [])
+    organizer_id = int(organizer_id)
+    if organizer_id not in approved:
+        approved.append(organizer_id)
+        store["approved_organizer_ids"] = approved
+        save_store(store)
+    return True
 
 
 def _notification_state_map():

@@ -269,7 +269,7 @@ function displaySuspendedOrganizers(organizers) {
     if (!tbody) return;
     
     if (!organizers || organizers.length === 0) {
-        tbody.innerHTML = '<td><td colspan="5" class="text-center">No suspended organizers found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No suspended organizers found</td></tr>';
         return;
     }
     

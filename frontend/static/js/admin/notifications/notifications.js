@@ -41,11 +41,10 @@ async function sendBroadcast() {
     Loader.show('Sending broadcast...');
     
     try {
-        await apiRequest('/api/admin/notifications/broadcast/', 'POST', {
-            title: title,
+        await apiRequest('/api/admin/broadcast/', 'POST', {
+            subject: title,
             message: message,
-            audience: audience,
-            method: method
+            audience: audience
         });
         
         showToast('Broadcast sent successfully', 'success');

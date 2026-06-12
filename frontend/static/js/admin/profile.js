@@ -99,7 +99,8 @@ async function loadUserProfile() {
         
         if (!response.ok) throw new Error('Failed to load profile');
         
-        currentUser = await response.json();
+        const data = await response.json();
+        currentUser = data.user || data;
         updateProfileUI(currentUser);
     } catch (error) {
         console.error('Error loading profile:', error);
@@ -427,11 +428,15 @@ async function loadUserStats() {
         
         if (!response.ok) throw new Error('Failed to load stats');
         
-        const stats = await response.json();
+        const data = await response.json();
+        const stats = data.stats || data;
         
-        document.getElementById('totalEvents').textContent = stats.events_count || 0;
-        document.getElementById('totalBookings').textContent = stats.bookings_count || 0;
-        document.getElementById('totalSpent').textContent = formatCurrency(stats.total_spent || 0);
+        const eventsEl = document.getElementById('totalEvents');
+        const bookingsEl = document.getElementById('totalBookings');
+        const spentEl = document.getElementById('totalSpent');
+        if (eventsEl) eventsEl.textContent = stats.events_managed || stats.events_count || 0;
+        if (bookingsEl) bookingsEl.textContent = stats.tickets_processed || stats.bookings_count || 0;
+        if (spentEl) spentEl.textContent = formatCurrency(stats.revenue_generated || stats.total_spent || 0);
     } catch (error) {
         console.error('Error loading stats:', error);
     }

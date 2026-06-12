@@ -326,17 +326,23 @@ urlpatterns = [
     path('api/admin/users/', admin_api.users_list_api, name='admin_users_list'),
     path('api/admin/users/stats/', admin_api.users_stats, name='admin_users_stats'),
     path('api/admin/users/export/', admin_api.users_export, name='admin_users_export'),
+    path('api/admin/users/<int:user_id>/', admin_api.user_detail_api, name='admin_user_detail'),
     path('api/admin/users/<int:user_id>/reset-password/', admin_api.user_reset_password, name='admin_user_reset_password'),
     path('api/admin/users/<int:user_id>/suspend/', admin_api.user_suspend, name='admin_user_suspend'),
     path('api/admin/users/<int:user_id>/activate/', admin_api.user_activate, name='admin_user_activate'),
+    path('api/admin/users/<int:user_id>/reactivate/', admin_api.user_activate, name='admin_user_reactivate'),
 
     # Organizer Management
     path('api/admin/organizers/stats/', admin_api.organizers_stats_api, name='admin_organizers_stats'),
     path('api/admin/organizers/verified/', admin_api.organizers_verified_api, name='admin_organizers_verified'),
     path('api/admin/organizers/suspended/', admin_api.organizers_suspended_api, name='admin_organizers_suspended'),
+    path('api/admin/organizers/pending/stats/', admin_api.organizers_pending_stats_api, name='admin_organizers_pending_stats'),
     path('api/admin/organizers/pending/', admin_api.organizers_pending_api, name='admin_organizers_pending'),
     path('api/admin/organizers/create/', admin_api.organizer_create_api, name='admin_organizers_create'),
     path('api/admin/organizers/<int:organizer_id>/', admin_api.organizer_detail_api, name='admin_organizer_detail'),
+    path('api/admin/organizers/<int:organizer_id>/verify/', admin_api.organizer_verify_api, name='admin_organizer_verify'),
+    path('api/admin/organizers/<int:organizer_id>/approve/', admin_api.organizer_verify_api, name='admin_organizer_approve'),
+    path('api/admin/organizers/<int:organizer_id>/reject/', admin_api.organizer_reject_api, name='admin_organizer_reject'),
     path('api/admin/organizers/<int:organizer_id>/suspend/', admin_api.organizer_suspend_api, name='admin_organizer_suspend'),
     path('api/admin/organizers/<int:organizer_id>/reactivate/', admin_api.organizer_reactivate_api, name='admin_organizer_reactivate'),
     path('api/admin/organizers/<int:organizer_id>/delete/', admin_api.organizer_delete_api, name='admin_organizer_delete'),
@@ -371,6 +377,7 @@ urlpatterns = [
     path('api/admin/payouts/stats/', admin_api.payouts_stats, name='admin_payouts_stats'),
     path('api/admin/payouts/process/', admin_api.payout_process, name='admin_payout_process'),
     path('api/admin/payouts/process-all/', admin_api.payout_process_all, name='admin_payout_process_all'),
+    path('api/admin/payouts/<int:payout_id>/', admin_api.payout_detail_api, name='admin_payout_detail'),
 
     # Reports & Analytics
     path('api/admin/reports/kpi/', admin_api.reports_kpi, name='admin_reports_kpi'),
@@ -392,15 +399,20 @@ urlpatterns = [
     # Notifications
     path('api/admin/notifications/', admin_api.notifications_api, name='admin_notifications'),
     path('api/admin/notifications/recent/', admin_api.api_notifications_recent, name='admin_notifications_recent'),
+    path('api/admin/notifications/mark-all-read/', admin_api.api_notifications_mark_all_read, name='admin_notifications_mark_all_read'),
+    path('api/admin/notifications/prune/', admin_api.api_notifications_prune, name='admin_notifications_prune'),
     path('api/admin/notifications/<str:notification_id>/read/', admin_api.api_notification_mark_read, name='admin_notification_mark_read'),
     path('api/admin/notifications/<str:notification_id>/dismiss/', admin_api.api_notification_dismiss, name='admin_notification_dismiss'),
     path('api/admin/notifications/<str:notification_id>/', admin_api.api_notification_delete, name='admin_notification_delete'),
-    path('api/admin/notifications/mark-all-read/', admin_api.api_notifications_mark_all_read, name='admin_notifications_mark_all_read'),
-    path('api/admin/notifications/prune/', admin_api.api_notifications_prune, name='admin_notifications_prune'),
 
     # Settings & Profile
     path('api/admin/user/profile/', admin_api.user_profile, name='admin_user_profile'),
+    path('api/admin/profile/', admin_api.user_profile, name='admin_profile'),
+    path('api/admin/profile/update/', admin_api.user_profile_update, name='admin_profile_update'),
+    path('api/admin/profile/change-password/', admin_api.user_profile_change_password, name='admin_profile_change_password'),
+    path('api/admin/profile/stats/', admin_api.user_profile_stats, name='admin_profile_stats'),
     path('api/admin/settings/', admin_api.settings_api, name='admin_settings_api'),
+    path('api/admin/settings/general/', admin_api.settings_general_api, name='admin_settings_general'),
     path('api/admin/broadcast/', admin_api.api_admin_broadcast, name='admin_settings_broadcast'),
 
     # Payments - M-Pesa

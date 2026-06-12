@@ -17,7 +17,8 @@ from accounts.admin_store import (
     delete_notification, dismiss_notification,
     expire_notifications_for_entity,
     get_support_tickets, get_support_ticket_detail,
-    add_support_ticket_reply, update_support_ticket_status
+    add_support_ticket_reply, update_support_ticket_status,
+    get_approved_organizer_ids, approve_organizer,
 )
 
 User = get_user_model()
@@ -994,6 +995,61 @@ def user_suspend(request, user_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 @admin_required_json
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def user_detail_api(request, user_id):
+    try:
+        u = get_object_or_404(User, id=user_id)
+        data = {
+            'id': u.id,
+            'username': u.username,
+            'email': u.email,
+            'full_name': u.get_full_name() or u.username,
+            'phone': u.phone or 'N/A',
+            'role': u.role,
+            'status': 'active' if u.is_active else 'suspended',
+            'email_verified': True,
+            'created_at': u.date_joined.isoformat(),
+            'last_login': u.last_login.isoformat() if u.last_login else None,
+        }
+        if u.role == 'organizer':
+            event_count = Event.objects.filter(organizer=u).count()
+            tickets_sold = Ticket.objects.filter(event__organizer=u).exclude(status='cancelled').aggregate(
+                total=Sum('quantity')
+            )
+            rev_agg = Ticket.objects.filter(event__organizer=u).exclude(status='cancelled').aggregate(
+                total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+            )
+            approved_ids = get_approved_organizer_ids()
+            data.update({
+                'business_name': u.organization_name or u.username,
+                'tax_id': 'N/A',
+                'business_address': u.location or 'N/A',
+                'is_verified': u.id in approved_ids or u.has_mpesa_payment_config(),
+                'total_events': event_count,
+                'total_tickets': int(tickets_sold['total'] or 0),
+                'total_revenue': float(rev_agg['total'] or 0.0),
+                'avg_rating': 0,
+            })
+        elif u.role == 'attendee':
+            tickets = Ticket.objects.filter(billing_email=u.email).exclude(status='cancelled')
+            spent_agg = tickets.aggregate(
+                total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+            )
+            data.update({
+                'total_bookings': tickets.count(),
+                'total_tickets': int(tickets.aggregate(total=Sum('quantity'))['total'] or 0),
+                'total_spent': float(spent_agg['total'] or 0.0),
+                'favorite_category': 'N/A',
+            })
+        return JsonResponse({'success': True, 'user': data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
 def user_activate(request, user_id):
     try:
         u = get_object_or_404(User, id=user_id)
@@ -1043,10 +1099,17 @@ def organizers_stats_api(request):
         events_count = Event.objects.filter(organizer__role='organizer').count()
         tickets_sold = Ticket.objects.filter(event__organizer__role='organizer').exclude(status='cancelled').count()
         
+        approved_ids = set(get_approved_organizer_ids())
+        pending = 0
+        for org in User.objects.filter(role='organizer', is_active=True):
+            if org.id not in approved_ids and not org.has_mpesa_payment_config():
+                if Event.objects.filter(organizer=org).count() == 0:
+                    pending += 1
+
         stats = {
             'verified': verified,
             'suspended': suspended,
-            'pending': 0,
+            'pending': pending,
             'total_events': events_count,
             'total_tickets': tickets_sold
         }
@@ -1144,8 +1207,65 @@ def organizers_suspended_api(request):
 @csrf_exempt
 @require_http_methods(["GET"])
 @admin_required_json
+def _pending_organizers_queryset():
+    approved_ids = set(get_approved_organizer_ids())
+    pending = []
+    for org in User.objects.filter(role='organizer', is_active=True).order_by('-date_joined'):
+        if org.id in approved_ids or org.has_mpesa_payment_config():
+            continue
+        if Event.objects.filter(organizer=org).count() > 0:
+            continue
+        pending.append(org)
+    return pending
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def organizers_pending_stats_api(request):
+    try:
+        pending = _pending_organizers_queryset()
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'pending': len(pending),
+                'approved_this_week': len(get_approved_organizer_ids()),
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
 def organizers_pending_api(request):
-    return JsonResponse({'success': True, 'organizers': [], 'pagination': {'current_page': 1, 'total_pages': 1, 'total_items': 0}})
+    try:
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        pending = _pending_organizers_queryset()
+        total_items = len(pending)
+        total_pages = max(1, (total_items + page_size - 1) // page_size)
+        start = (page - 1) * page_size
+        end = start + page_size
+        orgs_slice = pending[start:end]
+        data = [{
+            'id': u.id,
+            'business_name': u.organization_name or u.username,
+            'contact_name': u.get_full_name() or u.username,
+            'email': u.email,
+            'phone': u.phone or 'N/A',
+            'created_at': u.date_joined.isoformat(),
+            'status': 'pending',
+        } for u in orgs_slice]
+        pagination = {
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_items': total_items
+        }
+        return JsonResponse({'success': True, 'organizers': data, 'pagination': pagination})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1219,6 +1339,31 @@ def organizer_suspend_api(request, organizer_id):
         u.is_active = False
         u.save()
         return JsonResponse({'success': True, 'message': 'Organizer suspended successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def organizer_verify_api(request, organizer_id):
+    try:
+        u = get_object_or_404(User, id=organizer_id, role='organizer')
+        approve_organizer(u.id)
+        return JsonResponse({'success': True, 'message': 'Organizer verified successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def organizer_reject_api(request, organizer_id):
+    try:
+        data = json.loads(request.body) if request.body else {}
+        reason = data.get('reason', 'Application rejected by administrator')
+        u = get_object_or_404(User, id=organizer_id, role='organizer')
+        u.is_active = False
+        u.save()
+        return JsonResponse({'success': True, 'message': f'Organizer rejected. Reason: {reason}'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -1681,6 +1826,39 @@ def payout_process_all(request):
     return JsonResponse({'success': True, 'message': 'All pending payouts processed successfully'})
 
 
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def payout_detail_api(request, payout_id):
+    try:
+        e = get_object_or_404(Event, id=payout_id)
+        sales_agg = Ticket.objects.filter(event=e).exclude(status='cancelled').aggregate(
+            total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+        )
+        total_sales = float(sales_agg['total'] or 0.0)
+        platform_fee = total_sales * 0.05
+        amount = total_sales - platform_fee
+        payout_status = 'paid' if e.start_date < timezone.now() else 'pending'
+        payout = {
+            'id': e.id,
+            'organizer_name': e.organizer.organization_name or e.organizer.get_full_name() or e.organizer.username,
+            'organizer_email': e.organizer.email,
+            'event_title': e.title,
+            'period': e.start_date.strftime('%B %Y'),
+            'events_count': 1,
+            'ticket_sales': total_sales,
+            'platform_fee': platform_fee,
+            'payout_amount': amount,
+            'amount': amount,
+            'status': payout_status,
+            'payment_method': 'bank_transfer',
+            'requested_date': e.created_at.isoformat(),
+        }
+        return JsonResponse({'success': True, 'payout': payout})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
 # ============ 8. REPORTS & ANALYTICS APIS ============
 
 @csrf_exempt
@@ -1951,37 +2129,135 @@ def api_notifications_prune(request):
 
 # ============ 11. PROFILE & SETTINGS APIS ============
 
+def _serialize_admin_profile(u):
+    return {
+        'username': u.username,
+        'full_name': u.get_full_name() or u.username,
+        'email': u.email,
+        'phone': u.phone or '',
+        'role': u.role,
+        'avatar_url': u.get_avatar_url(),
+    }
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
+@admin_required_json
 def user_profile(request):
-    # Returns details of the logged in user or admin
     try:
         u = request.user
         if not u.is_authenticated:
             return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
-        data = {
-            'username': u.username,
-            'full_name': u.get_full_name() or u.username,
-            'email': u.email
-        }
-        return JsonResponse({'success': True, 'user': data})
+        data = _serialize_admin_profile(u)
+        return JsonResponse({'success': True, 'user': data, **data})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def user_profile_update(request):
+    try:
+        data = json.loads(request.body) if request.body else {}
+        u = request.user
+        if data.get('full_name'):
+            parts = data['full_name'].strip().split(' ', 1)
+            u.first_name = parts[0]
+            u.last_name = parts[1] if len(parts) > 1 else ''
+        if data.get('email'):
+            u.email = data['email'].strip()
+        if 'phone' in data:
+            u.phone = data.get('phone', '').strip()
+        u.save()
+        profile = _serialize_admin_profile(u)
+        return JsonResponse({'success': True, 'message': 'Profile updated', 'user': profile, **profile})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def user_profile_change_password(request):
+    try:
+        data = json.loads(request.body) if request.body else {}
+        current = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        if not request.user.check_password(current):
+            return JsonResponse({'success': False, 'message': 'Current password is incorrect'}, status=400)
+        if len(new_password) < 8:
+            return JsonResponse({'success': False, 'message': 'Password must be at least 8 characters'}, status=400)
+        request.user.set_password(new_password)
+        request.user.save()
+        return JsonResponse({'success': True, 'message': 'Password changed successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def user_profile_stats(request):
+    try:
+        rev_agg = Ticket.objects.exclude(status='cancelled').aggregate(
+            total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+        )
+        stats = {
+            'events_managed': Event.objects.count(),
+            'users_managed': User.objects.count(),
+            'tickets_processed': Ticket.objects.count(),
+            'pending_approvals': Event.objects.filter(status='pending').count(),
+            'revenue_generated': float(rev_agg['total'] or 0.0),
+        }
+        return JsonResponse({'success': True, 'stats': stats})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+def _default_settings():
+    return {
+        'site_name': 'EventHub',
+        'site_tagline': 'Discover Amazing Events in Kenya',
+        'site_description': 'Event Management Platform',
+        'logo_url': '',
+        'support_email': 'support@eventhub.co.ke',
+        'support_phone': '+254 700 000000',
+        'company_address': 'Nairobi, Kenya',
+        'contact_email': 'info@eventhub.com',
+        'timezone': 'Africa/Nairobi',
+        'date_format': 'DD/MM/YYYY',
+        'currency': 'KES',
+        'platform_fee': 5,
+        'processing_fee': 0,
+        'min_payout': 500,
+        'facebook_url': '',
+        'twitter_url': '',
+        'instagram_url': '',
+        'linkedin_url': '',
+    }
+
 
 @csrf_exempt
 @require_http_methods(["GET"])
 @admin_required_json
 def settings_api(request):
     try:
-        return JsonResponse({
-            'success': True,
-            'site_name': 'EventHub',
-            'site_description': 'Event Management Platform',
-            'contact_email': 'info@eventhub.com',
-            'timezone': 'Africa/Nairobi',
-            'currency': 'KES',
-            'platform_fee': 5
-        })
+        settings = _default_settings()
+        return JsonResponse({'success': True, 'settings': settings, **settings})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@admin_required_json
+def settings_general_api(request):
+    try:
+        if request.method == 'GET':
+            settings = _default_settings()
+            return JsonResponse({'success': True, 'settings': settings})
+        return JsonResponse({'success': True, 'message': 'Settings saved successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 

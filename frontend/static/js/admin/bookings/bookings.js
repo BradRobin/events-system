@@ -135,8 +135,20 @@ function displayBookings(bookings) {
     document.getElementById('recordsCount').textContent = `Showing ${bookings.length} records`;
 }
 
-function viewBooking(bookingId) {
-    window.open(`/admin-portal/bookings/detail/?id=${bookingId}`, '_blank');
+async function viewBooking(bookingId) {
+    try {
+        const data = await apiRequest(`/api/admin/bookings/${bookingId}/`);
+        const booking = data.booking;
+        alert(
+            `Booking: ${booking.id}\n` +
+            `Customer: ${booking.customer_name}\n` +
+            `Event: ${booking.event_title}\n` +
+            `Amount: Kes ${booking.total}\n` +
+            `Status: ${booking.status}`
+        );
+    } catch (error) {
+        showToast('Failed to load booking details', 'error');
+    }
 }
 
 function openRefundModal(bookingId) {
