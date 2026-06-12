@@ -1,5 +1,6 @@
 /* ============================================
    ATTENDEE NAVBAR - COMPLETE STYLES (DARK THEME)
+   IMPROVED: Better organization, responsive fixes
    ============================================ */
 
 .attendee-navbar {
@@ -137,13 +138,12 @@
     color: #f59e0b;
 }
 
-/* ========== DROPDOWN MENU STYLES - HOVER FOR ALL DEVICES ========== */
+/* ========== DROPDOWN MENU STYLES ========== */
 .nav-item-dropdown {
     position: relative;
     display: inline-block;
 }
 
-/* My Tickets nav item - position relative for absolute badge positioning */
 .nav-item-dropdown .dropdown-trigger {
     position: relative;
     display: flex;
@@ -151,7 +151,7 @@
     gap: 0.5rem;
 }
 
-/* My Tickets Badge - Positioned on top of the nav item, above the arrow */
+/* My Tickets Badge */
 .my-tickets-badge {
     position: absolute;
     top: -8px;
@@ -171,12 +171,10 @@
     z-index: 10;
 }
 
-/* When badge has count, add pulse animation */
 .my-tickets-badge:not(:empty) {
     animation: badgeGlow 2s ease-in-out infinite;
 }
 
-/* For desktop - badge appears above the icon and arrow */
 @media (min-width: 769px) {
     .my-tickets-badge {
         top: -6px;
@@ -184,7 +182,6 @@
     }
 }
 
-/* For tablet view (icons only) */
 @media (min-width: 769px) and (max-width: 1024px) {
     .my-tickets-badge {
         top: -8px;
@@ -192,7 +189,6 @@
     }
 }
 
-/* For mobile view - badge inline with text */
 @media (max-width: 768px) {
     .nav-item-dropdown .dropdown-trigger {
         justify-content: space-between;
@@ -203,8 +199,6 @@
         position: static;
         margin-left: auto;
         margin-right: 8px;
-        top: auto;
-        right: auto;
         order: 2;
     }
     
@@ -217,7 +211,6 @@
     }
 }
 
-/* Small mobile adjustments */
 @media (max-width: 480px) {
     .my-tickets-badge {
         font-size: 0.55rem;
@@ -227,30 +220,18 @@
     }
 }
 
-/* Badge pulse animation for when count updates */
 @keyframes badgePulse {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.2);
-    }
-    100% {
-        transform: scale(1);
-    }
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
 }
 
-/* Badge glow animation */
 @keyframes badgeGlow {
-    0%, 100% {
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-    }
-    50% {
-        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
-    }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2); }
 }
 
-/* ALL DEVICES (Desktop, Tablet, Mobile) - Hover to open */
+/* Dropdown Submenu */
 .nav-item-dropdown .dropdown-submenu {
     position: absolute;
     top: calc(100% + 5px);
@@ -288,13 +269,11 @@
     color: #f59e0b;
 }
 
-/* Hover effect on the nav item - badge scales slightly */
 .nav-item-dropdown:hover .my-tickets-badge {
     transform: scale(1.05);
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
 }
 
-/* Mobile specific adjustments - Keep hover, but adjust positioning */
 @media (max-width: 768px) {
     .nav-item-dropdown {
         width: 100%;
@@ -359,7 +338,6 @@
     color: #f59e0b;
 }
 
-/* Badge styles - Individual badges inside dropdown */
 .mobile-cart-badge, .mobile-wishlist-badge {
     margin-left: auto;
     background: linear-gradient(135deg, #ef4444, #dc2626);
@@ -372,7 +350,7 @@
     text-align: center;
 }
 
-/* ========== MOBILE ACCOUNT DROPDOWN - STYLED LIKE DESKTOP ========== */
+/* ========== MOBILE ACCOUNT DROPDOWN ========== */
 .mobile-account-dropdown {
     width: 100%;
     margin-bottom: 16px;
@@ -398,7 +376,6 @@
     color: white;
 }
 
-/* Mobile User Info Dropdown - Smooth rounded corners */
 .mobile-user-info-dropdown {
     display: flex;
     align-items: center;
@@ -451,14 +428,12 @@
     margin: 12px 0;
 }
 
-/* Mobile divider line before logout */
 .mobile-divider-line {
     height: 1px;
     background: rgba(255, 255, 255, 0.08);
     margin: 16px 0 12px 0;
 }
 
-/* Mobile logout wrapper and button - Smooth rounded corners */
 .mobile-logout-wrapper {
     margin-top: 8px;
 }
@@ -491,20 +466,14 @@
     transform: translateX(4px);
 }
 
-/* Hide mobile account dropdown on desktop */
 @media (min-width: 769px) {
-    .mobile-account-dropdown {
-        display: none !important;
-    }
-    .mobile-divider-line {
-        display: none;
-    }
+    .mobile-account-dropdown,
+    .mobile-divider-line,
     .mobile-logout-wrapper {
         display: none !important;
     }
 }
 
-/* Show mobile account dropdown only on mobile */
 @media (max-width: 768px) {
     .mobile-account-dropdown {
         display: block !important;
@@ -827,7 +796,6 @@
     transition: transform 0.2s;
 }
 
-/* Removed profile-notification-badge - no longer showing badge on account dropdown */
 .dropdown-menu {
     position: absolute;
     top: calc(100% + 10px);
@@ -956,19 +924,7 @@
     color: #ef4444;
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Mobile Elements */
+/* ========== MOBILE ELEMENTS ========== */
 .mobile-toggle {
     display: none;
     background: rgba(255, 255, 255, 0.08);
@@ -1013,7 +969,7 @@
     display: none;
 }
 
-/* Custom Toast */
+/* ========== TOAST NOTIFICATIONS ========== */
 .custom-toast {
     position: fixed;
     bottom: 20px;

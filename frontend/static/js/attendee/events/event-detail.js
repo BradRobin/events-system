@@ -1,5 +1,10 @@
 // EVENT DETAIL MODULE - Live Reviews, Organizer Details, Directions
 // FIXED: Venue information moved to separate tab, not duplicated in Details tab
+// ADDED: Location detection and distance calculation to event venue
+// FIXED: Book ticket shows toast without redirect
+// FIXED: Wishlist toggles with correct terminology
+// FIXED: Only one item per event in cart
+// FIXED: Cross-tab synchronization via storage events
 console.log('Event detail loaded');
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -58,6 +63,13 @@ function showToast(message, type = 'success') {
         toast.style.animation = 'fadeOut 0.3s ease';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
+    
+    // Dispatch events for navbar updates and cross-tab sync
+    if (type === 'success') {
+        window.dispatchEvent(new Event('cart-updated'));
+        window.dispatchEvent(new Event('wishlist-updated'));
+        window.dispatchEvent(new Event('storage'));
+    }
 }
 
 function renderStars(rating) {
@@ -87,12 +99,9 @@ function getEventReviews(eventId) {
     try {
         return JSON.parse(localStorage.getItem(`reviews_${eventId}`) || '[]');
     } catch (e) {
+        console.error('Error reading reviews:', e);
         return [];
     }
-}
-
-function getEventReviews(eventId) {
-    return eventReviewsCache;
 }
 
 function getAverageRating(eventId) {
@@ -140,7 +149,7 @@ function updateReviewsUI(eventId) {
     if (reviewsList) reviewsList.innerHTML = renderReviewsList(eventId);
 }
 
-// Wishlist functions
+// Wishlist functions - FIXED: Correct terminology
 async function isInWishlist(eventId) {
     const token = getAuthToken();
     if (!token) return false;
@@ -159,15 +168,24 @@ async function isInWishlist(eventId) {
     return wishlist.includes(eventId);
 }
 
-async function toggleWishlist(eventId, btnElement) {
+async function toggleWishlist(eventId, btnElement, eventTitle) {
     const token = getAuthToken();
     if (!token) {
-        showToast('Please login to save to wishlist', 'info');
+        showToast('🔐 Please login to manage your wishlist', 'info');
         setTimeout(() => window.location.href = '/login/', 1500);
         return false;
     }
     
     const wasActive = btnElement.classList.contains('active');
+    
+    // Optimistic UI update
+    if (wasActive) {
+        btnElement.classList.remove('active');
+        btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to Wishlist';
+    } else {
+        btnElement.classList.add('active');
+        btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove from Wishlist';
+    }
     
     try {
         if (!wasActive) {
@@ -181,15 +199,20 @@ async function toggleWishlist(eventId, btnElement) {
             });
             
             if (response.ok) {
-                btnElement.classList.add('active');
-                btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove from Wishlist';
-                showToast('Added to wishlist!', 'success');
+                showToast(`❤️ "${eventTitle}" has been saved to your wishlist`, 'success');
                 
                 let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
                 if (!wishlist.includes(eventId)) wishlist.push(eventId);
                 localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
                 window.dispatchEvent(new Event('wishlist-updated'));
+                window.dispatchEvent(new Event('storage'));
                 return true;
+            } else {
+                // Revert on error
+                btnElement.classList.remove('active');
+                btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to Wishlist';
+                showToast('Unable to save to wishlist. Please try again.', 'error');
+                return false;
             }
         } else {
             const response = await fetch(`${API.wishlist}${eventId}/`, {
@@ -198,38 +221,429 @@ async function toggleWishlist(eventId, btnElement) {
             });
             
             if (response.ok) {
-                btnElement.classList.remove('active');
-                btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to Wishlist';
-                showToast('Removed from wishlist', 'info');
+                showToast(`🗑️ "${eventTitle}" has been removed from your wishlist`, 'info');
                 
                 let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
                 wishlist = wishlist.filter(id => id != eventId);
                 localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
                 window.dispatchEvent(new Event('wishlist-updated'));
+                window.dispatchEvent(new Event('storage'));
                 return false;
+            } else {
+                // Revert on error
+                btnElement.classList.add('active');
+                btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove from Wishlist';
+                showToast('Unable to remove from wishlist. Please try again.', 'error');
+                return true;
             }
         }
     } catch (error) {
         console.error('Wishlist error:', error);
-        showToast('Network error. Please try again.', 'error');
+        showToast('Network error. Please check your connection.', 'error');
+        // Revert UI
+        if (wasActive) {
+            btnElement.classList.add('active');
+            btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove from Wishlist';
+        } else {
+            btnElement.classList.remove('active');
+            btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to Wishlist';
+        }
+        return !wasActive;
+    }
+}
+
+// ========== LOCATION & DISTANCE FUNCTIONS ==========
+let venueCoordinates = null;
+
+// Geocode address to coordinates
+async function geocodeAddress(address) {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+        const data = await response.json();
+        if (data && data.length > 0) {
+            return {
+                lat: parseFloat(data[0].lat),
+                lon: parseFloat(data[0].lon),
+                display_name: data[0].display_name
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Geocoding error:', error);
+        return null;
+    }
+}
+
+// Get user's current location
+function getUserLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by your browser'));
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                resolve({
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude
+                });
+            },
+            (error) => {
+                let errorMessage = 'Unable to get your location';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Location access denied. Please enable location services.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Location information unavailable';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Location request timed out';
+                        break;
+                }
+                reject(new Error(errorMessage));
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    });
+}
+
+// Calculate distance between two coordinates (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    return distance;
+}
+
+// Format distance for display
+function formatDistance(distanceKm) {
+    if (distanceKm < 1) {
+        return `${Math.round(distanceKm * 1000)} meters`;
+    } else if (distanceKm < 10) {
+        return `${distanceKm.toFixed(1)} km`;
+    } else {
+        return `${Math.round(distanceKm)} km`;
+    }
+}
+
+// Estimate travel time based on distance
+function estimateTravelTime(distanceKm, mode = 'driving') {
+    let avgSpeed;
+    switch(mode) {
+        case 'walking':
+            avgSpeed = 5; // km/h
+            break;
+        case 'transit':
+            avgSpeed = 30; // km/h
+            break;
+        default:
+            avgSpeed = 40; // km/h (driving in city)
+    }
+    const hours = distanceKm / avgSpeed;
+    const minutes = Math.round(hours * 60);
+    
+    if (minutes < 60) {
+        return `${minutes} min`;
+    } else {
+        const hrs = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return mins > 0 ? `${hrs} hr ${mins} min` : `${hrs} hr`;
+    }
+}
+
+// Show location map with distance calculation
+async function showLocationMap(location, venueName) {
+    // Create or get modal container
+    let mapModal = document.getElementById('locationMapModal');
+    if (!mapModal) {
+        mapModal = document.createElement('div');
+        mapModal.id = 'locationMapModal';
+        mapModal.className = 'location-map-modal';
+        mapModal.innerHTML = `
+            <div class="location-map-card">
+                <div class="map-card-header">
+                    <h3><i class="fas fa-map-marker-alt"></i> Event Location</h3>
+                    <button class="map-card-close">&times;</button>
+                </div>
+                <div class="map-card-body">
+                    <div class="location-info">
+                        <p><strong><i class="fas fa-building"></i> Venue:</strong> <span id="mapVenueName"></span></p>
+                        <p><strong><i class="fas fa-location-dot"></i> Address:</strong> <span id="mapAddress"></span></p>
+                    </div>
+                    
+                    <!-- Distance Info Section -->
+                    <div id="distanceInfo" class="distance-info" style="display: none;">
+                        <div class="distance-card">
+                            <div class="distance-icon">
+                                <i class="fas fa-location-arrow"></i>
+                            </div>
+                            <div class="distance-details">
+                                <div class="distance-label">Distance from your location</div>
+                                <div class="distance-value" id="distanceValue">--</div>
+                                <div class="travel-time" id="travelTime">--</div>
+                            </div>
+                            <button id="refreshLocationBtn" class="refresh-location-btn" title="Refresh my location">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="mapContainer" class="map-container">
+                        <div class="loading-map">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading map...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="map-actions">
+                        <button id="detectLocationBtn" class="detect-location-btn">
+                            <i class="fas fa-location-dot"></i> Detect My Location
+                        </button>
+                        <button id="copyAddressBtn" class="map-copy-btn">
+                            <i class="fas fa-copy"></i> Copy Address
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(mapModal);
+        
+        // Close button functionality
+        const closeBtn = mapModal.querySelector('.map-card-close');
+        closeBtn.onclick = () => {
+            mapModal.classList.remove('show');
+        };
+        
+        // Click outside to close
+        mapModal.onclick = (e) => {
+            if (e.target === mapModal) {
+                mapModal.classList.remove('show');
+            }
+        };
+        
+        // Copy address button
+        const copyBtn = mapModal.querySelector('#copyAddressBtn');
+        copyBtn.onclick = () => {
+            const address = document.getElementById('mapAddress').innerText;
+            navigator.clipboard.writeText(address);
+            showToast('📍 Venue address copied to clipboard', 'success');
+        };
+        
+        // Detect location button
+        const detectBtn = mapModal.querySelector('#detectLocationBtn');
+        detectBtn.onclick = async () => {
+            await detectAndShowDistance();
+        };
+        
+        // Refresh location button
+        const refreshBtn = mapModal.querySelector('#refreshLocationBtn');
+        if (refreshBtn) {
+            refreshBtn.onclick = async () => {
+                await detectAndShowDistance();
+            };
+        }
     }
     
-    // Fallback for offline
-    if (!wasActive) {
-        btnElement.classList.add('active');
-        btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove from Wishlist';
-        let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
-        if (!wishlist.includes(eventId)) wishlist.push(eventId);
-        localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
-    } else {
-        btnElement.classList.remove('active');
-        btnElement.innerHTML = '<i class="fas fa-heart"></i> Add to Wishlist';
-        let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
-        wishlist = wishlist.filter(id => id != eventId);
-        localStorage.setItem('event_wishlist', JSON.stringify(wishlist));
+    // Update modal content with location info
+    const venueNameSpan = document.getElementById('mapVenueName');
+    const addressSpan = document.getElementById('mapAddress');
+    const mapContainer = document.getElementById('mapContainer');
+    
+    if (venueNameSpan) venueNameSpan.textContent = venueName || 'Event Venue';
+    if (addressSpan) addressSpan.textContent = location;
+    
+    // Store venue address for distance calculation
+    window.currentVenueAddress = location;
+    window.currentVenueName = venueName;
+    
+    // Show modal
+    mapModal.classList.add('show');
+    
+    // Load map
+    await loadMap(location, venueName);
+    
+    // Auto-detect location and show distance
+    await detectAndShowDistance();
+}
+
+// Load OpenStreetMap
+async function loadMap(address, venueName) {
+    const mapContainer = document.getElementById('mapContainer');
+    if (!mapContainer) return;
+    
+    try {
+        // Geocode the address
+        const coords = await geocodeAddress(address);
+        if (coords) {
+            venueCoordinates = coords;
+            
+            // Clear container
+            mapContainer.innerHTML = '';
+            
+            // Create map container for Leaflet
+            const mapDiv = document.createElement('div');
+            mapDiv.id = 'leafletMap';
+            mapDiv.style.width = '100%';
+            mapDiv.style.height = '100%';
+            mapContainer.appendChild(mapDiv);
+            
+            // Check if Leaflet is available, if not load it
+            if (typeof L === 'undefined') {
+                // Load Leaflet CSS
+                const leafletCSS = document.createElement('link');
+                leafletCSS.rel = 'stylesheet';
+                leafletCSS.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(leafletCSS);
+                
+                // Load Leaflet JS
+                const leafletJS = document.createElement('script');
+                leafletJS.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                leafletJS.onload = () => {
+                    initLeafletMap(coords, venueName);
+                };
+                document.head.appendChild(leafletJS);
+            } else {
+                initLeafletMap(coords, venueName);
+            }
+        } else {
+            mapContainer.innerHTML = `
+                <div class="static-map-fallback">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <p>Unable to load map</p>
+                    <small>Address: ${escapeHtml(address)}</small>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Map loading error:', error);
+        mapContainer.innerHTML = `
+            <div class="static-map-fallback">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error loading map</p>
+                <small>Please try again later</small>
+            </div>
+        `;
     }
-    window.dispatchEvent(new Event('wishlist-updated'));
-    return !wasActive;
+}
+
+// Initialize Leaflet map
+function initLeafletMap(coords, venueName) {
+    const mapDiv = document.getElementById('leafletMap');
+    if (!mapDiv) return;
+    
+    const map = L.map('leafletMap').setView([coords.lat, coords.lon], 15);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19,
+        minZoom: 3
+    }).addTo(map);
+    
+    // Add marker for venue
+    const venueMarker = L.marker([coords.lat, coords.lon]).addTo(map);
+    venueMarker.bindPopup(`<b>${escapeHtml(venueName || 'Event Venue')}</b>`).openPopup();
+    
+    // Store map for later use
+    window.currentLeafletMap = map;
+    window.venueMarker = venueMarker;
+}
+
+// Detect user location and calculate distance
+async function detectAndShowDistance() {
+    const distanceInfoDiv = document.getElementById('distanceInfo');
+    const distanceValueSpan = document.getElementById('distanceValue');
+    const travelTimeSpan = document.getElementById('travelTime');
+    const detectBtn = document.getElementById('detectLocationBtn');
+    
+    if (!distanceInfoDiv) return;
+    
+    // Show loading state
+    distanceInfoDiv.style.display = 'block';
+    distanceValueSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
+    travelTimeSpan.innerHTML = '';
+    
+    if (detectBtn) {
+        detectBtn.disabled = true;
+        detectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
+    }
+    
+    try {
+        // Get user's location
+        const userLocation = await getUserLocation();
+        
+        // Get venue coordinates if not already cached
+        if (!venueCoordinates) {
+            venueCoordinates = await geocodeAddress(window.currentVenueAddress);
+        }
+        
+        if (venueCoordinates && userLocation) {
+            // Calculate distance
+            const distanceKm = calculateDistance(
+                userLocation.lat, userLocation.lon,
+                venueCoordinates.lat, venueCoordinates.lon
+            );
+            
+            const formattedDistance = formatDistance(distanceKm);
+            const travelTime = estimateTravelTime(distanceKm, 'driving');
+            
+            distanceValueSpan.innerHTML = formattedDistance;
+            travelTimeSpan.innerHTML = `<i class="fas fa-car"></i> Approximately ${travelTime} by car`;
+            
+            // Add a marker for user location on the map if map exists
+            if (window.currentLeafletMap && userLocation) {
+                // Remove existing user marker if any
+                if (window.userMarker) {
+                    window.currentLeafletMap.removeLayer(window.userMarker);
+                }
+                
+                // Add user location marker
+                window.userMarker = L.marker([userLocation.lat, userLocation.lon], {
+                    icon: L.divIcon({
+                        className: 'user-location-marker',
+                        html: '<i class="fas fa-user-circle" style="font-size: 20px; color: #3b82f6; text-shadow: 0 0 3px white;"></i>',
+                        iconSize: [20, 20],
+                        popupAnchor: [0, -10]
+                    })
+                }).addTo(window.currentLeafletMap);
+                window.userMarker.bindPopup('Your Location').openPopup();
+                
+                // Fit bounds to show both markers
+                const bounds = L.latLngBounds([
+                    [userLocation.lat, userLocation.lon],
+                    [venueCoordinates.lat, venueCoordinates.lon]
+                ]);
+                window.currentLeafletMap.fitBounds(bounds, { padding: [50, 50] });
+            }
+            
+            // Add a class to show success
+            distanceInfoDiv.classList.add('has-distance');
+        } else {
+            distanceValueSpan.innerHTML = 'Unable to calculate distance';
+            travelTimeSpan.innerHTML = 'Please verify the venue address';
+        }
+    } catch (error) {
+        console.error('Distance detection error:', error);
+        distanceValueSpan.innerHTML = error.message || 'Location detection failed';
+        travelTimeSpan.innerHTML = 'Please enable location access or enter address manually';
+        distanceInfoDiv.classList.add('error');
+    } finally {
+        if (detectBtn) {
+            detectBtn.disabled = false;
+            detectBtn.innerHTML = '<i class="fas fa-location-dot"></i> Detect My Location';
+        }
+    }
 }
 
 // Review Modal functions
@@ -242,7 +656,7 @@ function setupReviewModal(eventId) {
     
     writeBtn.onclick = () => {
         if (!isAuthenticated()) {
-            showToast('Please login to write a review', 'info');
+            showToast('🔐 Please login to write a review', 'info');
             setTimeout(() => window.location.href = '/login/', 1500);
             return;
         }
@@ -380,16 +794,16 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Book ticket function
+// Book ticket function - FIXED: Only one item per event, no duplicate add
 function bookTicket(event, quantity = 1, tier = 'Regular') {
     if (!isAuthenticated()) {
-        showToast('Please login to book tickets', 'info');
+        showToast('🔐 Please login to continue with ticket booking', 'info');
         setTimeout(() => window.location.href = '/login/', 1500);
         return false;
     }
     
     if (event.available_tickets <= 0) {
-        showToast('Sorry, this event is sold out!', 'error');
+        showToast('🎫 Sorry, tickets for this event are sold out!', 'error');
         return false;
     }
     
@@ -397,11 +811,14 @@ function bookTicket(event, quantity = 1, tier = 'Regular') {
     if (tier === 'VIP' && event.vip_price) price = event.vip_price;
     if (tier === 'VVIP' && event.vvip_price) price = event.vvip_price;
     
-    const cart = JSON.parse(localStorage.getItem('eventhub_cart') || '{"items":[]}');
-    const existingIndex = cart.items.findIndex(i => i.id === event.id && i.tier === tier);
+    // Get existing cart
+    let cart = JSON.parse(localStorage.getItem('eventhub_cart') || '{"items":[]}');
+    const existingIndex = cart.items.findIndex(i => i.id === event.id);
     
     if (existingIndex !== -1) {
-        cart.items[existingIndex].quantity += quantity;
+        // Item already exists in cart - cannot add duplicate
+        showToast(`⚠️ "${event.title}" is already in your cart. Proceed to checkout to complete your booking.`, 'info');
+        return false;
     } else {
         cart.items.push({
             id: event.id,
@@ -413,6 +830,10 @@ function bookTicket(event, quantity = 1, tier = 'Regular') {
             date: event.date,
             location: event.location
         });
+        
+        // Format price display for toast
+        const formattedPrice = `KES ${price.toLocaleString()}`;
+        showToast(`✅ "${event.title}" (${tier} tier) has been added to your cart. Total: ${formattedPrice}`, 'success');
     }
     
     cart.subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -420,16 +841,12 @@ function bookTicket(event, quantity = 1, tier = 'Regular') {
     
     localStorage.setItem('eventhub_cart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cart-updated'));
-    
-    showToast('Added to cart! Redirecting...', 'success');
-    setTimeout(() => {
-        window.location.href = '/cart/';
-    }, 1000);
+    window.dispatchEvent(new Event('storage'));
     
     return true;
 }
 
-// Render Event Details - FIXED: No Venue info in Details tab
+// Render Event Details
 async function renderEventDetails(event) {
     const container = document.getElementById('eventDetailContainer');
     if (!container) return;
@@ -482,12 +899,7 @@ async function renderEventDetails(event) {
                     <div class="meta-item"><i class="fas fa-ticket-alt"></i> ${event.available_tickets} tickets left</div>
                 </div>
                 
-                <!-- Directions button - opens in same tab -->
-                <button class="directions-btn" id="directionsBtn">
-                    <i class="fas fa-directions"></i> Get Directions
-                </button>
-                
-                <!-- Tabs with separate Venue tab -->
+                <!-- Tabs -->
                 <div class="event-tabs">
                     <button class="tab-btn active" data-tab="details">Details</button>
                     <button class="tab-btn" data-tab="venue">Venue</button>
@@ -495,7 +907,7 @@ async function renderEventDetails(event) {
                     <button class="tab-btn" data-tab="reviews">Reviews</button>
                 </div>
                 
-                <!-- DETAILS TAB - FIXED: No Venue information here -->
+                <!-- DETAILS TAB -->
                 <div id="detailsTab" class="tab-content active">
                     <div class="event-description">
                         <h3><i class="fas fa-info-circle"></i> About This Event</h3>
@@ -510,7 +922,7 @@ async function renderEventDetails(event) {
                     </div>
                 </div>
                 
-                <!-- VENUE TAB - All venue information here -->
+                <!-- VENUE TAB -->
                 <div id="venueTab" class="tab-content">
                     <div class="event-venue-details">
                         <div class="venue-header">
@@ -539,7 +951,7 @@ async function renderEventDetails(event) {
                         </div>
                         
                         <button class="venue-map-link" id="venueDirectionsBtn">
-                            <i class="fas fa-map"></i> View on Google Maps
+                            <i class="fas fa-directions"></i> Get Directions
                         </button>
                     </div>
                     
@@ -674,21 +1086,11 @@ async function renderEventDetails(event) {
         });
     });
     
-    // Directions button - opens Google Maps in same tab
-    const directionsBtn = document.getElementById('directionsBtn');
-    if (directionsBtn) {
-        directionsBtn.onclick = () => {
-            const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(event.location)}`;
-            window.location.href = mapsUrl;
-        };
-    }
-    
-    // Venue map button - also same tab
+    // Venue directions button - Opens map modal with distance calculation
     const venueDirectionsBtn = document.getElementById('venueDirectionsBtn');
     if (venueDirectionsBtn) {
         venueDirectionsBtn.onclick = () => {
-            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`;
-            window.location.href = mapsUrl;
+            showLocationMap(event.location, event.venue || event.location);
         };
     }
     
@@ -768,7 +1170,7 @@ async function renderEventDetails(event) {
     
     if (wishlistBtn) {
         wishlistBtn.onclick = async () => {
-            await toggleWishlist(event.id, wishlistBtn);
+            await toggleWishlist(event.id, wishlistBtn, event.title);
         };
     }
     

@@ -1,6 +1,9 @@
 /* ============================================
    EVENT DETAIL PAGE - COMPLETE CSS
    FIXED: Image size, venue tab, ticket tier styling, directions button
+   ADDED: Map modal styles with distance calculation
+   UPDATED: Consistent color theme (EventHub orange/gold)
+   FIXED: Map card fits without scrolling - reduced sizes
    ============================================ */
 
 /* ========== PAGE LAYOUT ========== */
@@ -46,7 +49,7 @@
     font-weight: 500;
 }
 
-/* ========== EVENT IMAGE - FIXED: Smaller, better proportions ========== */
+/* ========== EVENT IMAGE ========== */
 .event-image-container {
     position: relative;
     margin-bottom: 1.5rem;
@@ -150,30 +153,7 @@
     font-size: 0.85rem;
 }
 
-/* ========== DIRECTIONS BUTTON - FIXED: No new tab ========== */
-.directions-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.6rem 1.2rem;
-    background: linear-gradient(135deg, #f59e0b, #ec6408);
-    color: white;
-    border-radius: 40px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: all 0.3s ease;
-    margin-bottom: 1.5rem;
-    border: none;
-    cursor: pointer;
-}
-
-.directions-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-/* ========== TABS - FIXED: Added Venue tab ========== */
+/* ========== TABS ========== */
 .event-tabs {
     display: flex;
     gap: 0.3rem;
@@ -295,7 +275,7 @@
     font-size: 0.75rem;
 }
 
-/* ========== VENUE TAB - NEW, PROPERLY STYLED ========== */
+/* ========== VENUE TAB ========== */
 .event-venue-details {
     background: #f8fafc;
     border-radius: 1rem;
@@ -673,7 +653,7 @@
     font-size: 0.8rem;
 }
 
-/* ========== SIDEBAR - TICKET CARD (FIXED) ========== */
+/* ========== SIDEBAR - TICKET CARD ========== */
 .event-content-wrapper {
     display: grid;
     grid-template-columns: 1fr 360px;
@@ -715,7 +695,6 @@
     color: #f59e0b;
 }
 
-/* FIXED: Ticket Tier Selector Styling */
 .ticket-tier-selector {
     margin-bottom: 1.25rem;
 }
@@ -935,6 +914,362 @@
     color: #10b981;
     width: 16px;
     font-size: 0.7rem;
+}
+
+/* ========== LOCATION MAP MODAL - NO SCROLL, FITS ALL CONTENT ========== */
+.location-map-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.location-map-modal.show {
+    display: flex;
+}
+
+.location-map-card {
+    background: white;
+    border-radius: 1rem;
+    width: 90%;
+    max-width: 480px;
+    max-height: none;
+    overflow: visible;
+    animation: modalSlideUp 0.3s ease;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Map Card Header - Compact */
+.map-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    color: white;
+    border-radius: 1rem 1rem 0 0;
+}
+
+.map-card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    font-weight: 600;
+}
+
+.map-card-header h3 i {
+    color: white;
+    font-size: 1rem;
+}
+
+.map-card-close {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-card-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.map-card-body {
+    padding: 1rem 1.25rem;
+}
+
+/* Location Info - Compact */
+.location-info {
+    background: #fef3c7;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    border-left: 3px solid #f59e0b;
+}
+
+.location-info p {
+    margin: 0.3rem 0;
+    font-size: 0.75rem;
+    color: #92400e;
+}
+
+.location-info p strong {
+    color: #78350f;
+    width: 60px;
+    display: inline-block;
+    font-size: 0.7rem;
+}
+
+.location-info p strong i {
+    color: #f59e0b;
+    margin-right: 0.25rem;
+}
+
+/* Distance Info Section - Compact */
+.distance-info {
+    margin-bottom: 0.75rem;
+}
+
+.distance-card {
+    background: #f8fafc;
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-left: 3px solid #f59e0b;
+}
+
+.distance-info.has-distance .distance-card {
+    background: linear-gradient(135deg, #fef3c7, #fffbeb);
+    border-left-color: #10b981;
+}
+
+.distance-info.error .distance-card {
+    background: #fef2f2;
+    border-left-color: #ef4444;
+}
+
+.distance-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(245, 158, 11, 0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f59e0b;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.distance-info.has-distance .distance-icon {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.distance-details {
+    flex: 1;
+}
+
+.distance-label {
+    font-size: 0.6rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.distance-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.travel-time {
+    font-size: 0.65rem;
+    color: #475569;
+    margin-top: 0.15rem;
+}
+
+.travel-time i {
+    margin-right: 0.2rem;
+}
+
+.refresh-location-btn {
+    background: rgba(245, 158, 11, 0.1);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #f59e0b;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.refresh-location-btn:hover {
+    background: rgba(245, 158, 11, 0.2);
+    transform: rotate(180deg);
+}
+
+/* Map Container - Smaller height */
+.map-container {
+    width: 100%;
+    height: 200px;
+    background: #e2e8f0;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+
+.loading-map {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #64748b;
+}
+
+.loading-map i {
+    font-size: 1.5rem;
+    margin-bottom: 0.3rem;
+    color: #f59e0b;
+}
+
+.loading-map p {
+    font-size: 0.7rem;
+}
+
+.static-map-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+    color: #475569;
+    text-align: center;
+}
+
+.static-map-fallback i {
+    font-size: 2rem;
+    margin-bottom: 0.3rem;
+    color: #f59e0b;
+}
+
+.static-map-fallback p {
+    margin-bottom: 0.2rem;
+    font-size: 0.7rem;
+}
+
+.static-map-fallback small {
+    font-size: 0.6rem;
+    color: #64748b;
+}
+
+.map-fallback-link {
+    margin-top: 0.3rem;
+    padding: 0.25rem 0.6rem;
+    background: #f59e0b;
+    color: white;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.65rem;
+}
+
+.user-location-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Map Actions - Compact buttons */
+.map-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+.detect-location-btn {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    color: white;
+    border: none;
+    border-radius: 40px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: 100px;
+}
+
+.detect-location-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(245, 158, 11, 0.3);
+}
+
+.detect-location-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.map-copy-btn {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    border-radius: 40px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: 100px;
+}
+
+.map-copy-btn:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.map-attribution {
+    text-align: center;
+    font-size: 0.5rem;
+    color: #94a3b8;
+    margin-top: 0.5rem;
+}
+
+.map-attribution a {
+    color: #94a3b8;
+    text-decoration: none;
+}
+
+.map-attribution a:hover {
+    color: #f59e0b;
 }
 
 /* ========== MODAL ========== */
@@ -1327,6 +1662,54 @@ textarea.form-control {
     .modal-content {
         padding: 1.25rem;
     }
+    
+    .location-map-card {
+        width: 95%;
+        max-width: 420px;
+    }
+    
+    .map-card-header {
+        padding: 0.6rem 1rem;
+    }
+    
+    .map-card-header h3 {
+        font-size: 0.9rem;
+    }
+    
+    .map-card-body {
+        padding: 0.8rem 1rem;
+    }
+    
+    .map-container {
+        height: 180px;
+    }
+    
+    .detect-location-btn,
+    .map-copy-btn {
+        padding: 0.45rem 0.6rem;
+        font-size: 0.65rem;
+        min-width: 90px;
+    }
+    
+    .distance-card {
+        padding: 0.5rem 0.6rem;
+    }
+    
+    .location-info p {
+        font-size: 0.7rem;
+    }
+    
+    .location-info p strong {
+        width: 55px;
+    }
+    
+    .distance-value {
+        font-size: 0.85rem;
+    }
+    
+    .travel-time {
+        font-size: 0.6rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1419,6 +1802,28 @@ textarea.form-control {
     .modal-content {
         padding: 1rem;
     }
+    
+    .map-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .detect-location-btn,
+    .map-copy-btn {
+        width: 100%;
+        min-width: auto;
+        padding: 0.5rem;
+    }
+    
+    .map-container {
+        height: 160px;
+    }
+    
+    .location-info p strong {
+        width: auto;
+        display: inline-block;
+        margin-right: 0.3rem;
+    }
 }
 
 @media (max-width: 360px) {
@@ -1449,188 +1854,36 @@ textarea.form-control {
         width: 45px;
         font-size: 0.75rem;
     }
+    
+    .distance-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+    
+    .distance-value {
+        font-size: 0.8rem;
+    }
+    
+    .map-card-header h3 {
+        font-size: 0.85rem;
+    }
+    
+    .detect-location-btn,
+    .map-copy-btn {
+        font-size: 0.6rem;
+        padding: 0.4rem;
+    }
 }
 
-<<<<<<< HEAD
-/* Manual M-Pesa checkout modal */
-.checkout-modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    display: none;
-}
-.checkout-modal-content {
-    max-width: 480px;
-    width: 92%;
-    background: #fff;
-    border-radius: 16px;
-    padding: 2rem;
-    position: relative;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-.checkout-close {
-    position: absolute;
-    top: 1rem;
-    right: 1.25rem;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #64748b;
-}
-.checkout-hint { color: #64748b; margin-bottom: 1rem; font-size: 0.9rem; }
-.checkout-summary { text-align: center; margin-bottom: 1.25rem; }
-.checkout-amount { font-size: 1.75rem; font-weight: 700; color: #1e293b; }
-.checkout-receiver { margin-top: 0.5rem; color: #475569; }
-.checkout-payment-options { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
-.checkout-payment-option {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: #f8fafc;
-}
-.checkout-payment-value { font-size: 1.1rem; font-weight: 600; color: #0f172a; margin-top: 0.25rem; }
-.checkout-copy-btn {
-    padding: 0.4rem 0.75rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    background: #fff;
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: #334155;
-    flex-shrink: 0;
-    transition:
-        background 0.3s ease,
-        border-color 0.3s ease,
-        color 0.3s ease,
-        transform 0.15s ease,
-        box-shadow 0.3s ease;
-}
-
-.checkout-copy-btn:hover:not(.is-copied) {
-    border-color: #f59e0b;
-    color: #b45309;
-    background: #fffbeb;
-}
-
-.checkout-copy-btn:active:not(.is-copied) {
-    transform: scale(0.94);
-}
-
-.checkout-copy-btn-inner {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-}
-
-.checkout-copy-btn.is-copied {
-    border-color: #22c55e;
-    background: #ecfdf5;
-    color: #15803d;
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
-    animation: checkoutCopyBtnSuccess 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-    pointer-events: none;
-}
-
-.checkout-copy-btn.is-copied .checkout-copy-icon {
-    animation: checkoutCopyIconPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.checkout-copy-btn.is-copied .checkout-copy-label {
-    animation: checkoutCopyLabelFade 0.35s ease;
-}
-
-@keyframes checkoutCopyBtnSuccess {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.06); }
-    100% { transform: scale(1); }
-}
-
-@keyframes checkoutCopyIconPop {
-    0% { transform: scale(0.4) rotate(-20deg); opacity: 0; }
-    55% { transform: scale(1.2) rotate(0deg); opacity: 1; }
-    100% { transform: scale(1) rotate(0deg); }
-}
-
-@keyframes checkoutCopyLabelFade {
-    0% { opacity: 0; transform: translateY(4px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-.checkout-primary-btn {
-    width: 100%;
-    padding: 0.875rem;
-    background: #4CAF50;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-}
-.checkout-secondary-btn {
-    padding: 0.75rem 1rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    background: #fff;
-    cursor: pointer;
-    margin: 0.25rem;
-}
-.checkout-file-input { width: 100%; margin-bottom: 1rem; }
-.checkout-preview { margin-bottom: 1rem; }
-.checkout-result { text-align: center; padding: 1rem 0; }
-.checkout-result.success i { color: #22c55e; font-size: 2.5rem; }
-.checkout-result.pending i { color: #f59e0b; font-size: 2.5rem; }
-.checkout-result.fail i { color: #ef4444; font-size: 2.5rem; }
-.checkout-fail-actions { display: flex; flex-wrap: wrap; justify-content: center; margin: 1rem 0; }
-.checkout-manual-box { margin-top: 1rem; text-align: left; }
-.checkout-text-input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    margin: 0.5rem 0 1rem;
-    box-sizing: border-box;
-}
-.checkout-stk-section {
-    margin-bottom: 1.25rem;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid #e2e8f0;
-}
-.checkout-stk-section .checkout-secondary-btn {
-    width: 100%;
-    margin: 0.75rem 0 0;
-}
-.checkout-stk-sandbox {
-    font-size: 0.85rem;
-    margin-top: -0.5rem;
-}
-.checkout-tier-badge, .ticket-tier-vip, .ticket-tier-vvip, .ticket-tier-regular {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-}
-.ticket-tier-regular { background: #e2e8f0; color: #334155; }
-.ticket-tier-vip { background: #fef3c7; color: #b45309; }
-.ticket-tier-vvip { background: #ede9fe; color: #6d28d9; }
-
-=======
->>>>>>> 7fced7e (fix: storage quota exceeded and auth issues)
 @media print {
     .event-sidebar,
-    .directions-btn,
     .book-now-btn,
     .write-review-btn,
     .wishlist-sidebar-btn,
     .modal,
     .custom-toast,
+    .location-map-modal,
     .event-tabs button:not(.active) {
         display: none;
     }
