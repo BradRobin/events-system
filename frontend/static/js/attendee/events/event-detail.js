@@ -1,8 +1,14 @@
-// EVENT DETAIL MODULE - Live Reviews, Organizer Details, Directions
 console.log('Event detail loaded');
 
 const urlParams = new URLSearchParams(window.location.search);
 const eventId = urlParams.get('id');
+
+// Helper to check if user is logged in
+function isUserLoggedIn() {
+    const token = localStorage.getItem('attendee_access_token');
+    const user = localStorage.getItem('attendee_user');
+    return !!(token && user);
+}
 
 function showToast(message, type = 'success') {
     const existing = document.querySelector('.custom-toast');
@@ -101,9 +107,8 @@ function setupReviewModal(eventId) {
     if (!writeBtn) return;
     
     writeBtn.onclick = () => {
-        const token = localStorage.getItem('attendee_access_token');
-        if (!token) {
-            showToast('Please login to write a review', 'info');
+        if (!isUserLoggedIn()) {
+            showToast('🔐 Please login to write a review', 'info');
             setTimeout(() => window.location.href = '/login/', 1500);
             return;
         }
@@ -217,7 +222,7 @@ function submitReview(eventId) {
     }
     
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
-    const userName = user.name || 'Guest User';
+    const userName = user.name || user.full_name || 'Guest User';
     const userInitial = userName.charAt(0).toUpperCase();
     
     const newReview = {
@@ -243,7 +248,7 @@ function submitReview(eventId) {
     const modal = document.getElementById('reviewModal');
     if (modal) modal.style.display = 'none';
     resetReviewForm();
-    showToast('Thank you for your review!', 'success');
+    showToast('⭐ Thank you for your review!', 'success');
 }
 
 function renderEventDetails(event) {
@@ -252,7 +257,9 @@ function renderEventDetails(event) {
     
     const avgRating = getAverageRating(event.id);
     const reviewsCount = getEventReviews(event.id).length;
-    const wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
+    
+    // Get wishlist from localStorage (will be synced with API on page load)
+    let wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
     const isInWishlist = wishlist.includes(event.id);
     
     container.innerHTML = `
@@ -261,16 +268,16 @@ function renderEventDetails(event) {
                 <div class="event-breadcrumb">
                     <a href="/">Home</a> / 
                     <a href="/events/">Events</a> / 
-                    <span>${event.title}</span>
+                    <span>${escapeHtml(event.title)}</span>
                 </div>
                 
                 <div class="event-image-container">
-                    <img src="${event.image}" alt="${event.title}" class="event-main-image">
+                    <img src="${event.image || '/static/images/placeholder.jpg'}" alt="${escapeHtml(event.title)}" class="event-main-image" onerror="this.src='/static/images/placeholder.jpg'">
                     ${event.is_featured ? '<div class="event-featured-badge">Featured</div>' : ''}
                 </div>
                 
                 <div class="event-title-section">
-                    <h1>${event.title}</h1>
+                    <h1>${escapeHtml(event.title)}</h1>
                     <div class="event-rating">
                         <div class="stars">${renderStars(avgRating)}</div>
                         <span class="rating-count">(${reviewsCount} reviews)</span>
@@ -279,7 +286,7 @@ function renderEventDetails(event) {
                 
                 <div class="event-meta">
                     <span><i class="fas fa-calendar"></i> ${formatDate(event.date)} at ${event.time || 'TBA'}</span>
-                    <span><i class="fas fa-map-marker-alt"></i> ${event.location}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(event.location)}</span>
                     <span><i class="fas fa-ticket-alt"></i> ${event.available_tickets} tickets left</span>
                 </div>
                 
@@ -296,20 +303,20 @@ function renderEventDetails(event) {
                 <div id="detailsTab" class="tab-content active">
                     <div class="event-description">
                         <h3><i class="fas fa-info-circle"></i> About This Event</h3>
-                        <p>${event.description}</p>
+                        <p>${escapeHtml(event.description)}</p>
                     </div>
                     
                     <div class="event-features">
                         <h3><i class="fas fa-star"></i> Event Features</h3>
                         <ul>
-                            ${event.features.map(f => `<li><i class="fas fa-check-circle"></i> ${f}</li>`).join('')}
+                            ${event.features.map(f => `<li><i class="fas fa-check-circle"></i> ${escapeHtml(f)}</li>`).join('')}
                         </ul>
                     </div>
                     
                     <div class="event-venue">
                         <h3><i class="fas fa-map-marker-alt"></i> Venue Information</h3>
-                        <p><strong>Venue:</strong> ${event.venue || event.location}</p>
-                        <p><strong>Address:</strong> ${event.location}</p>
+                        <p><strong>Venue:</strong> ${escapeHtml(event.venue || event.location)}</p>
+                        <p><strong>Address:</strong> ${escapeHtml(event.location)}</p>
                         ${event.parking_available ? '<p><i class="fas fa-parking"></i> Free parking available</p>' : '<p><i class="fas fa-parking"></i> Limited street parking</p>'}
                         ${event.wheelchair_accessible ? '<p><i class="fas fa-wheelchair"></i> Wheelchair accessible</p>' : ''}
                         <a href="https://maps.google.com/?q=${encodeURIComponent(event.location)}" target="_blank" class="map-link">
@@ -329,7 +336,7 @@ function renderEventDetails(event) {
                 <div id="organizerTab" class="tab-content">
                     <div class="organizer-info">
                         <h3><i class="fas fa-building"></i> About the Organizer</h3>
-                        <p><strong>${event.organizer}</strong></p>
+                        <p><strong>${escapeHtml(event.organizer)}</strong></p>
                         ${event.organizer_email ? `<p><i class="fas fa-envelope"></i> <a href="mailto:${event.organizer_email}">${event.organizer_email}</a></p>` : ''}
                         ${event.organizer_phone ? `<p><i class="fas fa-phone"></i> <a href="tel:${event.organizer_phone}">${event.organizer_phone}</a></p>` : ''}
                         <div class="refund-policy">
@@ -359,9 +366,9 @@ function renderEventDetails(event) {
                     <h3>Get Your Tickets</h3>
                     
                     ${(event.vip_price || event.vvip_price) ? `
-                    <div class="ticket-tier-selector mb-3" style="margin-bottom: 1rem;">
-                        <label class="form-label" style="font-weight:600; font-size:0.875rem; color:#475569; display:block; margin-bottom:0.5rem;">Ticket Tier</label>
-                        <select id="ticketTier" class="form-select" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; color: #1e293b; background-color: #fff;">
+                    <div class="ticket-tier-selector" style="margin-bottom: 1rem;">
+                        <label style="font-weight:600; font-size:0.875rem; color:#475569; display:block; margin-bottom:0.5rem;">Ticket Tier</label>
+                        <select id="ticketTier" style="width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; color: #1e293b; background-color: #fff;">
                             <option value="Regular" data-price="${event.price}">Regular (KES ${event.price.toLocaleString()})</option>
                             ${event.vip_price ? `<option value="VIP" data-price="${event.vip_price}">VIP (KES ${event.vip_price.toLocaleString()})</option>` : ''}
                             ${event.vvip_price ? `<option value="VVIP" data-price="${event.vvip_price}">VVIP (KES ${event.vvip_price.toLocaleString()})</option>` : ''}
@@ -493,28 +500,70 @@ function renderEventDetails(event) {
         };
     }
     
-    // Book button — manual M-Pesa checkout flow
+    // Book button - FIXED: proper auth check
     if (bookBtn) {
         bookBtn.onclick = () => {
-            if (event.available_tickets <= 0) {
-                showToast('Sorry, this event is sold out!', 'error');
+            // Check if user is logged in
+            if (!isUserLoggedIn()) {
+                showToast('🔐 Please login to book tickets', 'info');
+                // Store current URL to redirect back after login
+                localStorage.setItem('redirect_after_login', window.location.pathname + window.location.search);
+                setTimeout(() => window.location.href = '/login/', 1500);
                 return;
             }
+            
+            if (event.available_tickets <= 0) {
+                showToast('🎟️ Sorry, this event is sold out!', 'error');
+                return;
+            }
+            
+            const currentPrice = getSelectedPrice();
+            const total = quantity * currentPrice;
             const tierName = getSelectedTier();
+            
+            // Use the checkout flow
             if (window.CheckoutFlow) {
                 window.CheckoutFlow.startCheckout(event.id, tierName, quantity);
             } else {
-                showToast('Checkout is loading. Please try again.', 'error');
+                // Fallback: add to cart and redirect
+                let cart = localStorage.getItem('eventhub_cart');
+                cart = cart ? JSON.parse(cart) : { items: [], subtotal: 0, platform_fee: 0, total: 0 };
+                
+                const existingItem = cart.items.find(i => i.id == event.id);
+                if (existingItem) {
+                    showToast('🎟️ Ticket already in your cart!', 'info');
+                    setTimeout(() => window.location.href = '/cart/', 1000);
+                    return;
+                }
+                
+                cart.items.push({
+                    id: event.id,
+                    title: event.title,
+                    price: currentPrice,
+                    quantity: quantity,
+                    image: event.image,
+                    location: event.location,
+                    date: event.date,
+                    ticket_type: tierName
+                });
+                
+                cart.subtotal = cart.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+                cart.total = cart.subtotal;
+                
+                localStorage.setItem('eventhub_cart', JSON.stringify(cart));
+                window.dispatchEvent(new Event('cart-updated'));
+                showToast('✅ Ticket added to cart!', 'success');
+                setTimeout(() => window.location.href = '/cart/', 1000);
             }
         };
     }
     
-    // Wishlist button
+    // Wishlist button - FIXED: sync with localStorage
     if (wishlistBtn) {
-        wishlistBtn.onclick = () => {
-            const token = localStorage.getItem('attendee_access_token');
-            if (!token) {
-                showToast('Please login to save to wishlist', 'info');
+        wishlistBtn.onclick = async () => {
+            if (!isUserLoggedIn()) {
+                showToast('🔐 Please login to save to wishlist', 'info');
+                localStorage.setItem('redirect_after_login', window.location.pathname + window.location.search);
                 setTimeout(() => window.location.href = '/login/', 1500);
                 return;
             }
@@ -526,12 +575,12 @@ function renderEventDetails(event) {
                 updatedWishlist.push(event.id);
                 wishlistBtn.classList.add('active');
                 wishlistBtn.innerHTML = '<i class="fas fa-heart"></i> Remove';
-                showToast('Event saved to wishlist!', 'success');
+                showToast('❤️ Event saved to wishlist!', 'success');
             } else {
                 updatedWishlist.splice(idx, 1);
                 wishlistBtn.classList.remove('active');
                 wishlistBtn.innerHTML = '<i class="fas fa-heart"></i> Add to wish list';
-                showToast('Event removed from wishlist', 'info');
+                showToast('🗑️ Event removed from wishlist', 'info');
             }
             
             localStorage.setItem('event_wishlist', JSON.stringify(updatedWishlist));
@@ -540,6 +589,13 @@ function renderEventDetails(event) {
     }
     
     setupReviewModal(event.id);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 async function loadEventDetails() {
@@ -558,7 +614,6 @@ async function loadEventDetails() {
         if (data.success && data.event) {
             const event = data.event;
             
-            // Normalize/fallback for fields that are missing in the DB model but expected by renderEventDetails:
             if (!event.features) {
                 event.features = ['General Admission', 'Standard Entry', 'Access to Venue'];
             }
@@ -594,4 +649,5 @@ async function loadEventDetails() {
         container.innerHTML = '<div class="error-state">Error loading event details. Please try again.</div>';
     }
 }
+
 document.addEventListener('DOMContentLoaded', loadEventDetails);
