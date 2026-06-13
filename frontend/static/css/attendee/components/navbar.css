@@ -1,6 +1,7 @@
 /* ============================================
    ATTENDEE NAVBAR - COMPLETE STYLES (DARK THEME)
-   IMPROVED: Better organization, responsive fixes
+   FIXED: Mobile dropdown positioning, no horizontal scroll
+   FIXED: User avatar with fallback initial
    ============================================ */
 
 .attendee-navbar {
@@ -376,6 +377,7 @@
     color: white;
 }
 
+/* FIXED: User avatar with fallback initial */
 .mobile-user-info-dropdown {
     display: flex;
     align-items: center;
@@ -390,19 +392,33 @@
 .mobile-user-avatar-dropdown {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #f59e0b, #ec6408);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
+/* User avatar image */
+.mobile-user-avatar-dropdown img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Fallback initial text */
 .mobile-user-avatar-dropdown span {
     color: white;
     font-weight: 700;
     font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
 }
 
 .mobile-user-details-dropdown {
@@ -434,8 +450,11 @@
     margin: 16px 0 12px 0;
 }
 
+/* FIXED: Mobile logout wrapper - ensures logout stays at bottom */
 .mobile-logout-wrapper {
-    margin-top: 8px;
+    margin-top: auto;
+    margin-bottom: 8px;
+    padding-top: 8px;
 }
 
 .mobile-logout-btn {
@@ -796,6 +815,36 @@
     transition: transform 0.2s;
 }
 
+/* FIXED: Desktop user avatar with fallback */
+.user-avatar-dropdown {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    flex-shrink: 0;
+}
+
+.user-avatar-dropdown img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-avatar-dropdown span {
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
 .dropdown-menu {
     position: absolute;
     top: calc(100% + 10px);
@@ -886,22 +935,6 @@
     background: rgba(245, 158, 11, 0.08);
     border-radius: 14px;
     margin-bottom: 8px;
-}
-
-.user-avatar-dropdown {
-    width: 44px;
-    height: 44px;
-    background: linear-gradient(135deg, #f59e0b, #ec6408);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.user-avatar-dropdown span {
-    color: white;
-    font-weight: 700;
-    font-size: 1rem;
 }
 
 .user-name-dropdown {
@@ -1054,8 +1087,13 @@
     }
 }
 
-/* Mobile Drawer (768px and below) */
+/* FIXED: Mobile Drawer (768px and below) - No horizontal scroll */
 @media (max-width: 768px) {
+    /* Prevent body from scrolling horizontally */
+    body {
+        overflow-x: hidden;
+    }
+    
     .mobile-toggle {
         display: block;
     }
@@ -1064,7 +1102,7 @@
         position: fixed;
         top: 0;
         right: -100%;
-        width: 320px;
+        width: 300px;
         max-width: 85%;
         background: #1e293b;
         flex-direction: column;
@@ -1076,10 +1114,18 @@
         max-height: 100vh;
         box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
         border-left: 1px solid rgba(245, 158, 11, 0.2);
+        /* Prevent horizontal overflow */
+        overflow-x: hidden;
     }
     
     .nav-links.show {
         right: 0;
+    }
+    
+    /* Ensure all content stays within drawer */
+    .nav-links * {
+        max-width: 100%;
+        box-sizing: border-box;
     }
     
     .mobile-close {
@@ -1112,6 +1158,7 @@
         padding: 14px 18px;
         justify-content: flex-start;
         white-space: normal;
+        box-sizing: border-box;
     }
     
     .nav-link span {
@@ -1148,6 +1195,7 @@
         border-radius: 30px;
         font-size: 0.85rem;
         color: white;
+        box-sizing: border-box;
     }
     
     .mobile-search button {
@@ -1190,6 +1238,18 @@
         right: 20px;
         bottom: 20px;
         width: auto;
+    }
+    
+    /* FIXED: Mobile drawer content spacing - logout at bottom */
+    .nav-links {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .mobile-logout-wrapper {
+        margin-top: auto;
+        margin-bottom: 0;
+        padding-top: 16px;
     }
 }
 
