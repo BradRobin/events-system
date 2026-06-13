@@ -53,7 +53,8 @@
                     <div id="mobileUserLinks" style="display: none;">
                         <div class="mobile-user-info-dropdown">
                             <div class="mobile-user-avatar-dropdown">
-                                <span id="mobileUserInitial">U</span>
+                                <img src="" alt="User Avatar" style="display: none;">
+                                <span class="avatar-initial" id="mobileUserInitial">U</span>
                             </div>
                             <div class="mobile-user-details-dropdown">
                                 <div class="mobile-user-name-dropdown" id="mobileUserName">User</div>
@@ -193,7 +194,8 @@
                     <div id="desktopUserLinks" style="display: none;">
                         <div class="user-info-dropdown">
                             <div class="user-avatar-dropdown">
-                                <span id="desktopUserInitial">U</span>
+                                <img src="" alt="User Avatar" style="display: none;">
+                                <span class="avatar-initial" id="desktopUserInitial">U</span>
                             </div>
                             <div>
                                 <div class="user-name-dropdown" id="desktopUserName">User</div>
@@ -236,17 +238,68 @@ document.addEventListener('DOMContentLoaded', function() {
     const desktopUser = document.getElementById('desktopUserLinks');
     const profileUserName = document.getElementById('profileUserName');
     const navLinks = document.getElementById('navLinks');
+    const desktopUserInitial = document.getElementById('desktopUserInitial');
+    const desktopUserAvatar = document.querySelector('.user-avatar-dropdown img');
+    const desktopUserNameSpan = document.getElementById('desktopUserName');
     
     // Mobile elements
     const mobileGuest = document.getElementById('mobileGuestLinks');
     const mobileUser = document.getElementById('mobileUserLinks');
     const mobileAccountLabel = document.getElementById('mobileAccountLabel');
     const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+    const mobileUserInitial = document.getElementById('mobileUserInitial');
+    const mobileUserAvatar = document.querySelector('.mobile-user-avatar-dropdown img');
+    const mobileUserNameSpan = document.getElementById('mobileUserName');
     
     const authOnlyElements = document.querySelectorAll('.auth-only');
     const guestOnlyElements = document.querySelectorAll('.guest-only');
     
     const isLoggedIn = accessToken && user && Object.keys(user).length > 0;
+    
+    // ========== AVATAR & USER NAME UPDATE ==========
+    function updateUserAvatarAndName() {
+        const firstName = user.first_name || '';
+        const lastName = user.last_name || '';
+        const email = user.email || '';
+        const fullName = user.full_name || (firstName + ' ' + lastName).trim() || email.split('@')[0] || 'User';
+        const userInitial = (firstName.charAt(0) || lastName.charAt(0) || email.charAt(0) || 'U').toUpperCase();
+        
+        // Update desktop
+        if (desktopUserNameSpan) desktopUserNameSpan.textContent = fullName;
+        if (profileUserName) profileUserName.textContent = fullName.split(' ')[0] || fullName;
+        
+        if (user.avatar_url) {
+            if (desktopUserAvatar) {
+                desktopUserAvatar.src = user.avatar_url;
+                desktopUserAvatar.style.display = 'block';
+                if (desktopUserInitial) desktopUserInitial.style.display = 'none';
+            }
+        } else {
+            if (desktopUserAvatar) desktopUserAvatar.style.display = 'none';
+            if (desktopUserInitial) {
+                desktopUserInitial.textContent = userInitial;
+                desktopUserInitial.style.display = 'flex';
+            }
+        }
+        
+        // Update mobile
+        if (mobileUserNameSpan) mobileUserNameSpan.textContent = fullName;
+        if (mobileAccountLabel) mobileAccountLabel.textContent = fullName.split(' ')[0] || fullName;
+        
+        if (user.avatar_url) {
+            if (mobileUserAvatar) {
+                mobileUserAvatar.src = user.avatar_url;
+                mobileUserAvatar.style.display = 'block';
+                if (mobileUserInitial) mobileUserInitial.style.display = 'none';
+            }
+        } else {
+            if (mobileUserAvatar) mobileUserAvatar.style.display = 'none';
+            if (mobileUserInitial) {
+                mobileUserInitial.textContent = userInitial;
+                mobileUserInitial.style.display = 'flex';
+            }
+        }
+    }
     
     // ========== BADGE MANAGEMENT SYSTEM ==========
     function getRawCartCount() {
@@ -283,7 +336,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let wishlistPageVisited = false;
     let ticketsPageVisited = false;
     
-    // Mark current page as visited - THIS CLEARS THE BADGE FOR THAT SPECIFIC PAGE
     function markCurrentPageAsVisited() {
         const currentPage = getCurrentPage();
         
@@ -300,7 +352,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateAllBadges();
     }
     
-    // Reset visited status when new items are added
     function resetVisitedStatusOnNewItems() {
         const cartCount = getRawCartCount();
         const wishlistCount = getRawWishlistCount();
@@ -322,7 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('total_last_count', (cartCount + wishlistCount).toString());
     }
     
-    // Get displayed badge counts
     function getDisplayedCartCount() {
         const rawCount = getRawCartCount();
         if (cartPageVisited) {
@@ -379,7 +429,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const displayWishlistCount = getDisplayedWishlistCount();
         const displayTicketsCount = getDisplayedTicketsCount();
         
-        // Update My Bookings badge (cart)
         const navCartBadge = document.getElementById('navCartBadge');
         if (navCartBadge) {
             if (displayCartCount > 0) {
@@ -391,7 +440,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Update Wishlist badge
         const navWishlistBadge = document.getElementById('navWishlistBadge');
         if (navWishlistBadge) {
             if (displayWishlistCount > 0) {
@@ -403,7 +451,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Update main My Tickets badge
         const myTicketsBadge = document.getElementById('myTicketsBadge');
         if (myTicketsBadge) {
             if (displayTicketsCount > 0) {
@@ -416,7 +463,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Setup navigation click handlers - clears badge when clicking the nav link
     function setupNavigationHandlers() {
         const cartLink = document.getElementById('navCartLink');
         const wishlistLink = document.getElementById('navWishlistLink');
@@ -446,7 +492,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Close dropdown functions
     function closeAllDesktopDropdowns() {
         const dropdownMenu = document.getElementById('dropdownMenu');
         if (dropdownMenu) dropdownMenu.classList.remove('show');
@@ -588,7 +633,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return div.innerHTML;
     }
     
-    // Load notifications
     function loadNotifications() {
         const notificationsList = document.getElementById('notificationsList');
         if (!notificationsList) return;
@@ -735,18 +779,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         window.addEventListener('profile-updated', function(e) {
-            if (e.detail && window.AccountProfile) AccountProfile.applyToNavbar(e.detail);
+            if (e.detail && window.AccountProfile) {
+                Object.assign(user, e.detail);
+                updateUserAvatarAndName();
+                AccountProfile.applyToNavbar(e.detail);
+            }
         });
         
+        updateUserAvatarAndName();
         updateAllBadges();
         setupNavigationHandlers();
-        
-        // Mark current page as visited to clear badges immediately
         markCurrentPageAsVisited();
         
         if (navLinks) navLinks.classList.add('logged-in');
-        
-        // Load notifications
         loadNotificationCount();
     } else {
         if (desktopUser) desktopUser.style.display = 'none';
@@ -766,7 +811,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     handleMobileAccountVisibility();
     
-    // Listen for page navigation
     window.addEventListener('pageshow', function() {
         markCurrentPageAsVisited();
         updateAllBadges();

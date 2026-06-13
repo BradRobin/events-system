@@ -1,7 +1,7 @@
 /* ============================================
    ATTENDEE NAVBAR - COMPLETE STYLES (DARK THEME)
-   FIXED: Mobile dropdown positioning, no horizontal scroll
-   FIXED: User avatar with fallback initial
+   FIXED: Mobile dropdown - no horizontal scroll, logout at bottom
+   FIXED: User avatar with image and fallback initial
    ============================================ */
 
 .attendee-navbar {
@@ -232,7 +232,7 @@
     50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2); }
 }
 
-/* Dropdown Submenu */
+/* Dropdown Submenu - Desktop */
 .nav-item-dropdown .dropdown-submenu {
     position: absolute;
     top: calc(100% + 5px);
@@ -275,6 +275,7 @@
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
 }
 
+/* ========== MOBILE DROPDOWN - FIXED ========== */
 @media (max-width: 768px) {
     .nav-item-dropdown {
         width: 100%;
@@ -282,7 +283,10 @@
     }
     
     .nav-item-dropdown .dropdown-submenu {
-        position: static;
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
         transform: none;
         margin: 8px 0 8px 16px;
         padding: 8px;
@@ -290,6 +294,8 @@
         visibility: visible;
         display: none;
         border-left: 2px solid rgba(245, 158, 11, 0.4);
+        width: calc(100% - 16px);
+        box-shadow: none;
     }
     
     .nav-item-dropdown:hover .dropdown-submenu {
@@ -351,7 +357,7 @@
     text-align: center;
 }
 
-/* ========== MOBILE ACCOUNT DROPDOWN ========== */
+/* ========== MOBILE ACCOUNT DROPDOWN - FIXED ========== */
 .mobile-account-dropdown {
     width: 100%;
     margin-bottom: 16px;
@@ -377,7 +383,7 @@
     color: white;
 }
 
-/* FIXED: User avatar with fallback initial */
+/* FIXED: User avatar with image and fallback */
 .mobile-user-info-dropdown {
     display: flex;
     align-items: center;
@@ -402,15 +408,16 @@
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
-/* User avatar image */
+/* Avatar image styling */
 .mobile-user-avatar-dropdown img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
 }
 
 /* Fallback initial text */
-.mobile-user-avatar-dropdown span {
+.mobile-user-avatar-dropdown .avatar-initial {
     color: white;
     font-weight: 700;
     font-size: 1.2rem;
@@ -450,11 +457,11 @@
     margin: 16px 0 12px 0;
 }
 
-/* FIXED: Mobile logout wrapper - ensures logout stays at bottom */
+/* FIXED: Logout wrapper - always at bottom of dropdown */
 .mobile-logout-wrapper {
     margin-top: auto;
-    margin-bottom: 8px;
-    padding-top: 8px;
+    padding-top: 12px;
+    margin-bottom: 0;
 }
 
 .mobile-logout-btn {
@@ -471,6 +478,7 @@
     background: rgba(239, 68, 68, 0.1);
     width: 100%;
     cursor: pointer;
+    box-sizing: border-box;
 }
 
 .mobile-logout-btn i {
@@ -485,6 +493,7 @@
     transform: translateX(4px);
 }
 
+/* Hide mobile account dropdown on desktop */
 @media (min-width: 769px) {
     .mobile-account-dropdown,
     .mobile-divider-line,
@@ -815,7 +824,7 @@
     transition: transform 0.2s;
 }
 
-/* FIXED: Desktop user avatar with fallback */
+/* FIXED: Desktop user avatar */
 .user-avatar-dropdown {
     width: 44px;
     height: 44px;
@@ -834,7 +843,7 @@
     object-fit: cover;
 }
 
-.user-avatar-dropdown span {
+.user-avatar-dropdown .avatar-initial {
     color: white;
     font-weight: 700;
     font-size: 1rem;
@@ -1090,8 +1099,9 @@
 /* FIXED: Mobile Drawer (768px and below) - No horizontal scroll */
 @media (max-width: 768px) {
     /* Prevent body from scrolling horizontally */
-    body {
+    html, body {
         overflow-x: hidden;
+        width: 100%;
     }
     
     .mobile-toggle {
@@ -1114,7 +1124,6 @@
         max-height: 100vh;
         box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
         border-left: 1px solid rgba(245, 158, 11, 0.2);
-        /* Prevent horizontal overflow */
         overflow-x: hidden;
     }
     
@@ -1240,15 +1249,16 @@
         width: auto;
     }
     
-    /* FIXED: Mobile drawer content spacing - logout at bottom */
+    /* FIXED: Mobile drawer content - proper flex layout */
     .nav-links {
         display: flex;
         flex-direction: column;
     }
     
+    /* Make content push logout to bottom */
     .mobile-logout-wrapper {
         margin-top: auto;
-        margin-bottom: 0;
+        margin-bottom: 8px;
         padding-top: 16px;
     }
 }
