@@ -342,10 +342,7 @@ async function initiateMpesaPayment(bookingId, billingInfo) {
             `;
         }
         
-        if (paymentTimeout) clearTimeout(paymentTimeout);
-        paymentTimeout = setTimeout(async () => {
-            await completePayment(bookingId, billingInfo);
-        }, 8000);
+        await completePayment(bookingId, billingInfo);
         
     } catch (error) {
         showToast(error.message || 'Failed to initiate payment', 'error');
@@ -353,71 +350,35 @@ async function initiateMpesaPayment(bookingId, billingInfo) {
     }
 }
 
-async function completePayment(bookingId, billingInfo) {
+
+    async function completePayment(bookingId, billingInfo) {
     try {
-        const paymentStatusEl = document.getElementById('paymentStatus');
-        
-        const newBooking = {
-            id: bookingId,
-            booking_date: new Date().toISOString(),
-            status: 'confirmed',
-            payment_method: 'M-Pesa',
-            receipt_number: 'MPESA' + Math.floor(Math.random() * 10000000),
-            total_amount: cartData.total,
-            subtotal: cartData.subtotal,
-            booking_fee: cartData.platform_fee,
-            discount: cartData.discount_amount || 0,
-            billing_info: {
-                name: billingInfo.full_name,
-                email: billingInfo.email,
-                phone: billingInfo.phone
+        const token = localStorage.getItem('attendee_access_token');
+
+        // Send real STK Push request to Django backend
+        const response = await fetch('/payments/pay/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
-            items: cartData.items.map(item => ({
-                id: item.id,
-                title: item.title,
-                category: item.category,
-                date: item.date,
-                location: item.location,
-                price: item.price,
-                quantity: item.quantity,
-                image: item.image,
-                ticket_status: 'active',
-                ticket_code: 'TKT' + Math.floor(Math.random() * 1000000)
-            }))
-        };
-        
-        const existingBookings = JSON.parse(localStorage.getItem('eventhub_bookings') || '[]');
-        existingBookings.unshift(newBooking);
-        localStorage.setItem('eventhub_bookings', JSON.stringify(existingBookings));
-        
-        if (paymentStatusEl) {
-            paymentStatusEl.innerHTML = `
-                <div class="payment-success">
-                    <i class="fas fa-check-circle"></i>
-                    <h3>Booking Confirmed!</h3>
-                    <p>Your booking has been successfully completed.</p>
-                    <div class="payment-details">
-                        <p><strong>Booking ID:</strong> ${bookingId}</p>
-                        <p><strong>M-Pesa Receipt:</strong> ${newBooking.receipt_number}</p>
-                        <p><strong>Amount Paid:</strong> ${formatCurrency(cartData.total)}</p>
-                        <p><strong>Tickets Booked:</strong> ${cartData.items.reduce((sum, item) => sum + item.quantity, 0)}</p>
-                    </div>
-                    <div class="redirect-message">
-                        <i class="fas fa-spinner fa-pulse"></i>
-                        <p>Redirecting to your bookings...</p>
-                    </div>
-                </div>
-            `;
+            body: JSON.stringify({
+                phone_number: billingInfo.phone,
+                amount: cartData.total,
+                event_id: cartData.items[0]?.id,
+                quantity: cartData.items.reduce((sum, item) => sum + item.quantity, 0),
+            })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.message || 'Payment initiation failed');
         }
-        
-        localStorage.removeItem('eventhub_cart');
-        updateCartCount(0);
-        showToast('Booking confirmed! Redirecting to your bookings...', 'success');
-        
-        setTimeout(() => {
-            window.location.href = '/bookings/';
-        }, 3000);
-        
+
+        // Poll for payment confirmation
+        pollCartPaymentStatus(data.checkout_request_id, billingInfo);
+
     } catch (error) {
         const paymentStatusEl = document.getElementById('paymentStatus');
         if (paymentStatusEl) {
@@ -431,6 +392,112 @@ async function completePayment(bookingId, billingInfo) {
             `;
         }
     }
+}
+
+function pollCartPaymentStatus(checkoutId, billingInfo) {
+    let attempts = 0;
+    const maxAttempts = 10;
+    const paymentStatusEl = document.getElementById('paymentStatus');
+
+    const interval = setInterval(async () => {
+        attempts++;
+        try {
+            const response = await fetch(`/payments/status/${checkoutId}/`);
+            const data = await response.json();
+
+            if (data.status === 'completed') {
+                clearInterval(interval);
+
+                // Save booking to localStorage
+                const bookingId = 'BK' + Date.now();
+                const newBooking = {
+                    id: bookingId,
+                    booking_date: new Date().toISOString(),
+                    status: 'confirmed',
+                    payment_method: 'M-Pesa',
+                    receipt_number: data.receipt,
+                    total_amount: cartData.total,
+                    subtotal: cartData.subtotal,
+                    booking_fee: cartData.platform_fee,
+                    discount: cartData.discount_amount || 0,
+                    billing_info: {
+                        name: billingInfo.full_name,
+                        email: billingInfo.email,
+                        phone: billingInfo.phone
+                    },
+                    items: cartData.items.map(item => ({
+                        id: item.id,
+                        title: item.title,
+                        category: item.category,
+                        date: item.date,
+                        location: item.location,
+                        price: item.price,
+                        quantity: item.quantity,
+                        image: item.image,
+                        ticket_status: 'active',
+                        ticket_code: 'TKT' + Math.floor(Math.random() * 1000000)
+                    }))
+                };
+
+                const existingBookings = JSON.parse(
+                    localStorage.getItem('eventhub_bookings') || '[]'
+                );
+                existingBookings.unshift(newBooking);
+                localStorage.setItem('eventhub_bookings', JSON.stringify(existingBookings));
+
+                if (paymentStatusEl) {
+                    paymentStatusEl.innerHTML = `
+                        <div class="payment-success">
+                            <i class="fas fa-check-circle"></i>
+                            <h3>Booking Confirmed!</h3>
+                            <p>Your M-Pesa payment was successful.</p>
+                            <div class="payment-details">
+                                <p><strong>Booking ID:</strong> ${bookingId}</p>
+                                <p><strong>M-Pesa Receipt:</strong> ${data.receipt}</p>
+                                <p><strong>Amount Paid:</strong> ${formatCurrency(cartData.total)}</p>
+                            </div>
+                            <div class="redirect-message">
+                                <i class="fas fa-spinner fa-pulse"></i>
+                                <p>Redirecting to your bookings...</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                localStorage.removeItem('eventhub_cart');
+                updateCartCount(0);
+                setTimeout(() => window.location.href = '/bookings/', 3000);
+
+            } else if (data.status === 'failed' || data.status === 'cancelled') {
+                clearInterval(interval);
+                if (paymentStatusEl) {
+                    paymentStatusEl.innerHTML = `
+                        <div class="payment-failed">
+                            <i class="fas fa-times-circle"></i>
+                            <h3>Payment Failed</h3>
+                            <p>Your M-Pesa payment was not completed. Please try again.</p>
+                            <button class="btn-outline" onclick="backToCart()">Try Again</button>
+                        </div>
+                    `;
+                }
+
+            } else if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                if (paymentStatusEl) {
+                    paymentStatusEl.innerHTML = `
+                        <div class="payment-failed">
+                            <i class="fas fa-times-circle"></i>
+                            <h3>Payment Timed Out</h3>
+                            <p>We did not receive payment confirmation. Please try again.</p>
+                            <button class="btn-outline" onclick="backToCart()">Try Again</button>
+                        </div>
+                    `;
+                }
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }, 3000);
 }
 
 function cancelPayment() {
