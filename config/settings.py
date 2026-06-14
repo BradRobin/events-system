@@ -1,10 +1,14 @@
 """
 Django settings for EventHub project.
 """
-
+from decouple import config
 from pathlib import Path
 import os
-import dj_database_url
+
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -18,9 +22,9 @@ if env_path.exists():
                 key, val = line.split('=', 1)
                 os.environ.setdefault(key.strip(), val.strip())
 # SECURITY: override with environment variable in production
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-j&#8z0n2)9txjmpi6=8i2h=d8ks8gt4gar#!kb0u0z6jd)im+#')
+SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-j&#8z0n2)9txjmpi6=8i2h=d8ks8gt4gar#!kb0u0z6jd)im+#')
 # Allow controlling debug via env var; default True for local development
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = config('DJANGO_DEBUG', default='True') == 'True'
 ALLOWED_HOSTS = ['*']
 
 
