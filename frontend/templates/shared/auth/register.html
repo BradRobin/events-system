@@ -41,6 +41,20 @@
                 </div>
             </div>
 
+            <!-- Google Sign In -->
+            <div style="position: relative; width: 100%; margin-bottom: 0.875rem;">
+                <button class="social-login-btn" id="googleSignInBtn" style="margin-bottom: 0; pointer-events: none;">
+                    <i class="fab fa-google social-login-icon"></i>
+                    Continue with Google
+                </button>
+                <div id="googleSignInBtnContainer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer;"></div>
+            </div>
+
+            <div class="auth-divider" style="margin-bottom: 1rem;">
+                <div class="auth-divider-line"><span></span></div>
+                <div class="auth-divider-text"><span>OR</span></div>
+            </div>
+
             <form method="POST" action="/api/auth/register/" id="registerForm">
                 {% csrf_token %}
                 <input type="hidden" name="role" id="roleInput" value="attendee">
@@ -102,6 +116,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
     // Role selection handler
     const roleRadios = document.querySelectorAll('input[name="role_select"]');
@@ -347,8 +362,16 @@
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json().then(resData => ({status: response.status, body: resData})))
+        .then(response => response.text().then(text => {
+            let resData = null;
+            try { resData = JSON.parse(text); } catch (e) { /* non-JSON response */ }
+            return {status: response.status, body: resData};
+        }))
         .then(({status, body}) => {
+            if (body === null) {
+                showToast(`Unexpected server response (HTTP ${status}). Please try again or contact support.`, 'error');
+                return;
+            }
             if (status === 201) {
                 const prefix = body.user.role === 'organizer' ? 'organizer' : 'attendee';
                 
@@ -360,7 +383,7 @@
                 showToast('Registration successful! Redirecting...', 'success');
                 setTimeout(() => {
                     if (body.user.role === 'organizer') {
-                        window.location.href = '/organizer/';
+                        window.location.href = '/organizer/dashboard/';
                     } else {
                         window.location.href = '/dashboard/';
                     }
@@ -375,7 +398,8 @@
             }
         })
         .catch(error => {
-            showToast('An error occurred', 'error');
+            console.error('Registration request failed:', error);
+            showToast('Could not reach the server. Please check that it is running and try again.', 'error');
         });
     });
     
@@ -386,5 +410,75 @@
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }
+
+    // Google Sign In Callback
+    function handleCredentialResponse(response) {
+        const selectedRole = roleInput.value;
+        const googleBtn = document.getElementById('googleSignInBtn');
+        if (googleBtn) {
+            googleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
+        }
+        
+        fetch('/api/auth/google/', {
+            method: 'POST',
+            body: JSON.stringify({
+                credential: response.credential,
+                role: selectedRole
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json().then(data => ({status: res.status, body: data})))
+        .then(({status, body}) => {
+            if (status === 200 || status === 201) {
+                const userRole = body.user.role;
+                const prefix = userRole === 'organizer' ? 'organizer' : 'attendee';
+                
+                localStorage.setItem(`${prefix}_access_token`, body.access);
+                localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
+                localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
+                
+                showToast('Registration successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    if (body.user.role === 'organizer') {
+                        window.location.href = '/organizer/dashboard/';
+                    } else {
+                        window.location.href = '/dashboard/';
+                    }
+                }, 1000);
+            } else {
+                showToast(body.error || 'Google Sign-in failed', 'error');
+                if (googleBtn) {
+                    googleBtn.innerHTML = '<i class="fab fa-google social-login-icon"></i> Continue with Google';
+                }
+            }
+        })
+        .catch(error => {
+            showToast('Network error during Google Sign-in.', 'error');
+            if (googleBtn) {
+                googleBtn.innerHTML = '<i class="fab fa-google social-login-icon"></i> Continue with Google';
+            }
+        });
+    }
+
+    // Initialize GIS Client
+    function initGoogleSignIn() {
+        if (typeof google !== 'undefined') {
+            google.accounts.id.initialize({
+                client_id: '{{ GOOGLE_OAUTH_CLIENT_ID }}',
+                callback: handleCredentialResponse
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("googleSignInBtnContainer"),
+                { theme: "outline", size: "large", width: "360" }
+            );
+        } else {
+            setTimeout(initGoogleSignIn, 100);
+        }
+    }
+
+    initGoogleSignIn();
 </script>
 {% endblock %}

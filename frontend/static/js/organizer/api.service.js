@@ -590,12 +590,27 @@ class OrganizerAPIService {
                 return { success: true };
             }
             if (parts.length === 3 && parts[2] === 'analytics' && method === 'GET') {
+                const sold = event.sold || 0;
+                const capacity = event.capacity || 0;
+                const available = Math.max(0, capacity - sold);
+                const sales_data = Array.from({ length: 7 }, (_, i) => {
+                    const point = new Date();
+                    point.setDate(point.getDate() - (6 - i));
+                    return {
+                        date: point.toISOString().split('T')[0],
+                        sold: Math.round(sold * ((i + 1) / 7))
+                    };
+                });
                 return {
-                    total_tickets: event.capacity || 0,
-                    tickets_sold: event.sold || 0,
+                    total_tickets: capacity,
+                    tickets_sold: sold,
                     revenue: event.revenue || 0,
-                    attendance: Math.min(event.sold || 0, event.capacity || 0),
-                    sales_data: [{ date: new Date().toISOString().split('T')[0], sold: event.sold || 0 }]
+                    attendance: Math.min(sold, capacity),
+                    sales_data,
+                    ticket_distribution: {
+                        Sold: sold,
+                        Available: available
+                    }
                 };
             }
         }
@@ -635,8 +650,9 @@ class OrganizerAPIService {
             if (cachedData) return cachedData;
         }
 
-        // Fast-path for explicit mock activation
-        if (this.config.USE_MOCK) {
+        // Fast-path for explicit mock activation (bypass for actual file uploads/deletions)
+        const isUploadOrDeleteImage = endpoint.includes('/upload-image/') || endpoint.includes('/upload-gallery/') || (endpoint.includes('/gallery/') && endpoint.includes('/delete/'));
+        if (this.config.USE_MOCK && !isUploadOrDeleteImage) {
             console.log(`[MOCK MODE] Serving local response for ${method} ${endpoint}`);
             return this.getMockResponse(method, endpoint, data, options);
         }
@@ -752,6 +768,20 @@ class OrganizerAPIService {
                 throw error;
             }
             
+            // Only use mock fallback when mock mode is explicitly enabled.
+            if (this.config.USE_MOCK) {
+                console.warn(`[MOCK MODE] Servicing "${endpoint}" via local storage because backend request failed:`, error);
+                return this.getMockResponse(method, endpoint, data);
+            }
+            
+            // Optionally allow offline fallback when browser is offline.
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                console.warn(`[OFFLINE] Serving "${endpoint}" via local storage because browser is offline.`, error);
+                return this.getMockResponse(method, endpoint, data);
+            }
+            
+            // Propagate actual backend request failures so the dashboard reflects real endpoint status.
+            throw error;
             // Fallback on total server crash or offline mode
             console.warn(`[CONNECTION FAILED] Servicing "${endpoint}" via local storage:`, error);
             return this.getMockResponse(method, endpoint, data, options);

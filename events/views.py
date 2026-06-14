@@ -6,30 +6,63 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
+from django.views.decorators.cache import cache_page
 
 from events.models import Event
 from accounts.models import User
 from bookings.models import Ticket
-from django.db.models import Sum
+from django.db.models import Sum, Avg
 
 def home(request):
     return render(request, 'index.html')
+
+
+def get_platform_stats():
+    """
+    Shared platform headline stats for public pages and APIs.
+    """
+    from reviews.models import EventReview
+
+    events_hosted = Event.objects.exclude(status='draft').count()
+
+    ticket_agg = Ticket.objects.exclude(status='cancelled').aggregate(total=Sum('quantity'))
+    happy_attendees = ticket_agg['total'] or 0
+
+    event_organizers = Event.objects.values('organizer').distinct().count()
+
+    avg_rating = EventReview.objects.aggregate(avg=Avg('rating'))['avg']
+    if avg_rating is not None:
+        satisfaction_rate = round((float(avg_rating) / 5.0) * 100)
+    else:
+        satisfaction_rate = 0
+
+    return {
+        'events_hosted': events_hosted,
+        'happy_attendees': happy_attendees,
+        'event_organizers': event_organizers,
+        'satisfaction_rate': satisfaction_rate,
+    }
+
 
 def homepage_view(request):
     events_count = Event.objects.filter(status='published').count()
     attendees_count = User.objects.filter(role='attendee').count()
     organizers_count = User.objects.filter(role='organizer').count()
     tickets_count = Ticket.objects.filter(status='valid').aggregate(Sum('quantity'))['quantity__sum'] or 0
-    satisfaction_rate = 98
-    
+    platform_stats = get_platform_stats()
+
     context = {
         'events_count': events_count,
         'attendees_count': attendees_count,
         'organizers_count': organizers_count,
         'tickets_count': tickets_count,
-        'satisfaction_rate': satisfaction_rate,
+        'satisfaction_rate': platform_stats['satisfaction_rate'],
     }
     return render(request, 'attendee/pages/homepage/homepage.html', context)
+
+
+def success_stories_view(request):
+    return render(request, 'attendee/pages/success-stories.html', get_platform_stats())
 
 
 
@@ -241,20 +274,65 @@ def organizer_dashboard_revenue(request):
 
 # ============ ATTENDEE EVENTS API ENDPOINTS ============
 
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, IntegerField
 from .models import Category, Event
+
+
+def _events_with_image_first(queryset):
+    """Prioritize events that have a banner image, then soonest start date."""
+    return queryset.annotate(
+        _has_image=Case(
+            When(Q(banner_image='') | Q(banner_image__isnull=True), then=Value(0)),
+            default=Value(1),
+            output_field=IntegerField(),
+        )
+    ).order_by('-_has_image', 'start_date')
+
+
+def resolve_banner_image(value):
+    """Return a browser-loadable banner URL for API responses."""
+    if not value:
+        return ''
+    value = value.strip()
+    if value.startswith(('data:', 'http://', 'https://', '/')):
+        return value
+    from django.conf import settings
+    if value.startswith(settings.MEDIA_URL):
+        return value
+    return settings.MEDIA_URL + value.lstrip('/')
 
 def api_event_list(request):
     """API endpoint to list and search events for attendees"""
+    from django.core.cache import cache
+    import hashlib
+
     query = request.GET.get('search', '').strip()
     category_id = request.GET.get('category', '').strip()
-    ordering = request.GET.get('ordering', 'date').strip()
+    city = request.GET.get('city', '').strip()
+    ordering = request.GET.get('ordering', '').strip()
+    if not ordering:
+        ordering = request.GET.get('sort', '').strip()
     
     # Handle search from both list.html and search.html
     if not query:
         query = request.GET.get('q', '').strip()
+
+    # Simple pagination
+    page = int(request.GET.get('page', 1))
+    limit = int(request.GET.get('limit', 6))
+    if 'limit' not in request.GET and ('q' in request.GET or 'search' in request.GET):
+        limit = 200  # return all matches when searching so no result is hidden by pagination
+
+    # Construct unique cache key based on query params
+    params_str = f"search:{query}|cat:{category_id}|city:{city}|ord:{ordering}|page:{page}|limit:{limit}"
+    cache_key = f"api_event_list_v2_{hashlib.md5(params_str.encode('utf-8')).hexdigest()}"
+
+    # Try cache lookup first
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return JsonResponse(cached_data)
         
-    events = Event.objects.filter(status='published', end_date__gte=timezone.now())
+    events = Event.objects.filter(status='published', end_date__gte=timezone.now()).select_related('category')
     
     if query:
         events = events.filter(
@@ -264,23 +342,29 @@ def api_event_list(request):
         )
         
     if category_id:
-        events = events.filter(category_id=category_id)
+        # Support both numeric id and slug (front-end sends slug)
+        if category_id.isdigit():
+            events = events.filter(category_id=category_id)
+        else:
+            events = events.filter(category__slug=category_id)
+        
+    if city:
+        events = events.filter(Q(address__icontains=city) | Q(venue__icontains=city))
         
     # Ordering
-    if ordering == 'price':
+    if ordering == 'price_asc' or ordering == 'price':
         events = events.order_by('price')
-    elif ordering == '-price':
+    elif ordering == 'price_desc' or ordering == '-price':
         events = events.order_by('-price')
+    elif ordering == 'date_desc' or ordering == '-date':
+        events = events.order_by('-start_date')
+    elif ordering == 'date_asc' or ordering == 'date':
+        events = events.order_by('start_date')
     elif ordering == 'title':
         events = events.order_by('title')
-    elif ordering == '-date':
-        events = events.order_by('-start_date')
     else:
-        events = events.order_by('start_date')
+        events = _events_with_image_first(events)
         
-    # Simple pagination
-    page = int(request.GET.get('page', 1))
-    limit = int(request.GET.get('limit', 6))
     start = (page - 1) * limit
     end = page * limit
     
@@ -302,44 +386,61 @@ def api_event_list(request):
             'venue': e.venue,
             'price': float(e.price),
             'min_price': float(e.price),
+            'vip_price': float(e.vip_price) if e.vip_price is not None else None,
+            'vvip_price': float(e.vvip_price) if e.vvip_price is not None else None,
             'total_seats': e.total_seats,
             'available_seats': e.available_seats,
             'available_tickets': e.available_seats,
-            'image': e.banner_image,
-            'banner_image': e.banner_image,
+            'image': resolve_banner_image(e.banner_image),
+            'banner_image': resolve_banner_image(e.banner_image),
             'category': e.category.name if e.category else 'General',
             'category_name': e.category.name if e.category else 'General',
             'is_featured': e.is_featured,
         })
         
-    return JsonResponse({
+    response_data = {
+        'success': True,
         'count': count,
+        'total_count': count,
         'results': results,
+        'events': results,
         'total_pages': (count + limit - 1) // limit
-    })
+    }
+
+    # Store in cache for 1 hour (3600 seconds)
+    cache.set(cache_key, response_data, 3600)
+    
+    return JsonResponse(response_data)
 
 
+@cache_page(300)
 def api_category_list(request):
     """API endpoint to list categories"""
-    categories = Category.objects.all()
+    from django.db.models import Count, Q
+    categories = Category.objects.annotate(
+        active_event_count=Count(
+            'event',
+            filter=Q(event__status='published', event__end_date__gte=timezone.now())
+        )
+    )
     results = []
     for c in categories:
-        event_count = Event.objects.filter(category=c, status='published', end_date__gte=timezone.now()).count()
         results.append({
             'id': c.id,
             'name': c.name,
             'slug': c.slug,
             'description': c.description,
             'icon': c.icon or 'globe',
-            'event_count': event_count
+            'event_count': c.active_event_count
         })
     return JsonResponse({'success': True, 'categories': results})
 
 
+@cache_page(15)
 def api_event_detail(request, event_id):
     """API endpoint to get detail of a single event"""
     try:
-        e = Event.objects.get(id=event_id)
+        e = Event.objects.select_related('category', 'organizer').prefetch_related('images').get(id=event_id)
         data = {
             'id': e.id,
             'title': e.title,
@@ -353,15 +454,18 @@ def api_event_detail(request, event_id):
             'venue': e.venue,
             'price': float(e.price),
             'min_price': float(e.price),
+            'vip_price': float(e.vip_price) if e.vip_price is not None else None,
+            'vvip_price': float(e.vvip_price) if e.vvip_price is not None else None,
             'total_seats': e.total_seats,
             'available_seats': e.available_seats,
             'available_tickets': e.available_seats,
-            'image': e.banner_image,
-            'banner_image': e.banner_image,
+            'image': resolve_banner_image(e.banner_image),
+            'banner_image': resolve_banner_image(e.banner_image),
             'category': e.category.name if e.category else 'General',
             'category_name': e.category.name if e.category else 'General',
             'is_featured': e.is_featured,
             'organizer_name': e.organizer.organization_name or e.organizer.username,
+            'images': [img.url for img in e.images.all()],
         }
         return JsonResponse({'success': True, 'event': data})
     except Event.DoesNotExist:
@@ -418,7 +522,8 @@ def api_dashboard_stats(request):
         # Count upcoming events that this specific user has tickets for
         user_upcoming_count = user_tickets.filter(event__end_date__gte=timezone.now()).values('event').distinct().count()
         upcoming_events = user_upcoming_count if user_upcoming_count > 0 else general_upcoming_count
-        reviews_written = 0
+        from reviews.models import EventReview
+        reviews_written = EventReview.objects.filter(user=user).count()
 
     return JsonResponse({
         'total_tickets': total_tickets,
@@ -445,7 +550,7 @@ def api_dashboard_recommendations(request):
             'date': e.start_date.isoformat(),
             'location': e.venue,
             'price': float(e.price),
-            'image': e.banner_image,
+            'image': resolve_banner_image(e.banner_image),
         })
     return JsonResponse(results, safe=False)
 
@@ -458,7 +563,7 @@ def api_dashboard_recent_activity(request):
     if not user or not user.is_authenticated:
         return JsonResponse([], safe=False)
         
-    tickets = Ticket.objects.filter(attendee=user).order_by('-purchase_date')[:5]
+    tickets = Ticket.objects.filter(attendee=user).select_related('event').order_by('-purchase_date')[:5]
     results = []
     for t in tickets:
         results.append({
@@ -474,11 +579,12 @@ def api_tickets_upcoming(request):
     """API endpoint to get upcoming tickets"""
     return JsonResponse({'results': []})
 
+@cache_page(3600)
 def api_featured_events(request):
     """API endpoint to get featured events for the attendee homepage"""
-    events = Event.objects.filter(status='published', end_date__gte=timezone.now(), is_featured=True).order_by('start_date')[:6]
+    events = Event.objects.filter(status='published', end_date__gte=timezone.now(), is_featured=True).select_related('category').order_by('start_date')[:6]
     if not events.exists():
-        events = Event.objects.filter(status='published', end_date__gte=timezone.now()).order_by('start_date')[:6]
+        events = Event.objects.filter(status='published', end_date__gte=timezone.now()).select_related('category').order_by('start_date')[:6]
         
     results = []
     for e in events:
@@ -492,8 +598,8 @@ def api_featured_events(request):
             'location': e.venue,
             'venue': e.venue,
             'price': float(e.price),
-            'image': e.banner_image,
-            'banner_image': e.banner_image,
+            'image': resolve_banner_image(e.banner_image),
+            'banner_image': resolve_banner_image(e.banner_image),
             'category': e.category.name if e.category else 'General',
             'category_name': e.category.name if e.category else 'General',
             'attendees_count': e.total_seats - e.available_seats,
@@ -502,51 +608,39 @@ def api_featured_events(request):
     return JsonResponse({'success': True, 'events': results})
 
 
+@cache_page(60)
+@require_http_methods(["GET"])
+def api_platform_stats(request):
+    """
+    Public API endpoint — no authentication required.
+    Returns platform-wide headline stats for public marketing pages.
+    """
+    stats = get_platform_stats()
+    return JsonResponse({
+        'success': True,
+        **stats,
+    })
+
+
 import dateutil.parser
 from bookings.models import Ticket
 from bookings.email_service import send_attendee_review_request_email, send_organizer_performance_summary_email
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def api_events_check_expired(request):
-    """
-    Checks for completed events and dispatches automated post-event alerts.
-    Utilizes client-passed local time and date from the context frameworks.
-    """
+def _process_expired_events_async(events_ids, client_dt):
+    """Background task to run post-event email dispatches asynchronously"""
+    from django.db import connection
+    import logging
+    logger = logging.getLogger(__name__)
     try:
-        data = json.loads(request.body)
-        client_date = data.get('current_date')
-        client_time = data.get('current_time', '00:00')
-        
-        if not client_date:
-            return JsonResponse({'success': False, 'message': 'Date is required'}, status=400)
-            
-        # Parse client date and time context to obtain a datetime threshold
-        try:
-            client_dt = dateutil.parser.isoparse(f"{client_date}T{client_time}")
-            if timezone.is_naive(client_dt):
-                client_dt = timezone.make_aware(client_dt)
-        except ValueError:
-            client_dt = timezone.now()
-
-        # Query active published events that have passed this end datetime and need notification updates
-        events = Event.objects.filter(
-            status='published',
-            end_date__lte=client_dt
-        ).filter(
-            Q(attendee_reviews_sent=False) | Q(organizer_summary_sent=False)
-        )
-        
+        # Re-query inside thread to keep database sessions distinct
+        events = Event.objects.filter(id__in=events_ids)
         processed_attendees_emails = 0
         processed_organizers_emails = 0
         
         for event in events:
             # 1. Dispatch attendee review requests
             if not event.attendee_reviews_sent:
-                # Find all tickets for this event
                 tickets = Ticket.objects.filter(event=event, status='valid')
-                
-                # Deduplicate attendee contacts
                 attendee_map = {}
                 for ticket in tickets:
                     email = ticket.billing_email or (ticket.attendee.email if ticket.attendee else None)
@@ -555,14 +649,17 @@ def api_events_check_expired(request):
                         attendee_map[email] = name
                         
                 for email, name in attendee_map.items():
-                    send_attendee_review_request_email(
-                        attendee_email=email,
-                        attendee_name=name,
-                        event_title=event.title,
-                        event_id=event.id
-                    )
-                    processed_attendees_emails += 1
-                    
+                    try:
+                        send_attendee_review_request_email(
+                            attendee_email=email,
+                            attendee_name=name,
+                            event_title=event.title,
+                            event_id=event.id
+                        )
+                        processed_attendees_emails += 1
+                    except Exception as email_exc:
+                        logger.error("Failed to send review email to %s: %s", email, email_exc)
+                        
                 event.attendee_reviews_sent = True
                 
             # 2. Dispatch organizer performance summary reports
@@ -571,28 +668,86 @@ def api_events_check_expired(request):
                 total_seats_sold = sum(t.quantity for t in tickets)
                 total_revenue = float(sum(t.quantity * t.price for t in tickets))
                 
-                send_organizer_performance_summary_email(
-                    organizer_email=event.organizer.email,
-                    organizer_name=event.organizer.organization_name or event.organizer.username,
-                    event_title=event.title,
-                    total_attendees=total_seats_sold,
-                    total_revenue=total_revenue
-                )
-                processed_organizers_emails += 1
+                try:
+                    send_organizer_performance_summary_email(
+                        organizer_email=event.organizer.email,
+                        organizer_name=event.organizer.organization_name or event.organizer.username,
+                        event_title=event.title,
+                        total_attendees=total_seats_sold,
+                        total_revenue=total_revenue
+                    )
+                    processed_organizers_emails += 1
+                except Exception as email_exc:
+                    logger.error("Failed to send organizer summary email for event %d: %s", event.id, email_exc)
                 event.organizer_summary_sent = True
                 
             event.save()
             
+        logger.info(
+            "Async post-event alerts completed. Attendees notified: %d, Organizers notified: %d",
+            processed_attendees_emails,
+            processed_organizers_emails
+        )
+    except Exception as exc:
+        logger.exception("Error in background post-event alerts thread: %s", exc)
+    finally:
+        connection.close()
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_events_check_expired(request):
+    """
+    Checks for completed events and dispatches automated post-event alerts in the background.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        data = json.loads(request.body)
+        client_date = data.get('current_date')
+        client_time = data.get('current_time', '00:00')
+        
+        if not client_date:
+            return JsonResponse({'success': False, 'message': 'Date is required'}, status=400)
+            
+        # Parse client date and time context
+        try:
+            client_dt = dateutil.parser.isoparse(f"{client_date}T{client_time}")
+            if timezone.is_naive(client_dt):
+                client_dt = timezone.make_aware(client_dt)
+        except ValueError:
+            client_dt = timezone.now()
+
+        # Query active published events that have passed this end datetime and need notification updates
+        events_to_process = Event.objects.filter(
+            status='published',
+            end_date__lte=client_dt
+        ).filter(
+            Q(attendee_reviews_sent=False) | Q(organizer_summary_sent=False)
+        )
+        
+        events_ids = list(events_to_process.values_list('id', flat=True))
+        
+        if events_ids:
+            # Start background thread
+            import threading
+            thread = threading.Thread(
+                target=_process_expired_events_async,
+                args=(events_ids, client_dt),
+                daemon=True
+            )
+            thread.start()
+            message = f"Post-event automations triggered in the background for {len(events_ids)} events."
+        else:
+            message = "No events require processing."
+            
         return JsonResponse({
             'success': True,
-            'message': f"Post-event automations triggered successfully.",
-            'attendees_notified': processed_attendees_emails,
-            'organizers_notified': processed_organizers_emails
+            'message': message,
         })
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error("Error in api_events_check_expired: %s", e)
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
@@ -722,4 +877,83 @@ def api_discover_local_events(request):
         "internal_events": internal_events,
         "external_events": external_events,
     })
+
+
+def api_db_status(request):
+    """Diagnostic view to inspect database engine, columns, and migrations status."""
+    from django.conf import settings
+    from django.db import connection
+    
+    db_engine = settings.DATABASES['default']['ENGINE']
+    
+    status_info = {
+        'db_engine': db_engine,
+        'connection_vendor': connection.vendor,
+        'banner_image_column_type': None,
+        'eventimage_image_column_type': None,
+        'applied_migrations': [],
+        'error': None
+    }
+    
+    try:
+        # 1. Fetch column info for events_event.banner_image
+        with connection.cursor() as cursor:
+            if connection.vendor == 'postgresql':
+                cursor.execute("""
+                    SELECT data_type, character_maximum_length 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'events_event' AND column_name = 'banner_image';
+                """)
+                row = cursor.fetchone()
+                if row:
+                    status_info['banner_image_column_type'] = f"{row[0]}({row[1]})" if row[1] else row[0]
+                
+                cursor.execute("""
+                    SELECT data_type, character_maximum_length 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'events_eventimage' AND column_name = 'image';
+                """)
+                row = cursor.fetchone()
+                if row:
+                    status_info['eventimage_image_column_type'] = f"{row[0]}({row[1]})" if row[1] else row[0]
+            elif connection.vendor == 'sqlite':
+                cursor.execute("PRAGMA table_info(events_event);")
+                rows = cursor.fetchall()
+                for r in rows:
+                    if r[1] == 'banner_image':
+                        status_info['banner_image_column_type'] = r[2]
+                
+                cursor.execute("PRAGMA table_info(events_eventimage);")
+                rows = cursor.fetchall()
+                for r in rows:
+                    if r[1] == 'image':
+                        status_info['eventimage_image_column_type'] = r[2]
+                        
+        # 2. Get applied migrations
+        from django.db.migrations.recorder import MigrationRecorder
+        applied = MigrationRecorder.Migration.objects.filter(app='events').values_list('name', flat=True)
+        status_info['applied_migrations'] = list(applied)
+        status_info['accounts_migrations'] = list(
+            MigrationRecorder.Migration.objects.filter(app='accounts').values_list('name', flat=True)
+        )
+
+        from config.db_migrations import _auth_schema_status, _payment_schema_status
+        status_info['auth_schema'] = _auth_schema_status()
+        status_info['payment_schema'] = _payment_schema_status()
+        status_info['payments_migrations'] = list(
+            MigrationRecorder.Migration.objects.filter(app='payments').values_list('name', flat=True)
+        )
+        
+    except Exception as e:
+        status_info['error'] = str(e)
+        
+    return JsonResponse(status_info)
+
+
+def api_run_migrations(request):
+    """Diagnostic view to repair migration history and run Django migrations."""
+    from config.db_migrations import run_migrations
+    return JsonResponse(run_migrations())
+
+
 

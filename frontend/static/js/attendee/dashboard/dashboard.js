@@ -5,11 +5,56 @@
 let refreshInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    setupStatCardNavigation();
     loadDashboardData();
     displayCurrentDate();
+    displayGreeting();
     displayUserName();
     setupAutoRefresh();
+    window.addEventListener('profile-updated', displayUserName);
 });
+
+function setupStatCardNavigation() {
+    const navigableCards = [
+        { statId: 'totalTickets', href: '/tickets/' },
+        { statId: 'upcomingEvents', href: '/events/' },
+        { statId: 'reviewsWritten', href: '/tickets/?tab=past' },
+    ];
+
+    navigableCards.forEach(({ statId, href }) => {
+        const statEl = document.getElementById(statId);
+        const card = statEl?.closest('.stat-card');
+        if (!card) return;
+
+        card.classList.add('stat-card--clickable');
+        card.setAttribute('role', 'link');
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('aria-label', `${card.querySelector('.stat-info span')?.textContent || 'View'} — open page`);
+
+        const navigate = () => { window.location.href = href; };
+        card.addEventListener('click', navigate);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate();
+            }
+        });
+    });
+}
+
+function displayGreeting() {
+    const greetingTextEl = document.getElementById('greetingText');
+    if (greetingTextEl) {
+        const hour = new Date().getHours();
+        let greeting = "Good Evening";
+        if (hour >= 3 && hour < 12) {
+            greeting = "Good Morning";
+        } else if (hour >= 12 && hour < 18) {
+            greeting = "Good Afternoon";
+        }
+        greetingTextEl.textContent = greeting;
+    }
+}
 
 function displayCurrentDate() {
     const dateElement = document.getElementById('currentDate');
@@ -20,12 +65,21 @@ function displayCurrentDate() {
     }
 }
 
+function getGreetingFirstName(user) {
+    if (user.first_name && String(user.first_name).trim()) {
+        return String(user.first_name).trim().split(/\s+/)[0];
+    }
+    const full = window.AccountProfile
+        ? AccountProfile.resolveDisplayName(user)
+        : (user.full_name || user.name || user.username || 'Attendee');
+    return full.split(/\s+/)[0] || full;
+}
+
 function displayUserName() {
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
     const userNameSpan = document.getElementById('userName');
     if (userNameSpan) {
-        const name = user.name || user.first_name || user.username || 'Attendee';
-        userNameSpan.textContent = name;
+        userNameSpan.textContent = getGreetingFirstName(user);
     }
 }
 
@@ -108,7 +162,7 @@ async function loadRecentActivity() {
         }
         
         container.innerHTML = activities.slice(0, 5).map(activity => `
-            <div class="activity-item activity-${activity.type || 'booking'}" onclick="window.location.href='${activity.action_url || '#'}'" style="cursor: pointer;">
+            <div class="activity-item activity-${activity.type || 'booking'}" ${activity.action_url ? `onclick="window.location.href='${activity.action_url}'" style="cursor: pointer;"` : ''}>
                 <div class="activity-icon">
                     <i class="fas ${getActivityIcon(activity.type)}"></i>
                 </div>
@@ -216,7 +270,7 @@ function getActivityIcon(type) {
 }
 
 function viewTicket(ticketId) {
-    window.location.href = `/tickets/detail/?ticket=${ticketId}`;
+    window.location.href = `/tickets/detail/?id=${encodeURIComponent(ticketId)}`;
 }
 
 function viewEvent(eventId) {

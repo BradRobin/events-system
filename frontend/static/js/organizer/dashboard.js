@@ -2,6 +2,20 @@
 // GLOBAL HELPERS (used across all modules)
 // ============================================
 
+window.displayGreeting = function() {
+    const greetingTextEl = document.getElementById('greetingText');
+    if (greetingTextEl) {
+        const hour = new Date().getHours();
+        let greeting = "Good Evening";
+        if (hour >= 3 && hour < 12) {
+            greeting = "Good Morning";
+        } else if (hour >= 12 && hour < 18) {
+            greeting = "Good Afternoon";
+        }
+        greetingTextEl.textContent = greeting;
+    }
+};
+
 window.showToast = function(message, type = 'info') {
     let toastContainer = document.getElementById('toastContainer');
     if (!toastContainer) {
@@ -288,6 +302,87 @@ window.loadPerformance = async function() {
         document.getElementById('fulfillmentRate').innerText = perf.fulfillment_rate || 92;
     } catch(e) {
         console.error(e);
+    }
+};
+
+window.loadPendingPayments = async function() {
+    const container = document.getElementById('pendingPaymentsList');
+    if (!container) return;
+    try {
+        const data = await OrganizerAPI.paymentOrders.getPending();
+        const orders = data.orders || [];
+        if (!orders.length) {
+            container.innerHTML = '<div class="text-muted text-center">No pending payment approvals</div>';
+            return;
+        }
+        container.innerHTML = orders.map(o => {
+            const verifyBadge = o.screenshot_verified === true
+                ? '<span class="badge bg-success ms-1">Auto-verified</span>'
+                : '<span class="badge bg-secondary ms-1">Manual review</span>';
+            const mpesaName = o.submitted_mpesa_name
+                ? escapeHtml(o.submitted_mpesa_name)
+                : '<em class="text-muted">Not provided</em>';
+            return `
+            <div class="border rounded p-3 mb-2">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <strong>${escapeHtml(o.event_title)}</strong>
+                        <span class="badge bg-warning text-dark ms-2">${escapeHtml(o.ticket_type)}</span>
+                        ${verifyBadge}<br>
+                        <small>Attendee: ${escapeHtml(o.attendee_name)}</small><br>
+                        <small>M-Pesa name: <strong>${mpesaName}</strong></small><br>
+                        <small>Amount: KES ${Number(o.total_amount).toLocaleString()} &middot; Qty: ${o.quantity}</small>
+                        ${o.verification_message ? `<br><small class="text-muted">${escapeHtml(o.verification_message)}</small>` : ''}
+                        ${o.has_screenshot ? `<br><button type="button" class="btn btn-sm btn-link p-0 view-screenshot-btn" data-id="${o.id}">View screenshot</button>` : ''}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-success approve-payment-btn" data-id="${o.id}">Approve</button>
+                        <button class="btn btn-sm btn-outline-danger reject-payment-btn" data-id="${o.id}">Reject</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        }).join('');
+        container.querySelectorAll('.view-screenshot-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                try {
+                    const data = await OrganizerAPI.paymentOrders.getScreenshot(btn.dataset.id);
+                    if (data.screenshot_data) {
+                        window.open(data.screenshot_data, '_blank', 'noopener');
+                    } else {
+                        showToast('Screenshot not available', 'error');
+                    }
+                } catch (e) {
+                    showToast(e.message || 'Could not load screenshot', 'error');
+                }
+            });
+        });
+        container.querySelectorAll('.approve-payment-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                try {
+                    await OrganizerAPI.paymentOrders.approve(btn.dataset.id);
+                    showToast('Payment approved. Ticket issued.', 'success');
+                    loadPendingPayments();
+                    loadDashboardStats();
+                } catch (e) {
+                    showToast(e.message || 'Approval failed', 'error');
+                }
+            });
+        });
+        container.querySelectorAll('.reject-payment-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Reject this payment submission?')) return;
+                try {
+                    await OrganizerAPI.paymentOrders.reject(btn.dataset.id);
+                    showToast('Payment rejected.', 'info');
+                    loadPendingPayments();
+                } catch (e) {
+                    showToast(e.message || 'Rejection failed', 'error');
+                }
+            });
+        });
+    } catch (e) {
+        container.innerHTML = '<div class="text-muted text-center">Could not load pending approvals</div>';
     }
 };
 

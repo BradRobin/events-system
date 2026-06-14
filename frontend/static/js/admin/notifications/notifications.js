@@ -41,11 +41,10 @@ async function sendBroadcast() {
     Loader.show('Sending broadcast...');
     
     try {
-        await apiRequest('/api/admin/notifications/broadcast/', 'POST', {
-            title: title,
+        await apiRequest('/api/admin/broadcast/', 'POST', {
+            subject: title,
             message: message,
-            audience: audience,
-            method: method
+            audience: audience
         });
         
         showToast('Broadcast sent successfully', 'success');
@@ -85,8 +84,11 @@ function displayNotifications(notifications) {
         return;
     }
     
-    container.innerHTML = notifications.map(n => `
-        <div class="notification-item ${n.is_read ? '' : 'unread'}">
+    container.innerHTML = notifications.map(n => {
+        const redirectUrl = n.redirect_url || '/admin-portal/dashboard/';
+        const notifId = escapeHtml(String(n.id));
+        return `
+        <div class="notification-item ${n.is_read ? '' : 'unread'}" style="cursor: pointer;" onclick="openNotification('${notifId}', '${redirectUrl.replace(/'/g, "\\'")}')">
             <div class="notification-content">
                 <div class="notification-title">
                     ${escapeHtml(n.title)}
@@ -96,11 +98,12 @@ function displayNotifications(notifications) {
                 <div class="notification-time">${formatRelativeTime(n.created_at)}</div>
             </div>
             <div class="notification-actions">
-                ${!n.is_read ? `<button class="action-btn" onclick="markAsRead(${n.id})" title="Mark as Read"><i class="fas fa-check"></i></button>` : ''}
-                <button class="action-btn" onclick="deleteNotification(${n.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                ${!n.is_read ? `<button class="action-btn" onclick="event.stopPropagation(); markAsRead('${notifId}')" title="Mark as Read"><i class="fas fa-check"></i></button>` : ''}
+                <button class="action-btn" onclick="event.stopPropagation(); deleteNotification('${notifId}')" title="Delete"><i class="fas fa-trash"></i></button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
     
     document.getElementById('recordsCount').textContent = `Showing ${notifications.length} notifications`;
 }
@@ -204,9 +207,24 @@ async function deleteTemplate(id) {
     });
 }
 
+function encodeNotificationId(notificationId) {
+    return encodeURIComponent(String(notificationId));
+}
+
+async function openNotification(id, redirectUrl) {
+    try {
+        await apiRequest(`/api/admin/notifications/${encodeNotificationId(id)}/read/`, 'POST');
+    } catch (error) {
+        console.error('Error marking as read:', error);
+    }
+    sessionStorage.setItem('admin_active_notification_id', String(id));
+    const separator = redirectUrl.includes('?') ? '&' : '?';
+    window.location.href = `${redirectUrl}${separator}from_notification=${encodeNotificationId(id)}`;
+}
+
 async function markAsRead(id) {
     try {
-        await apiRequest(`/api/admin/notifications/${id}/read/`, 'POST');
+        await apiRequest(`/api/admin/notifications/${encodeNotificationId(id)}/read/`, 'POST');
         loadNotifications();
     } catch (error) {
         console.error('Error marking as read:', error);
@@ -216,7 +234,7 @@ async function markAsRead(id) {
 async function deleteNotification(id) {
     showConfirm('Delete this notification?', async () => {
         try {
-            await apiRequest(`/api/admin/notifications/${id}/`, 'DELETE');
+            await apiRequest(`/api/admin/notifications/${encodeNotificationId(id)}/`, 'DELETE');
             showToast('Notification deleted', 'success');
             loadNotifications();
         } catch (error) {
@@ -290,6 +308,7 @@ window.addTemplate = addTemplate;
 window.editTemplate = editTemplate;
 window.saveTemplate = saveTemplate;
 window.deleteTemplate = deleteTemplate;
+window.openNotification = openNotification;
 window.markAsRead = markAsRead;
 window.deleteNotification = deleteNotification;
 window.closeTemplateModal = closeTemplateModal;

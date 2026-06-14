@@ -209,7 +209,7 @@
                 <p>Join thousands of happy attendees and organizers on EventHub</p>
                 <div class="cta-buttons">
                     <a href="/events/" class="btn btn-primary">Browse Events</a>
-                    <a href="/register/" class="btn btn-outline">Create Account</a>
+                    <a href="/register/" id="ctaAccountBtn" class="btn btn-outline">Create Account</a>
                 </div>
             </div>
         </div>
@@ -219,4 +219,49 @@
 
 {% block extra_js %}
 <script src="{% static 'js/attendee/pages/about.js' %}"></script>
+<script>
+    // Check login state and update CTA button on About page
+    (function() {
+        const accessToken = localStorage.getItem('attendee_access_token');
+        const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+        const isLoggedIn = accessToken && user && Object.keys(user).length > 0;
+        
+        const ctaAccountBtn = document.getElementById('ctaAccountBtn');
+        
+        if (ctaAccountBtn) {
+            if (isLoggedIn) {
+                // Logged in - change to Dashboard button
+                ctaAccountBtn.href = '/dashboard/';
+                ctaAccountBtn.innerHTML = 'Go to Dashboard <i class="fas fa-tachometer-alt"></i>';
+                ctaAccountBtn.classList.remove('btn-outline');
+                ctaAccountBtn.classList.add('btn-primary');
+            } else {
+                // Not logged in - keep as Create Account
+                ctaAccountBtn.href = '/register/';
+                ctaAccountBtn.innerHTML = 'Create Account';
+                ctaAccountBtn.classList.remove('btn-primary');
+                ctaAccountBtn.classList.add('btn-outline');
+            }
+        }
+        
+        // Listen for auth state changes
+        window.addEventListener('auth-state-changed', function(event) {
+            const isLoggedInEvent = event.detail?.isLoggedIn || false;
+            
+            if (ctaAccountBtn) {
+                if (isLoggedInEvent) {
+                    ctaAccountBtn.href = '/dashboard/';
+                    ctaAccountBtn.innerHTML = 'Go to Dashboard <i class="fas fa-tachometer-alt"></i>';
+                    ctaAccountBtn.classList.remove('btn-outline');
+                    ctaAccountBtn.classList.add('btn-primary');
+                } else {
+                    ctaAccountBtn.href = '/register/';
+                    ctaAccountBtn.innerHTML = 'Create Account';
+                    ctaAccountBtn.classList.remove('btn-primary');
+                    ctaAccountBtn.classList.add('btn-outline');
+                }
+            }
+        });
+    })();
+</script>
 {% endblock %}

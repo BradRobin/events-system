@@ -152,6 +152,9 @@ function displayOrganizers(organizers) {
                         <i class="fas fa-user-check"></i>
                     </button>
                 `}
+                <button class="action-btn suspend" style="color: var(--danger);" onclick="deleteOrganizer(${org.id})" title="Delete Permanent">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </td>
          </tr>
     `).join('');
@@ -266,7 +269,7 @@ function displaySuspendedOrganizers(organizers) {
     if (!tbody) return;
     
     if (!organizers || organizers.length === 0) {
-        tbody.innerHTML = '<td><td colspan="5" class="text-center">No suspended organizers found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No suspended organizers found</td></tr>';
         return;
     }
     
@@ -282,6 +285,9 @@ function displaySuspendedOrganizers(organizers) {
                 </button>
                 <button class="action-btn edit" onclick="reactivateOrganizer(${org.id})" title="Reactivate">
                     <i class="fas fa-user-check"></i>
+                </button>
+                <button class="action-btn suspend" style="color: var(--danger);" onclick="deleteOrganizer(${org.id})" title="Delete Permanent">
+                    <i class="fas fa-trash-alt"></i>
                 </button>
              </td>
          </tr>
@@ -477,3 +483,78 @@ window.viewOrganizerDetail = viewOrganizerDetail;
 window.closeVerifyModal = closeVerifyModal;
 window.applyFilters = applyFilters;
 window.resetFilters = resetFilters;
+
+// Organizer Creation and Deletion functions
+async function deleteOrganizer(organizerId) {
+    if (!confirm('Are you sure you want to permanently delete this organizer? All their events will be deleted as well.')) {
+        return;
+    }
+    
+    if (typeof Loader !== 'undefined') Loader.show('Deleting organizer...');
+    
+    try {
+        await apiRequest(`/api/admin/organizers/${organizerId}/delete/`, 'POST');
+        showToast('Organizer deleted successfully', 'success');
+        if (currentTab === 'verified') {
+            loadOrganizers();
+        } else if (currentTab === 'suspended') {
+            loadSuspendedOrganizers();
+        }
+        loadStats();
+    } catch (error) {
+        showToast('Failed to delete organizer', 'error');
+    } finally {
+        if (typeof Loader !== 'undefined') Loader.hide();
+    }
+}
+
+function openCreateOrganizerModal() {
+    const modal = document.getElementById('createOrganizerModal');
+    if (modal) {
+        document.getElementById('createOrganizerForm').reset();
+        modal.style.display = 'flex';
+    }
+}
+
+function closeCreateOrganizerModal() {
+    const modal = document.getElementById('createOrganizerModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function handleCreateOrganizer(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('orgUsername').value;
+    const email = document.getElementById('orgEmail').value;
+    const password = document.getElementById('orgPassword').value;
+    const businessName = document.getElementById('orgBusinessName').value;
+    const contactName = document.getElementById('orgContactName').value;
+    const phone = document.getElementById('orgPhone').value;
+    
+    if (typeof Loader !== 'undefined') Loader.show('Creating organizer...');
+    
+    try {
+        await apiRequest('/api/admin/organizers/create/', 'POST', {
+            username: username,
+            email: email,
+            password: password,
+            business_name: businessName,
+            contact_name: contactName,
+            phone: phone
+        });
+        
+        showToast('Organizer created successfully', 'success');
+        closeCreateOrganizerModal();
+        loadOrganizers();
+        loadStats();
+    } catch (error) {
+        showToast('Failed to create organizer', 'error');
+    } finally {
+        if (typeof Loader !== 'undefined') Loader.hide();
+    }
+}
+
+window.deleteOrganizer = deleteOrganizer;
+window.openCreateOrganizerModal = openCreateOrganizerModal;
+window.closeCreateOrganizerModal = closeCreateOrganizerModal;
+window.handleCreateOrganizer = handleCreateOrganizer;

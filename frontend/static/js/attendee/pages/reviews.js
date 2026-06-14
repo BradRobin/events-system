@@ -19,10 +19,20 @@ async function loadReviews() {
         
         if (response.ok) {
             const data = await response.json();
-            displayReviews(data.reviews);
+            const reviews = (data.results || data.reviews || []).map((review) => ({
+                reviewer_name: review.event_title ? (review.user_name || 'Attendee') : (review.user_name || 'Attendee'),
+                rating: review.rating,
+                comment: review.comment,
+                event_title: review.event_title || 'Event',
+                created_at: review.created_at,
+            }));
+            displayReviews(reviews);
             totalPages = data.total_pages || 1;
             updateLoadMoreButton();
-            updateRatingSummary(data.summary);
+            updateRatingSummary({
+                average_rating: data.average_rating,
+                total_reviews: data.count || reviews.length,
+            });
         }
     } catch (error) {
         console.error('Error loading reviews:', error);

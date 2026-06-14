@@ -12,24 +12,34 @@
 
 {% block extra_css %}
 <style>
+    body, .container-fluid {
+        background: radial-gradient(circle at top, #090909 0%, #000 55%, #080808 100%);
+        color: #f8fafc;
+    }
     .event-card {
-        background: rgba(17, 24, 39, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
+        background: #050505;
+        border: 1px solid rgba(255, 107, 0, 0.35);
+        border-radius: 18px;
         overflow: hidden;
-        backdrop-filter: blur(10px);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 18px 40px rgba(255, 107, 0, 0.08);
     }
     .event-card:hover {
         transform: translateY(-4px);
-        border-color: rgba(245, 158, 11, 0.3);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        border-color: rgba(255, 107, 0, 0.75);
+        box-shadow: 0 20px 40px rgba(255, 107, 0, 0.18);
     }
     .event-banner {
         height: 180px;
         background-size: cover;
         background-position: center;
         position: relative;
+    }
+    .event-banner::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.85));
     }
     .event-badge {
         position: absolute;
@@ -40,39 +50,71 @@
         border-radius: 30px;
         font-weight: 600;
         font-size: 0.75rem;
+        background: rgba(255, 255, 255, 0.08);
+        color: #f8fafc;
+        border: 1px solid rgba(255, 255, 255, 0.12);
     }
     .badge-published {
-        background: rgba(16, 185, 129, 0.2);
-        color: #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        background: rgba(255, 107, 0, 0.18);
+        color: #ffb347;
+        border: 1px solid rgba(255, 107, 0, 0.45);
     }
     .badge-draft {
-        background: rgba(148, 163, 184, 0.2);
-        color: #94a3b8;
-        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(255, 255, 255, 0.08);
+        color: #f8fafc;
+        border: 1px solid rgba(255, 255, 255, 0.18);
     }
     .badge-cancelled {
         background: rgba(239, 68, 68, 0.2);
-        color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #fecaca;
+        border: 1px solid rgba(239, 68, 68, 0.4);
     }
     .capacity-bar {
         height: 8px;
         border-radius: 4px;
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.05);
         overflow: hidden;
     }
     .capacity-fill {
         height: 100%;
-        background: linear-gradient(135deg, #f59e0b, #d97706);
+        background: linear-gradient(135deg, #ff6b00, #f97316);
         border-radius: 4px;
         transition: width 0.5s ease;
     }
     .search-filter-bar {
-        background: rgba(17, 24, 39, 0.4);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 107, 0, 0.25);
+        border-radius: 16px;
         padding: 1rem;
+    }
+    .form-control,
+    .form-select {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #f8fafc;
+    }
+    .form-control:focus,
+    .form-select:focus {
+        border-color: rgba(255, 107, 0, 0.6);
+        box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.18);
+    }
+    .modal-content {
+        background: #080808;
+        border: 1px solid rgba(255, 107, 0, 0.2);
+    }
+    .modal-header,
+    .modal-footer {
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+    .btn-outline-secondary {
+        color: #f8fafc;
+        border-color: rgba(255, 255, 255, 0.22);
+    }
+    .btn-outline-secondary:hover {
+        background: rgba(255, 255, 255, 0.06);
+    }
+    .text-white {
+        color: #f8fafc !important;
     }
 </style>
 {% endblock %}
@@ -262,7 +304,7 @@
             return;
         }
 
-        container.innerHTML = filtered.map(e => {
+        eventsContainer.innerHTML = filtered.map(e => {
             const isPub = e.status === 'published';
             const badgeClass = isPub ? 'badge-published' : (e.status === 'cancelled' ? 'badge-cancelled' : 'badge-draft');
             const percent = e.capacity > 0 ? Math.min(100, ((e.sold || 0) / e.capacity) * 100) : 0;

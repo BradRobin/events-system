@@ -1,13 +1,18 @@
 import hashlib
 import json
+import logging
+import os
 import secrets
 from datetime import timedelta
 
 from django.contrib.auth import authenticate, get_user_model
+from django.db import DatabaseError
 from django.http import JsonResponse
 from django.utils import timezone
 
 from .models import APIToken
+
+logger = logging.getLogger(__name__)
 
 
 ACCESS_TOKEN_LIFETIME = timedelta(minutes=30)
@@ -29,6 +34,33 @@ def json_error(message, status=400, errors=None):
     if errors:
         payload['errors'] = errors
     return JsonResponse(payload, status=status)
+
+
+def database_unavailable_response(exc):
+    logger.exception('Database error during authentication: %s', exc)
+    return json_error(
+        'The authentication database is not ready. '
+        'An administrator should open /api/events/run-migrations/ to initialize '
+        'the Supabase schema, then try signing in again.',
+        status=503,
+        errors={'detail': str(exc)},
+    )
+
+
+def retry_after_migration_repair(request, view_callable):
+    """On managed Postgres (Supabase), repair migration history once and retry."""
+    if not os.environ.get('DATABASE_URL'):
+        return None
+    if getattr(request, '_db_repair_attempted', False):
+        return None
+    request._db_repair_attempted = True
+    try:
+        from config.db_migrations import run_migrations
+        if run_migrations().get('success'):
+            return view_callable(request)
+    except Exception:
+        logger.exception('Migration repair during auth failed')
+    return None
 
 
 def token_hash(token):

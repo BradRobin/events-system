@@ -3,14 +3,33 @@
    EventHub Admin Portal - Core Functionality
    ============================================ */
 
+function getAdminAccessToken() {
+    try {
+        return localStorage.getItem('admin_access_token') || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function getAdminAuthHeaders() {
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': getCSRFToken()
+    };
+    const token = getAdminAccessToken();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
 // Global API Request Function
 async function apiRequest(url, method = 'GET', data = null) {
     const options = {
         method: method,
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        }
+        headers: getAdminAuthHeaders(),
+        credentials: 'same-origin'
     };
     
     if (data && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
@@ -265,6 +284,7 @@ function initActivePageHighlighting() {
 function initNotifications() {
     const notificationsBtn = document.getElementById('notificationsBtn');
     const notificationsPanel = document.getElementById('notificationsPanel');
+    const notificationsList = document.getElementById('notificationsList');
     
     if (notificationsBtn && notificationsPanel) {
         notificationsBtn.addEventListener('click', function(e) {
@@ -281,16 +301,73 @@ function initNotifications() {
             e.stopPropagation();
         });
     }
+
+    if (notificationsList) {
+        notificationsList.addEventListener('click', function(e) {
+            const item = e.target.closest('.notification-item');
+            if (!item || e.target.closest('.mark-read')) return;
+            const notificationId = item.dataset.id;
+            const redirectUrl = item.dataset.url;
+            if (notificationId && redirectUrl) {
+                handleNotificationClick(e, notificationId, redirectUrl);
+            }
+        });
+    }
     
     loadNotifications();
+    setInterval(loadNotifications, 30000);
+
+    window.addEventListener('pageshow', function() {
+        loadNotifications();
+    });
+
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            loadNotifications();
+        }
+    });
 }
+
+function encodeNotificationId(notificationId) {
+    return encodeURIComponent(String(notificationId));
+}
+
+async function dismissAdminNotification(notificationId, onView = false, force = false) {
+    try {
+        await fetch(`/api/admin/notifications/${encodeNotificationId(notificationId)}/dismiss/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({ on_view: onView, force: force })
+        });
+    } catch (error) {
+        console.error('Error dismissing notification:', error);
+    }
+}
+
+function getActiveNotificationId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return sessionStorage.getItem('admin_active_notification_id') || urlParams.get('from_notification');
+}
+
+function clearActiveNotification() {
+    sessionStorage.removeItem('admin_active_notification_id');
+}
+
+window.dismissAdminNotification = dismissAdminNotification;
+window.getActiveNotificationId = getActiveNotificationId;
+window.clearActiveNotification = clearActiveNotification;
 
 async function loadNotifications() {
     const container = document.getElementById('notificationsList');
     if (!container) return;
     
-    // Show loading state
-    container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    const isFirstLoad = !container.querySelector('.notification-item') && !container.querySelector('.empty-state');
+    if (isFirstLoad) {
+        container.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
+    }
     
     try {
         const response = await fetch('/api/admin/notifications/recent/');
@@ -318,40 +395,39 @@ function displayNotifications(notifications, unreadCount) {
     } else {
         container.innerHTML = notifications.map(n => {
             // Determine dynamic redirect URL based on notification contents
-            let redirectUrl = '/admin-portal/dashboard/';
-            const title = n.title ? n.title.toLowerCase() : '';
-            const msg = n.message ? n.message.toLowerCase() : '';
+            let redirectUrl = n.redirect_url || '/admin-portal/dashboard/';
+            if (!n.redirect_url) {
+                const title = n.title ? n.title.toLowerCase() : '';
+                const msg = n.message ? n.message.toLowerCase() : '';
 
-            if (title.includes('event') || msg.includes('event')) {
-                if (title.includes('submit') || title.includes('pending') || title.includes('draft') || msg.includes('approval') || msg.includes('submit')) {
-                    redirectUrl = '/admin-portal/events/pending/';
-                } else {
-                    redirectUrl = '/admin-portal/events/all/';
+                if (title.includes('event') || msg.includes('event')) {
+                    if (title.includes('submit') || title.includes('pending') || title.includes('draft') || msg.includes('approval') || msg.includes('submit')) {
+                        redirectUrl = '/admin-portal/events/pending/';
+                    } else {
+                        redirectUrl = '/admin-portal/events/all/';
+                    }
+                } else if (title.includes('refund') || msg.includes('refund')) {
+                    redirectUrl = '/admin-portal/bookings/refunds/';
+                } else if (title.includes('organizer') || msg.includes('organizer')) {
+                    redirectUrl = '/admin-portal/users/organizers/';
+                } else if (title.includes('user') || msg.includes('user') || title.includes('registration') || msg.includes('registration')) {
+                    redirectUrl = '/admin-portal/users/';
+                } else if (title.includes('support') || title.includes('ticket') || msg.includes('support') || msg.includes('ticket')) {
+                    redirectUrl = '/admin-portal/support/';
+                } else if (title.includes('payment') || title.includes('transaction') || msg.includes('payment') || msg.includes('transaction')) {
+                    redirectUrl = '/admin-portal/payments/';
+                } else if (title.includes('payout') || msg.includes('payout')) {
+                    redirectUrl = '/admin-portal/payments/payouts/';
                 }
-            } else if (title.includes('refund') || msg.includes('refund')) {
-                redirectUrl = '/admin-portal/bookings/refunds/';
-            } else if (title.includes('organizer') || msg.includes('organizer')) {
-                redirectUrl = '/admin-portal/users/organizers/';
-            } else if (title.includes('user') || msg.includes('user') || title.includes('registration') || msg.includes('registration')) {
-                redirectUrl = '/admin-portal/users/';
-            } else if (title.includes('support') || title.includes('ticket') || msg.includes('support') || msg.includes('ticket')) {
-                redirectUrl = '/admin-portal/support/';
-            } else if (title.includes('payment') || title.includes('transaction') || msg.includes('payment') || msg.includes('transaction')) {
-                redirectUrl = '/admin-portal/payments/';
-            } else if (title.includes('payout') || msg.includes('payout')) {
-                redirectUrl = '/admin-portal/payments/payouts/';
             }
 
             return `
-                <div class="notification-item ${!n.is_read ? 'unread' : ''}" data-id="${n.id}" style="cursor: pointer;" onclick="handleNotificationClick(event, ${n.id}, '${redirectUrl}')">
+                <div class="notification-item ${!n.is_read ? 'unread' : ''}" data-id="${escapeHtml(n.id)}" data-url="${escapeHtml(redirectUrl)}" style="cursor: pointer;">
                     <div class="notification-content">
                         <div class="notification-title">${escapeHtml(n.title)}</div>
                         <div class="notification-message">${escapeHtml(n.message)}</div>
                         <div class="notification-time">${formatRelativeTime(n.created_at)}</div>
                     </div>
-                    <a href="/admin-portal/settings/general/" class="mark-read" title="Information: View general settings & privacy policy" onclick="event.stopPropagation();" style="color: var(--success); font-size: 1.15rem; display: flex; align-items: center; justify-content: center; text-decoration: none; padding: 4px;">
-                        <i class="ri-info-circle-line"></i>
-                    </a>
                 </div>
             `;
         }).join('');
@@ -369,23 +445,30 @@ function displayNotifications(notifications, unreadCount) {
 }
 
 window.handleNotificationClick = async function(event, notificationId, redirectUrl) {
-    const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
-    if (item && item.classList.contains('unread')) {
-        try {
-            await fetch(`/api/admin/notifications/${notificationId}/read/`, {
-                method: 'POST',
-                headers: { 'X-CSRFToken': getCSRFToken() }
-            });
-        } catch (error) {
-            console.error('Error marking as read on click:', error);
-        }
+    if (event) event.stopPropagation();
+
+    try {
+        await fetch(`/api/admin/notifications/${encodeNotificationId(notificationId)}/read/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRFToken() }
+        });
+    } catch (error) {
+        console.error('Error marking as read on click:', error);
     }
-    window.location.href = redirectUrl;
+
+    sessionStorage.setItem('admin_active_notification_id', String(notificationId));
+
+    const item = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+    if (item) item.classList.remove('unread');
+    updateNotificationBadge();
+
+    const separator = redirectUrl.includes('?') ? '&' : '?';
+    window.location.href = `${redirectUrl}${separator}from_notification=${encodeURIComponent(notificationId)}`;
 };
 
 window.markNotificationRead = async function(notificationId) {
     try {
-        await fetch(`/api/admin/notifications/${notificationId}/read/`, {
+        await fetch(`/api/admin/notifications/${encodeNotificationId(notificationId)}/read/`, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCSRFToken() }
         });
@@ -447,9 +530,14 @@ function initPendingCount() {
 async function fetchPendingCount() {
     const badge = document.getElementById('pendingBadge');
     if (!badge) return;
-    
+    if (!getAdminAccessToken() && !getCSRFToken()) return;
+
     try {
-        const response = await fetch('/api/admin/events/pending/count/');
+        const response = await fetch('/api/admin/events/pending/count/', {
+            headers: getAdminAuthHeaders(),
+            credentials: 'same-origin'
+        });
+        if (response.status === 403) return;
         const contentType = response.headers.get('content-type');
         if (response.ok && contentType && contentType.includes('application/json')) {
             const data = await response.json();
@@ -478,12 +566,89 @@ function formatRelativeTime(dateString) {
     return `${Math.floor(diffMins / 1440)}d ago`;
 }
 
+function showConfirm(message, callback) {
+    const modalId = 'dynamicConfirmModal';
+    let modal = document.getElementById(modalId);
+    if (modal) {
+        modal.remove();
+    }
+    
+    modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        opacity: 1;
+        transition: opacity 0.2s ease-out;
+    `;
+    
+    const content = document.createElement('div');
+    content.className = 'modal-content';
+    content.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 400px;
+        padding: 24px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        transform: scale(0.95);
+        transition: transform 0.2s ease-out;
+    `;
+    
+    content.innerHTML = `
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="width: 56px; height: 56px; background: rgba(245, 158, 11, 0.1); color: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px;">
+                <i class="ri-alert-line"></i>
+            </div>
+            <h3 style="margin: 0 0 8px; font-weight: 700; color: #1e293b; font-size: 18px;">Confirm Action</h3>
+            <p style="margin: 0; color: #64748b; font-size: 14px; line-height: 1.5;">${escapeHtml(message)}</p>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <button id="confirmCancelBtn" class="btn-outline" style="flex: 1; min-height: 40px; border-radius: 8px; font-weight: 500; cursor: pointer; border: 1px solid #e2e8f0; background: transparent; color: #1e293b;">Cancel</button>
+            <button id="confirmOkBtn" class="btn-primary" style="flex: 1; min-height: 40px; border-radius: 8px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, #f59e0b, #ec6408); border: none; color: white;">Confirm</button>
+        </div>
+    `;
+    
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    
+    setTimeout(() => {
+        content.style.transform = 'scale(1)';
+    }, 10);
+    
+    const closeModal = () => {
+        content.style.transform = 'scale(0.95)';
+        modal.style.opacity = '0';
+        setTimeout(() => modal.remove(), 200);
+    };
+    
+    modal.querySelector('#confirmCancelBtn').onclick = () => {
+        closeModal();
+    };
+    
+    modal.querySelector('#confirmOkBtn').onclick = () => {
+        closeModal();
+        if (callback) callback();
+    };
+}
+
 // Export globals
 window.apiRequest = apiRequest;
 window.showToast = showToast;
+window.showConfirm = showConfirm;
 window.formatCurrency = formatCurrency;
 window.formatDate = formatDate;
 window.formatDateTime = formatDateTime;
 window.escapeHtml = escapeHtml;
 
-console.log('âœ… Admin JS loaded');
+console.log('✅ Admin JS loaded');

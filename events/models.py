@@ -17,9 +17,21 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from django.core.cache import cache
+        cache.clear()
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        from django.core.cache import cache
+        cache.clear()
+
 class Event(models.Model):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
         ('published', 'Published'),
         ('cancelled', 'Cancelled'),
         ('sold_out', 'Sold Out'),
@@ -37,10 +49,12 @@ class Event(models.Model):
     address = models.CharField(max_length=300, blank=True)
     
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    vip_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vvip_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total_seats = models.IntegerField(default=0)
     available_seats = models.IntegerField(default=0)
     
-    banner_image = models.URLField(blank=True)
+    banner_image = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     is_featured = models.BooleanField(default=False)
     attendee_reviews_sent = models.BooleanField(default=False)
@@ -49,6 +63,14 @@ class Event(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    class Meta:
+        indexes = [
+            models.Index(fields=['status', 'end_date']),
+            models.Index(fields=['status', 'start_date']),
+            models.Index(fields=['is_featured', 'status']),
+            models.Index(fields=['price']),
+        ]
+
     def __str__(self):
         return self.title
     
@@ -71,4 +93,42 @@ class Event(models.Model):
             self.slug = slug
             
         super().save(*args, **kwargs)
+        from django.core.cache import cache
+        cache.clear()
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        from django.core.cache import cache
+        cache.clear()
+
+
+class EventImage(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='images')
+    image = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from django.core.cache import cache
+        cache.clear()
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        from django.core.cache import cache
+        cache.clear()
+
+    @property
+    def url(self):
+        if not self.image:
+            return ''
+        if self.image.startswith('data:') or self.image.startswith('http://') or self.image.startswith('https://'):
+            return self.image
+        from django.conf import settings
+        if self.image.startswith(settings.MEDIA_URL):
+            return self.image
+        return settings.MEDIA_URL + self.image
+
+    def __str__(self):
+        return f"Image for {self.event.title}"
+
 

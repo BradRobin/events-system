@@ -9,3 +9,6 @@ django-extensions
 python-dateutil
 requests==2.31.0
 beautifulsoup4==4.12.3
+google-auth==2.29.0
+Pillow>=10.3.0
+pytesseract>=0.3.10

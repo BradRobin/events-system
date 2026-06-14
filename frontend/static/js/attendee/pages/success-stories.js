@@ -1,240 +1,796 @@
 // ============================================
-// SUCCESS STORIES PAGE - Interactive Elements
+// SUCCESS STORIES PAGE - FIXED STARS, PAGINATION, NO EMPTY SPACE
 // ============================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Modal elements
-    const shareStoryBtn = document.getElementById('shareStoryBtn');
-    const leaveReviewBtn = document.getElementById('leaveReviewBtn');
-    const storyModal = document.getElementById('storyModal');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const storyForm = document.getElementById('storyForm');
+(function() {
+    'use strict';
     
-    // Rating stars
-    const ratingStars = document.querySelectorAll('.rating-input i');
-    const ratingInput = document.getElementById('storyRating');
-    
-    // Open modal
-    function openModal() {
-        if (storyModal) {
-            storyModal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-    }
-    
-    // Close modal
-    function closeModal() {
-        if (storyModal) {
-            storyModal.classList.remove('show');
-            document.body.style.overflow = '';
-            if (storyForm) storyForm.reset();
-            resetRating();
-        }
-    }
-    
-    // Reset rating stars
-    function resetRating() {
-        ratingStars.forEach(star => {
-            star.classList.remove('active');
-            star.classList.add('far');
-            star.classList.remove('fas');
+    // Strong function to remove ALL loaders from the page
+    function removeAllLoaders() {
+        const loaderSelectors = [
+            '.loader', '#loader', '.loading', '.spinner', '.page-loader', 
+            '.loader-spinner', '.loading-spinner', '.overlay-loader',
+            '.global-loader', '.main-loader', '.content-loader',
+            '[class*="loader"]', '[class*="spinner"]', '[id*="loader"]', '[id*="spinner"]'
+        ];
+        
+        loaderSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                if (el) {
+                    el.style.display = 'none';
+                    el.style.opacity = '0';
+                    el.style.visibility = 'hidden';
+                }
+            });
         });
-        if (ratingInput) ratingInput.value = '0';
-    }
-    
-    // Handle rating selection
-    if (ratingStars.length) {
-        ratingStars.forEach(star => {
-            star.addEventListener('click', function() {
-                const rating = parseInt(this.dataset.rating);
-                if (ratingInput) ratingInput.value = rating;
-                
-                ratingStars.forEach((s, index) => {
-                    if (index < rating) {
-                        s.classList.add('active');
-                        s.classList.remove('far');
-                        s.classList.add('fas');
-                    } else {
-                        s.classList.remove('active');
-                        s.classList.remove('fas');
-                        s.classList.add('far');
-                    }
-                });
-            });
-            
-            star.addEventListener('mouseenter', function() {
-                const rating = parseInt(this.dataset.rating);
-                ratingStars.forEach((s, index) => {
-                    if (index < rating) {
-                        s.classList.add('fas');
-                        s.classList.remove('far');
-                    }
-                });
-            });
-            
-            star.addEventListener('mouseleave', function() {
-                const currentRating = parseInt(ratingInput?.value || 0);
-                ratingStars.forEach((s, index) => {
-                    if (index < currentRating) {
-                        s.classList.add('fas');
-                        s.classList.remove('far');
-                    } else {
-                        s.classList.remove('fas');
-                        s.classList.add('far');
-                    }
-                });
-            });
+        
+        const overlays = document.querySelectorAll('.loader-overlay, .loading-overlay, .page-overlay');
+        overlays.forEach(overlay => {
+            if (overlay && overlay.parentNode) {
+                overlay.remove();
+            }
         });
     }
     
-    // Event listeners for modal
-    if (shareStoryBtn) shareStoryBtn.addEventListener('click', openModal);
-    if (leaveReviewBtn) leaveReviewBtn.addEventListener('click', openModal);
-    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-    
-    // Close modal on outside click
-    if (storyModal) {
-        storyModal.addEventListener('click', function(e) {
-            if (e.target === storyModal) closeModal();
-        });
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+        initialize();
     }
     
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && storyModal?.classList.contains('show')) {
-            closeModal();
+    function initialize() {
+        // Remove all loaders immediately
+        removeAllLoaders();
+        const loaderInterval = setInterval(removeAllLoaders, 50);
+        setTimeout(() => clearInterval(loaderInterval), 5000);
+        
+        console.log('Success Stories initializing - Loaders blocked');
+        
+        // Default stories data - 12 stories with different ratings
+        const DEFAULT_STORIES = [
+            {
+                id: 1,
+                name: 'Yvonne Eshitemi',
+                email: 'yvonne@example.com',
+                role: 'Event Enthusiast',
+                rating: 5,
+                message: 'EventHub made it so easy to discover and book tickets for amazing events in Nairobi. The QR code check-in was seamless!',
+                event: 'Music Festival 2024',
+                avatar: 'https://randomuser.me/api/portraits/women/16.jpg',
+                isDefault: true
+            },
+            {
+                id: 2,
+                name: 'Wilson Thoma',
+                email: 'wilson@example.com',
+                role: 'Regular Attendee',
+                rating: 5,
+                message: 'I\'ve attended over 20 events through EventHub. The platform is reliable, and customer support is exceptional!',
+                event: '20+ Events',
+                avatar: 'https://randomuser.me/api/portraits/men/80.jpg',
+                isDefault: true
+            },
+            {
+                id: 3,
+                name: 'Scholasticah Mutuku',
+                email: 'scholasticah@example.com',
+                role: 'Adventure Seeker',
+                rating: 5,
+                message: 'Best event discovery platform in Kenya! The variety of events and ease of booking is unmatched.',
+                event: 'Cultural Fest 2024',
+                avatar: 'https://randomuser.me/api/portraits/women/89.jpg',
+                isDefault: true
+            },
+            {
+                id: 4,
+                name: 'Brad Omwamba',
+                email: 'brad@example.com',
+                role: 'Event Organizer',
+                rating: 5,
+                message: 'As an event organizer, EventHub helped us sell out our event in record time. The support team is amazing!',
+                event: 'Tech Summit 2024',
+                avatar: 'https://randomuser.me/api/portraits/men/70.jpg',
+                isDefault: true
+            },
+            {
+                id: 5,
+                name: 'Bullim Njeri',
+                email: 'bullim@example.com',
+                role: 'Mobile User',
+                rating: 5,
+                message: 'The mobile app is fantastic! I can browse, book, and check-in using my phone. No more paper tickets!',
+                event: 'Food Festival 2024',
+                avatar: 'https://randomuser.me/api/portraits/women/90.jpg',
+                isDefault: true
+            },
+            {
+                id: 6,
+                name: 'Toji Mraster',
+                email: 'toji@example.com',
+                role: 'First-time User',
+                rating: 5,
+                message: 'The customer service team went above and beyond to help me with a booking issue. Exceptional service!',
+                event: 'Business Forum',
+                avatar: 'https://randomuser.me/api/portraits/men/55.jpg',
+                isDefault: true
+            },
+            {
+                id: 7,
+                name: 'Stacy Naomi',
+                email: 'stacy@example.com',
+                role: 'Entrepreneur',
+                rating: 5,
+                message: 'The networking opportunities through EventHub\'s business events have been invaluable for my startup!',
+                event: 'Business Summit 2024',
+                avatar: 'https://randomuser.me/api/portraits/women/69.jpg',
+                isDefault: true
+            },
+            {
+                id: 8,
+                name: 'Frank Maina',
+                email: 'frank@example.com',
+                role: 'Sports Fan',
+                rating: 5,
+                message: 'Getting tickets for major sports events has never been easier. EventHub is a game-changer for sports fans!',
+                event: 'Marathon 2024',
+                avatar: 'https://randomuser.me/api/portraits/men/16.jpg',
+                isDefault: true
+            },
+            {
+                id: 9,
+                name: 'Dev Ndung\'u',
+                email: 'dev@example.com',
+                role: 'Foodie',
+                rating: 5,
+                message: 'The food festivals and culinary events I found on EventHub were incredible. Can\'t wait for more!',
+                event: 'Food Festival 2024',
+                avatar: 'https://randomuser.me/api/portraits/women/92.jpg',
+                isDefault: true
+            },
+            {
+                id: 10,
+                name: 'Catherine Cherop',
+                email: 'catherine@example.com',
+                role: 'Art Lover',
+                rating: 5,
+                message: 'Thanks to EventHub, I discovered amazing art exhibitions I would have otherwise missed. Great platform!',
+                event: 'Art Exhibition 2024',
+                avatar: 'https://randomuser.me/api/portraits/women/62.jpg',
+                isDefault: true
+            },
+            {
+                id: 11,
+                name: 'Brian Odhiambo',
+                email: 'brian@example.com',
+                role: 'Music Producer',
+                rating: 5,
+                message: 'EventHub has transformed how I discover local talent and music events. Absolutely love the platform!',
+                event: 'Music Concert 2024',
+                avatar: 'https://randomuser.me/api/portraits/men/25.jpg',
+                isDefault: true
+            },
+            {
+                id: 12,
+                name: 'Edwin Nyambane',
+                email: 'edwin@example.com',
+                role: 'Tech Enthusiast',
+                rating: 5,
+                message: 'The best event platform in Kenya! I\'ve discovered so many tech events and networking opportunities.',
+                event: 'Tech Summit 2024',
+                avatar: 'https://randomuser.me/api/portraits/men/54.jpg',
+                isDefault: true
+            }
+        ];
+        
+        // Application state
+        let allStories = [];
+        let currentPage = 1;
+        const STORIES_PER_PAGE = 3;
+        let submittedEmails = new Set();
+        
+        // DOM elements
+        const storiesGrid = document.getElementById('testimonialsGrid');
+        const loadMoreBtn = document.getElementById('readMoreBtn');
+        const shareBtn = document.getElementById('shareStoryBtn');
+        const modal = document.getElementById('storyModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const storyForm = document.getElementById('storyForm');
+        
+        // Helper functions
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
-    });
-    
-    // Form submission
-    if (storyForm) {
-        storyForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('storyName')?.value.trim();
-            const email = document.getElementById('storyEmail')?.value.trim();
-            const eventName = document.getElementById('storyEvent')?.value.trim();
-            const rating = document.getElementById('storyRating')?.value;
-            const message = document.getElementById('storyMessage')?.value.trim();
-            
-            // Validation
-            if (!name) {
-                showToast('Please enter your name', 'error');
-                return;
+        
+        // Generate stars based on rating
+        function generateStars(rating) {
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= rating) {
+                    starsHtml += '<i class="fas fa-star"></i>';
+                } else {
+                    starsHtml += '<i class="far fa-star"></i>';
+                }
             }
-            
-            if (!email || !isValidEmail(email)) {
-                showToast('Please enter a valid email address', 'error');
-                return;
-            }
-            
-            if (!rating || rating === '0') {
-                showToast('Please select a rating', 'error');
-                return;
-            }
-            
-            if (!message || message.length < 10) {
-                showToast('Please enter your story (minimum 10 characters)', 'error');
-                return;
-            }
-            
-            // Disable submit button
-            const submitBtn = storyForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-            
+            return starsHtml;
+        }
+        
+        function getCurrentUserEmail() {
             try {
-                // Simulate API call (replace with actual endpoint)
-                await simulateSubmit({ name, email, eventName, rating, message });
-                
-                showToast('Thank you for sharing your story!', 'success');
-                closeModal();
-                
-            } catch (error) {
-                console.error('Submission error:', error);
-                showToast(error.message || 'Failed to submit. Please try again.', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
+                const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+                if (user && user.email) {
+                    return user.email.toLowerCase().trim();
+                }
+            } catch(e) {
+                console.error('Error getting user:', e);
             }
-        });
-    }
-    
-    // Simulate API submission
-    function simulateSubmit(data) {
-        return new Promise((resolve) => {
+            return null;
+        }
+        
+        // Load and save data
+        function loadData() {
+            const saved = localStorage.getItem('eventhub_stories');
+            if (saved) {
+                allStories = JSON.parse(saved);
+                console.log('Loaded stories from storage:', allStories.length);
+            } else {
+                allStories = [...DEFAULT_STORIES];
+                saveData();
+                console.log('Loaded default stories:', allStories.length);
+            }
+            
+            const savedEmails = localStorage.getItem('eventhub_submitted_emails');
+            if (savedEmails) {
+                submittedEmails = new Set(JSON.parse(savedEmails));
+            }
+            
+            DEFAULT_STORIES.forEach(story => {
+                if (story.email) {
+                    submittedEmails.add(story.email.toLowerCase());
+                }
+            });
+            saveEmails();
+        }
+        
+        function saveData() {
+            localStorage.setItem('eventhub_stories', JSON.stringify(allStories));
+        }
+        
+        function saveEmails() {
+            localStorage.setItem('eventhub_submitted_emails', JSON.stringify([...submittedEmails]));
+        }
+        
+        // Create story card
+        function createStoryCard(story) {
+            const card = document.createElement('div');
+            card.className = 'testimonial-card';
+            card.setAttribute('data-id', story.id);
+            
+            const currentUserEmail = getCurrentUserEmail();
+            const isOwnStory = currentUserEmail && story.email && 
+                              story.email.toLowerCase() === currentUserEmail && 
+                              !story.isDefault;
+            
+            const badge = story.isDefault ? 
+                '<span class="default-badge"><i class="fas fa-star-of-life"></i> Featured Story</span>' : 
+                '<span class="user-badge"><i class="fas fa-user-plus"></i> Your Story</span>';
+            
+            const deleteButton = isOwnStory ? 
+                `<button class="delete-story-btn" data-id="${story.id}" data-email="${escapeHtml(story.email)}">
+                    <i class="fas fa-trash-alt"></i> Delete
+                </button>` : '';
+            
+            const starsHtml = generateStars(story.rating);
+            
+            card.innerHTML = `
+                <div class="testimonial-header">
+                    <i class="fas fa-quote-left quote-icon"></i>
+                    <div class="rating">${starsHtml}</div>
+                </div>
+                <p class="testimonial-text">${escapeHtml(story.message)}</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">
+                        ${story.avatar ? `<img src="${story.avatar}" alt="${story.name}">` : '<i class="fas fa-user-circle"></i>'}
+                    </div>
+                    <div class="author-info">
+                        <h4>${escapeHtml(story.name)}</h4>
+                        <p>${escapeHtml(story.role)}</p>
+                        ${story.event ? `<p class="event-attended">📌 ${escapeHtml(story.event)}</p>` : ''}
+                    </div>
+                </div>
+                <div class="story-footer">
+                    <div class="story-badge-container">${badge}</div>
+                    ${deleteButton}
+                </div>
+            `;
+            
+            if (isOwnStory) {
+                const deleteBtn = card.querySelector('.delete-story-btn');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deleteStory(story.id, story.email);
+                    });
+                }
+            }
+            
+            return card;
+        }
+        
+        function deleteStory(storyId, storyEmail) {
+            const currentUserEmail = getCurrentUserEmail();
+            
+            if (!currentUserEmail) {
+                showToast('Please login to delete your story', 'error');
+                return;
+            }
+            
+            if (storyEmail.toLowerCase() !== currentUserEmail) {
+                showToast('You can only delete your own stories!', 'error');
+                return;
+            }
+            
+            const storyToDelete = allStories.find(s => s.id === storyId);
+            if (storyToDelete && storyToDelete.isDefault) {
+                showToast('Default stories cannot be deleted!', 'error');
+                return;
+            }
+            
+            allStories = allStories.filter(s => s.id !== storyId);
+            submittedEmails.delete(storyEmail.toLowerCase());
+            
+            saveData();
+            saveEmails();
+            
+            const totalPages = Math.ceil(allStories.length / STORIES_PER_PAGE);
+            if (currentPage > totalPages && totalPages > 0) {
+                currentPage = totalPages;
+            }
+            if (currentPage < 1) currentPage = 1;
+            
+            renderStories();
+            updateShareButtonState();
+            showToast('Your story has been deleted! You can now submit a new story.', 'success');
+        }
+        
+        // Get total pages
+        function getTotalPages() {
+            return Math.ceil(allStories.length / STORIES_PER_PAGE);
+        }
+        
+        // Render stories
+        function renderStories() {
+            if (!storiesGrid) return;
+            
+            storiesGrid.innerHTML = '';
+            
+            if (allStories.length === 0) {
+                storiesGrid.innerHTML = '<div class="empty-message"><i class="fas fa-comment-dots"></i> No stories yet. Be the first to share!</div>';
+                if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+                return;
+            }
+            
+            if (loadMoreBtn) loadMoreBtn.style.display = 'inline-flex';
+            
+            const start = (currentPage - 1) * STORIES_PER_PAGE;
+            const end = start + STORIES_PER_PAGE;
+            const pageStories = allStories.slice(start, end);
+            
+            pageStories.forEach(story => {
+                storiesGrid.appendChild(createStoryCard(story));
+            });
+            
+            updatePaginationButton();
+            updatePaginationInfo(start, end);
+        }
+        
+        function updatePaginationButton() {
+            if (!loadMoreBtn) return;
+            
+            const totalPages = getTotalPages();
+            
+            if (totalPages <= 1) {
+                loadMoreBtn.innerHTML = `<i class="fas fa-book-open"></i> Load More`;
+                loadMoreBtn.disabled = true;
+                loadMoreBtn.style.opacity = '0.5';
+                loadMoreBtn.style.cursor = 'not-allowed';
+            } else if (currentPage < totalPages) {
+                loadMoreBtn.innerHTML = `<i class="fas fa-book-open"></i> Load More (${currentPage + 1}/${totalPages})`;
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.style.opacity = '1';
+                loadMoreBtn.style.cursor = 'pointer';
+            } else {
+                loadMoreBtn.innerHTML = `<i class="fas fa-redo-alt"></i> Start Over (Page 1)`;
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.style.opacity = '1';
+                loadMoreBtn.style.cursor = 'pointer';
+            }
+        }
+        
+        function updatePaginationInfo(start, end) {
+            let info = document.querySelector('.pagination-info');
+            if (!info && storiesGrid && storiesGrid.parentNode) {
+                info = document.createElement('div');
+                info.className = 'pagination-info';
+                storiesGrid.parentNode.insertBefore(info, storiesGrid.nextSibling);
+            }
+            if (info) {
+                const userStoriesCount = allStories.filter(s => !s.isDefault).length;
+                info.innerHTML = `Showing ${Math.min(start + 1, allStories.length)}-${Math.min(end, allStories.length)} of ${allStories.length} stories (${userStoriesCount} by users)`;
+            }
+        }
+        
+        function nextPage() {
+            const totalPages = getTotalPages();
+            
+            if (totalPages <= 1) {
+                showToast('No more stories to load', 'info');
+                return;
+            }
+            
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderStories();
+                if (storiesGrid) {
+                    storiesGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } else {
+                currentPage = 1;
+                renderStories();
+                if (storiesGrid) {
+                    storiesGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                showToast('Showing first page of stories', 'info');
+            }
+        }
+        
+        // Add new story
+        function addNewStory(storyData) {
+            console.log('addNewStory called with:', storyData);
+            
+            const email = storyData.email.toLowerCase().trim();
+            
+            if (submittedEmails.has(email)) {
+                showToast('You have already shared a story! Delete your existing story first to submit a new one.', 'error');
+                return false;
+            }
+            
+            const newStory = {
+                id: Date.now(),
+                name: storyData.name,
+                email: email,
+                role: 'Event Enthusiast',
+                rating: storyData.rating,
+                message: storyData.message,
+                event: storyData.event || '',
+                avatar: null,
+                date: new Date().toISOString(),
+                isDefault: false
+            };
+            
+            allStories.unshift(newStory);
+            submittedEmails.add(email);
+            
+            saveData();
+            saveEmails();
+            
+            currentPage = 1;
+            renderStories();
+            
             setTimeout(() => {
-                console.log('Story submitted:', data);
-                resolve({ success: true });
-            }, 1500);
-        });
-    }
-    
-    // Email validation
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-    
-    // Show toast notification
-    function showToast(message, type = 'success') {
-        const existingToast = document.querySelector('.toast-notification');
-        if (existingToast) existingToast.remove();
+                if (storiesGrid) {
+                    storiesGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const firstCard = document.querySelector('.testimonial-card');
+                    if (firstCard) {
+                        firstCard.style.transition = 'all 0.3s ease';
+                        firstCard.style.boxShadow = '0 0 0 3px #f59e0b';
+                        setTimeout(() => {
+                            if (firstCard) firstCard.style.boxShadow = '';
+                        }, 2000);
+                    }
+                }
+            }, 100);
+            
+            showToast('Your story has been published successfully!', 'success');
+            return true;
+        }
         
-        const toast = document.createElement('div');
-        toast.className = `toast-notification ${type}`;
-        toast.innerHTML = `
-            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-            <span>${escapeHtml(message)}</span>
-        `;
-        
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            if (toast && toast.parentNode) toast.remove();
-        }, 5000);
-    }
-    
-    // Escape HTML
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-    
-    // Add scroll animations
-    const cards = document.querySelectorAll('.testimonial-card, .featured-story');
-    
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-                observer.unobserve(entry.target);
+        // Update share button state
+        function updateShareButtonState() {
+            if (!shareBtn) return;
+            
+            const currentUserEmail = getCurrentUserEmail();
+            
+            if (!currentUserEmail) {
+                shareBtn.style.display = 'none';
+                return;
             }
-        });
-    }, observerOptions);
-    
-    cards.forEach(card => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(card);
-    });
-});
+            
+            shareBtn.style.display = 'inline-flex';
+            
+            if (submittedEmails.has(currentUserEmail)) {
+                shareBtn.disabled = true;
+                shareBtn.style.opacity = '0.5';
+                shareBtn.style.cursor = 'not-allowed';
+                shareBtn.title = 'You have already shared a story. Delete it first to submit a new one.';
+            } else {
+                shareBtn.disabled = false;
+                shareBtn.style.opacity = '1';
+                shareBtn.style.cursor = 'pointer';
+                shareBtn.title = 'Share your story';
+            }
+        }
+        
+        // Modal functions
+        function openModal() {
+            const currentUserEmail = getCurrentUserEmail();
+            
+            if (!currentUserEmail) {
+                showToast('Please login to share your story', 'error');
+                return;
+            }
+            
+            if (submittedEmails.has(currentUserEmail)) {
+                showToast('You have already shared a story! Delete your existing story first to submit a new one.', 'error');
+                return;
+            }
+            
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                
+                const emailInput = document.getElementById('storyEmail');
+                if (emailInput) {
+                    emailInput.value = currentUserEmail;
+                    emailInput.readOnly = true;
+                }
+                
+                const nameInput = document.getElementById('storyName');
+                if (nameInput) nameInput.value = '';
+                
+                const eventInput = document.getElementById('storyEvent');
+                if (eventInput) eventInput.value = '';
+                
+                const messageInput = document.getElementById('storyMessage');
+                if (messageInput) messageInput.value = '';
+                
+                const ratingInput = document.getElementById('storyRating');
+                if (ratingInput) ratingInput.value = '0';
+                
+                const stars = document.querySelectorAll('.rating-input i');
+                stars.forEach(star => {
+                    star.classList.remove('fas');
+                    star.classList.add('far');
+                });
+                
+                try {
+                    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+                    if (user.first_name && nameInput) {
+                        const fullName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+                        nameInput.value = fullName;
+                    }
+                } catch(e) {}
+            }
+        }
+        
+        function closeModal() {
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+                if (storyForm) storyForm.reset();
+                
+                const ratingInput = document.getElementById('storyRating');
+                if (ratingInput) ratingInput.value = '0';
+                
+                const stars = document.querySelectorAll('.rating-input i');
+                stars.forEach(star => {
+                    star.classList.remove('fas');
+                    star.classList.add('far');
+                });
+            }
+        }
+        
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const existingToast = document.querySelector('.toast-notification');
+            if (existingToast) existingToast.remove();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${escapeHtml(message)}</span>`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                if (toast.parentNode) toast.remove();
+            }, 3000);
+        }
+        
+        // Rating stars setup for form
+        function setupRatingStars() {
+            const stars = document.querySelectorAll('.rating-input i');
+            const ratingInput = document.getElementById('storyRating');
+            
+            if (!stars.length) return;
+            
+            stars.forEach(star => {
+                star.addEventListener('click', function() {
+                    const rating = parseInt(this.dataset.rating);
+                    if (ratingInput) ratingInput.value = rating;
+                    
+                    stars.forEach((s, index) => {
+                        if (index < rating) {
+                            s.classList.remove('far');
+                            s.classList.add('fas');
+                        } else {
+                            s.classList.remove('fas');
+                            s.classList.add('far');
+                        }
+                    });
+                });
+            });
+        }
+        
+        // Platform stats pipeline — fetch live counts then animate
+        function easeOutExpo(t) {
+            return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+        }
 
-// Make functions global for debugging
-window.closeStoryModal = function() {
-    const modal = document.getElementById('storyModal');
-    if (modal) {
-        modal.classList.remove('show');
-        document.body.style.overflow = '';
+        function animateCounter(el) {
+            const target = parseInt(el.getAttribute('data-target'), 10) || 0;
+            const duration = 2000;
+            let startTime = null;
+
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = easeOutExpo(progress);
+                el.textContent = Math.floor(eased * target).toLocaleString();
+
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    el.textContent = target.toLocaleString();
+                }
+            }
+
+            requestAnimationFrame(step);
+        }
+
+        function observeStats(counters) {
+            if (!counters.length) return;
+
+            const statsBar = document.getElementById('platformStatsBar') || counters[0].closest('.stats-bar');
+            if (!statsBar) return;
+
+            let animated = false;
+            const observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting && !animated) {
+                        animated = true;
+                        counters.forEach(animateCounter);
+                        observer.disconnect();
+                    }
+                });
+            }, { threshold: 0.25 });
+
+            observer.observe(statsBar);
+        }
+
+        function loadPlatformStats() {
+            const counters = Array.from(document.querySelectorAll('.stats-bar .counter[data-stat]'));
+            if (!counters.length) return;
+
+            fetch('/api/platform/stats/')
+                .then(function(res) {
+                    if (!res.ok) throw new Error('Network response was not ok');
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (!data.success) throw new Error('API returned failure');
+
+                    counters.forEach(function(el) {
+                        const key = el.getAttribute('data-stat');
+                        if (data[key] !== undefined && data[key] !== null) {
+                            el.setAttribute('data-target', data[key]);
+                        }
+                    });
+                })
+                .catch(function(err) {
+                    console.warn('[success-stories] Using server-rendered stats fallback:', err);
+                })
+                .finally(function() {
+                    observeStats(counters);
+                });
+        }
+        
+        // Form submission
+        if (storyForm) {
+            storyForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const nameInput = document.getElementById('storyName');
+                const emailInput = document.getElementById('storyEmail');
+                const eventInput = document.getElementById('storyEvent');
+                const ratingInput = document.getElementById('storyRating');
+                const messageInput = document.getElementById('storyMessage');
+                
+                const name = nameInput?.value.trim();
+                const email = emailInput?.value.trim();
+                const eventName = eventInput?.value.trim();
+                const rating = ratingInput?.value;
+                const message = messageInput?.value.trim();
+                
+                if (!name) {
+                    showToast('Please enter your name', 'error');
+                    return;
+                }
+                if (!email) {
+                    showToast('Please enter your email', 'error');
+                    return;
+                }
+                if (!rating || rating === '0') {
+                    showToast('Please select a rating', 'error');
+                    return;
+                }
+                if (!message || message.length < 10) {
+                    showToast('Please enter your story (minimum 10 characters)', 'error');
+                    return;
+                }
+                
+                const success = addNewStory({
+                    name: name,
+                    email: email,
+                    event: eventName,
+                    rating: parseInt(rating),
+                    message: message
+                });
+                
+                if (success) {
+                    closeModal();
+                    updateShareButtonState();
+                }
+            });
+        }
+        
+        // Event listeners
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', nextPage);
+        }
+        
+        if (shareBtn) {
+            shareBtn.addEventListener('click', openModal);
+        }
+        
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', closeModal);
+        }
+        
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeModal();
+            });
+        }
+        
+        window.addEventListener('auth-state-changed', function() {
+            updateShareButtonState();
+            renderStories();
+        });
+        
+        // Initialize
+        loadData();
+        renderStories();
+        updateShareButtonState();
+        setupRatingStars();
+        loadPlatformStats();
+        
+        console.log('Success Stories initialized with', allStories.length, 'stories');
     }
-};
+})();

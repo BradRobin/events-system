@@ -19,14 +19,27 @@ function initializeSettings() {
     setupPasswordStrength();
 }
 
-// Load User Profile Data
-function loadUserProfile() {
-    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+async function loadUserProfile() {
     const fullNameInput = document.getElementById('fullName');
     const emailInput = document.getElementById('email');
     const phoneInput = document.getElementById('phone');
-    
-    if (fullNameInput) fullNameInput.value = user.name || user.first_name || '';
+
+    try {
+        if (window.AttendeeAPIEndpoints?.profile?.get) {
+            const profile = await window.AttendeeAPIEndpoints.profile.get();
+            if (profile) {
+                if (fullNameInput) fullNameInput.value = profile.full_name || profile.name || '';
+                if (emailInput) emailInput.value = profile.email || '';
+                if (phoneInput) phoneInput.value = profile.phone || '';
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+    }
+
+    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+    if (fullNameInput) fullNameInput.value = user.full_name || user.name || user.first_name || '';
     if (emailInput) emailInput.value = user.email || '';
     if (phoneInput) phoneInput.value = user.phone || '';
 }
@@ -122,16 +135,33 @@ async function handleProfileUpdate(e) {
         return;
     }
     
-    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
-    user.name = fullName;
-    user.email = email;
-    user.phone = phone;
-    
-    localStorage.setItem('attendee_user', JSON.stringify(user));
-    showMessage('Profile updated successfully!', 'success');
-    
-    // Update navbar
-    updateNavbarUserInfo();
+    try {
+        if (window.AttendeeAPIEndpoints?.profile?.update) {
+            await window.AttendeeAPIEndpoints.profile.update({
+                name: fullName,
+                full_name: fullName,
+                email,
+                phone,
+            });
+        } else if (window.AccountProfile) {
+            AccountProfile.save({
+                name: fullName,
+                full_name: fullName,
+                email,
+                phone,
+            });
+        }
+
+        if (window.AccountProfile) {
+            await AccountProfile.syncFromAPI();
+        }
+
+        showMessage('Profile updated successfully!', 'success');
+        updateNavbarUserInfo();
+    } catch (error) {
+        console.error('Profile update failed:', error);
+        showMessage(error.message || 'Failed to update profile', 'error');
+    }
 }
 
 // Handle Security Update
@@ -157,9 +187,18 @@ async function handleSecurityUpdate(e) {
         return;
     }
     
-    // Simulate password update (in real app, call API)
-    showMessage('Password updated successfully!', 'success');
-    document.getElementById('securityForm').reset();
+    try {
+        if (window.AttendeeAPIEndpoints?.auth?.changePassword) {
+            await window.AttendeeAPIEndpoints.auth.changePassword(currentPassword, newPassword);
+        } else {
+            throw new Error('Password service unavailable');
+        }
+        showMessage('Password updated successfully!', 'success');
+        document.getElementById('securityForm').reset();
+    } catch (error) {
+        console.error('Password update failed:', error);
+        showMessage(error.message || 'Failed to update password', 'error');
+    }
 }
 
 // Handle Notifications Update
@@ -264,53 +303,50 @@ function checkPasswordMatch() {
     }
 }
 
-// Delete Account
-function deleteAccount() {
+async function deleteAccount() {
     if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
         return;
     }
-    
+
     const confirmation = prompt('Type "DELETE" to confirm account deletion');
     if (confirmation !== 'DELETE') {
         showMessage('Account deletion cancelled', 'error');
         return;
     }
-    
-    // Clear all user data
-    localStorage.removeItem('attendee_access_token');
-    localStorage.removeItem('attendee_refresh_token');
-    localStorage.removeItem('attendee_user');
-    localStorage.removeItem('eventhub_cart');
-    localStorage.removeItem('event_wishlist');
-    localStorage.removeItem('eventhub_bookings');
-    localStorage.removeItem('eventhub_tickets');
-    localStorage.removeItem('notification_settings');
-    localStorage.removeItem('privacy_settings');
-    
-    showMessage('Account deleted successfully', 'success');
-    
-    setTimeout(() => {
-        window.location.href = '/logout/';
-    }, 1500);
+
+    try {
+        if (window.AttendeeAPIEndpoints?.profile?.deleteAccount) {
+            await window.AttendeeAPIEndpoints.profile.deleteAccount();
+        } else {
+            throw new Error('Account deletion service unavailable');
+        }
+
+        localStorage.removeItem('attendee_access_token');
+        localStorage.removeItem('attendee_refresh_token');
+        localStorage.removeItem('attendee_user');
+        localStorage.removeItem('eventhub_cart');
+        localStorage.removeItem('event_wishlist');
+        localStorage.removeItem('eventhub_bookings');
+        localStorage.removeItem('eventhub_tickets');
+        localStorage.removeItem('notification_settings');
+        localStorage.removeItem('privacy_settings');
+
+        showMessage('Account deleted successfully', 'success');
+        setTimeout(() => {
+            window.location.href = '/login/';
+        }, 1500);
+    } catch (error) {
+        console.error('Account deletion failed:', error);
+        showMessage(error.message || 'Failed to delete account', 'error');
+    }
 }
 
 // Update Navbar User Info
 function updateNavbarUserInfo() {
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
-    const nameVal = user.name || user.first_name || user.username || 'User';
-    const initialVal = nameVal.charAt(0).toUpperCase();
-    
-    const desktopName = document.getElementById('desktopUserName');
-    const profileUserName = document.getElementById('profileUserName');
-    const desktopInitial = document.getElementById('desktopUserInitial');
-    const mobileName = document.getElementById('mobileUserName');
-    const mobileInitial = document.getElementById('mobileUserInitial');
-    
-    if (desktopName) desktopName.textContent = nameVal;
-    if (profileUserName) profileUserName.textContent = nameVal.split(' ')[0];
-    if (desktopInitial) desktopInitial.textContent = initialVal;
-    if (mobileName) mobileName.textContent = nameVal;
-    if (mobileInitial) mobileInitial.textContent = initialVal;
+    if (window.AccountProfile) {
+        AccountProfile.applyToNavbar(user);
+    }
 }
 
 // Show Message

@@ -4,76 +4,7 @@
 {% block title %}Search Events - EventHub{% endblock %}
 
 {% block extra_css %}
-<style>
-    .search-page {
-        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-        min-height: 100vh;
-        padding: 2rem 0 4rem;
-    }
-    .container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 2rem;
-    }
-    .search-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .search-header h1 {
-        font-family: 'Kaushan Script', cursive;
-        font-size: 2.5rem;
-        background: linear-gradient(135deg, #f59e0b, #ec6408);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        margin-bottom: 0.5rem;
-    }
-    .filters-section {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 16px;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-    .filters-wrapper {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    .filter-group {
-        flex: 1;
-        min-width: 150px;
-    }
-    .filter-select {
-        width: 100%;
-        padding: 0.7rem 1rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 40px;
-        font-size: 0.85rem;
-        background: white;
-        cursor: pointer;
-    }
-    .results-count {
-        text-align: center;
-        margin-bottom: 1.5rem;
-        color: #64748b;
-    }
-    .events-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 1.8rem;
-    }
-    .pagination {
-        margin-top: 3rem;
-        text-align: center;
-    }
-    @media (max-width: 768px) {
-        .container { padding: 0 1rem; }
-        .search-header h1 { font-size: 1.8rem; }
-        .filters-wrapper { flex-direction: column; }
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/attendee/event/search.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -122,6 +53,5 @@
 {% endblock %}
 
 {% block extra_js %}
-
 <script src="{% static 'js/attendee/events/search.js' %}"></script>
 {% endblock %}

@@ -14,20 +14,44 @@ from events.models import Event, Category
 from bookings.models import Ticket
 from accounts.admin_store import (
     get_notifications, mark_notification_read, mark_all_notifications_read,
-    add_notification, get_support_tickets, get_support_ticket_detail,
-    add_support_ticket_reply, update_support_ticket_status
+    delete_notification, dismiss_notification,
+    expire_notifications_for_entity,
+    get_support_tickets, get_support_ticket_detail,
+    add_support_ticket_reply, update_support_ticket_status,
+    get_approved_organizer_ids, approve_organizer,
 )
 
 User = get_user_model()
 
 # ============ HELPER: STAFF REQUIRED CHECK ============
 def is_admin_or_staff(user):
-    return user.is_authenticated and (user.is_staff or user.is_superuser)
+    if not user.is_authenticated:
+        return False
+    role = getattr(user, 'role', None)
+    return user.is_staff or user.is_superuser or role == 'admin'
+
+
+def resolve_admin_user(request):
+    """Resolve admin user from Django session or Bearer token (Vercel/serverless)."""
+    if is_admin_or_staff(request.user):
+        return request.user
+
+    from accounts.auth import authenticate_bearer
+    bearer_user, _error = authenticate_bearer(request)
+    if bearer_user and is_admin_or_staff(bearer_user):
+        return bearer_user
+    return None
+
 
 def admin_required_json(view_func):
     def _wrapped(request, *args, **kwargs):
-        if not is_admin_or_staff(request.user):
-            return JsonResponse({'success': False, 'message': 'Forbidden. Admin privileges required.'}, status=403)
+        admin_user = resolve_admin_user(request)
+        if not admin_user:
+            return JsonResponse(
+                {'success': False, 'message': 'Forbidden. Admin privileges required.'},
+                status=403,
+            )
+        request.user = admin_user
         return view_func(request, *args, **kwargs)
     return _wrapped
 
@@ -259,7 +283,7 @@ def recent_activity(request):
 @admin_required_json
 def pending_count(request):
     try:
-        count = Event.objects.filter(status='draft').count()
+        count = Event.objects.filter(status='pending').count()
         return JsonResponse({'success': True, 'pending_count': count, 'count': count})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -281,12 +305,7 @@ def events_list_api(request):
         if search:
             query &= (Q(title__icontains=search) | Q(organizer__username__icontains=search) | Q(organizer__organization_name__icontains=search))
         if status:
-            if status == 'pending':
-                query &= Q(status='draft')
-            elif status == 'approved' or status == 'published':
-                query &= Q(status='published')
-            else:
-                query &= Q(status=status)
+            query &= Q(status=status)
                 
         events = Event.objects.filter(query).order_by('-created_at')
         
@@ -320,7 +339,6 @@ def events_list_api(request):
 @require_http_methods(["GET"])
 @admin_required_json
 def api_pending_events(request):
-    # Same as events_list_api but forced status='draft'
     try:
         search = request.GET.get('search', '').strip()
         category = request.GET.get('category', '').strip()
@@ -328,7 +346,7 @@ def api_pending_events(request):
         page = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('page_size', 10))
         
-        query = Q(status='draft')
+        query = Q(status='pending')
         if search:
             query &= (Q(title__icontains=search) | Q(organizer__username__icontains=search))
         if category:
@@ -394,7 +412,8 @@ def api_event_detail(request, event_id):
             'available_seats': e.available_seats,
             'banner_image': e.banner_image or '',
             'created_at': e.created_at.isoformat(),
-            'is_featured': e.is_featured
+            'is_featured': e.is_featured,
+            'images': [img.url for img in e.images.all()],
         }
         return JsonResponse({'success': True, 'event': data})
     except Exception as e:
@@ -408,11 +427,7 @@ def api_approve_event(request, event_id):
         e = get_object_or_404(Event, id=event_id)
         e.status = 'published'
         e.save()
-        add_notification(
-            title="Event Approved",
-            message=f"Event '{e.title}' has been approved and published successfully.",
-            n_type="success"
-        )
+        expire_notifications_for_entity('event', e.id, ['event_pending_approval'])
         return JsonResponse({'success': True, 'message': 'Event approved successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -425,13 +440,15 @@ def api_reject_event(request, event_id):
         data = json.loads(request.body) if request.body else {}
         reason = data.get('reason', 'Does not meet platform guidelines')
         e = get_object_or_404(Event, id=event_id)
+        
+        is_revocation = e.status in ('approved', 'published')
         e.status = 'draft' # Rejects back to draft
         e.save()
-        add_notification(
-            title="Event Rejected",
-            message=f"Event '{e.title}' was rejected. Reason: {reason}.",
-            n_type="warning"
-        )
+        
+        title = "Event Approval Revoked" if is_revocation else "Event Rejected"
+        msg = f"Approval for event '{e.title}' was revoked." if is_revocation else f"Event '{e.title}' was rejected. Reason: {reason}."
+        
+        expire_notifications_for_entity('event', e.id, ['event_pending_approval'])
         return JsonResponse({'success': True, 'message': 'Event rejected successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -452,7 +469,6 @@ def api_delete_event(request, event_id):
 @admin_required_json
 def api_event_history(request, event_id):
     try:
-        # Return mock history log of approval processes
         e = get_object_or_404(Event, id=event_id)
         history = [
             {
@@ -462,7 +478,7 @@ def api_event_history(request, event_id):
                 'timestamp': e.created_at.isoformat()
             }
         ]
-        if e.status == 'published':
+        if e.status in ['approved', 'published']:
             history.append({
                 'action': 'Event Approved',
                 'user': 'admin',
@@ -478,11 +494,10 @@ def api_event_history(request, event_id):
 @admin_required_json
 def api_event_stats(request):
     try:
-        pending = Event.objects.filter(status='draft').count()
-        # Mock other counts dynamically based on actual database stats
+        pending = Event.objects.filter(status='pending').count()
         now = timezone.now()
         month_start = datetime(now.year, now.month, 1, tzinfo=dt_timezone.utc)
-        approved = Event.objects.filter(status='published', updated_at__gte=month_start).count()
+        approved = Event.objects.filter(status__in=['approved', 'published'], updated_at__gte=month_start).count()
         stats = {
             'pending': pending,
             'approved_this_month': approved,
@@ -500,6 +515,8 @@ def api_bulk_approve(request):
         data = json.loads(request.body)
         ids = data.get('event_ids', [])
         Event.objects.filter(id__in=ids).update(status='published')
+        for event_id in ids:
+            expire_notifications_for_entity('event', event_id, ['event_pending_approval'])
         return JsonResponse({'success': True, 'message': f'Successfully approved {len(ids)} events'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -512,6 +529,8 @@ def api_bulk_reject(request):
         data = json.loads(request.body)
         ids = data.get('event_ids', [])
         Event.objects.filter(id__in=ids).update(status='draft')
+        for event_id in ids:
+            expire_notifications_for_entity('event', event_id, ['event_pending_approval'])
         return JsonResponse({'success': True, 'message': f'Successfully rejected {len(ids)} events'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -688,11 +707,7 @@ def booking_refund(request, booking_id):
         t = get_object_or_404(Ticket, ticket_number=booking_id)
         t.status = 'refunded'
         t.save()
-        add_notification(
-            title="Refund Processed",
-            message=f"Refund of Kes {t.price * t.quantity} was processed for ticket {t.ticket_number}.",
-            n_type="info"
-        )
+        expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund processed successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -844,6 +859,7 @@ def refund_approve_api(request, refund_id):
         t = get_object_or_404(Ticket, id=refund_id)
         t.status = 'refunded'
         t.save()
+        expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund approved successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -856,6 +872,7 @@ def refund_reject_api(request, refund_id):
         t = get_object_or_404(Ticket, id=refund_id)
         t.status = 'valid' # Restores ticket back to valid
         t.save()
+        expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund rejected. Ticket restored.'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -999,6 +1016,61 @@ def user_suspend(request, user_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 @admin_required_json
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def user_detail_api(request, user_id):
+    try:
+        u = get_object_or_404(User, id=user_id)
+        data = {
+            'id': u.id,
+            'username': u.username,
+            'email': u.email,
+            'full_name': u.get_full_name() or u.username,
+            'phone': u.phone or 'N/A',
+            'role': u.role,
+            'status': 'active' if u.is_active else 'suspended',
+            'email_verified': True,
+            'created_at': u.date_joined.isoformat(),
+            'last_login': u.last_login.isoformat() if u.last_login else None,
+        }
+        if u.role == 'organizer':
+            event_count = Event.objects.filter(organizer=u).count()
+            tickets_sold = Ticket.objects.filter(event__organizer=u).exclude(status='cancelled').aggregate(
+                total=Sum('quantity')
+            )
+            rev_agg = Ticket.objects.filter(event__organizer=u).exclude(status='cancelled').aggregate(
+                total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+            )
+            approved_ids = get_approved_organizer_ids()
+            data.update({
+                'business_name': u.organization_name or u.username,
+                'tax_id': 'N/A',
+                'business_address': u.location or 'N/A',
+                'is_verified': u.id in approved_ids or u.has_mpesa_payment_config(),
+                'total_events': event_count,
+                'total_tickets': int(tickets_sold['total'] or 0),
+                'total_revenue': float(rev_agg['total'] or 0.0),
+                'avg_rating': 0,
+            })
+        elif u.role == 'attendee':
+            tickets = Ticket.objects.filter(billing_email=u.email).exclude(status='cancelled')
+            spent_agg = tickets.aggregate(
+                total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+            )
+            data.update({
+                'total_bookings': tickets.count(),
+                'total_tickets': int(tickets.aggregate(total=Sum('quantity'))['total'] or 0),
+                'total_spent': float(spent_agg['total'] or 0.0),
+                'favorite_category': 'N/A',
+            })
+        return JsonResponse({'success': True, 'user': data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
 def user_activate(request, user_id):
     try:
         u = get_object_or_404(User, id=user_id)
@@ -1032,6 +1104,310 @@ def users_export(request):
                 u.date_joined.isoformat()
             ])
         return response
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+# ============ ORGANIZER MANAGEMENT APIS ============
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def organizers_stats_api(request):
+    try:
+        verified = User.objects.filter(role='organizer', is_active=True).count()
+        suspended = User.objects.filter(role='organizer', is_active=False).count()
+        events_count = Event.objects.filter(organizer__role='organizer').count()
+        tickets_sold = Ticket.objects.filter(event__organizer__role='organizer').exclude(status='cancelled').count()
+        
+        approved_ids = set(get_approved_organizer_ids())
+        pending = 0
+        for org in User.objects.filter(role='organizer', is_active=True):
+            if org.id not in approved_ids and not org.has_mpesa_payment_config():
+                if Event.objects.filter(organizer=org).count() == 0:
+                    pending += 1
+
+        stats = {
+            'verified': verified,
+            'suspended': suspended,
+            'pending': pending,
+            'total_events': events_count,
+            'total_tickets': tickets_sold
+        }
+        return JsonResponse({'success': True, 'stats': stats})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def organizers_verified_api(request):
+    try:
+        search = request.GET.get('search', '').strip()
+        status = request.GET.get('status', '').strip()
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        
+        query = Q(role='organizer', is_active=True)
+        if search:
+            query &= (Q(username__icontains=search) | Q(email__icontains=search) | Q(organization_name__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search))
+            
+        if status == 'suspended':
+            query = Q(role='organizer', is_active=False)
+            if search:
+                query &= (Q(username__icontains=search) | Q(email__icontains=search) | Q(organization_name__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search))
+
+        organizers = User.objects.filter(query).order_by('-date_joined')
+        
+        total_items = organizers.count()
+        total_pages = max(1, (total_items + page_size - 1) // page_size)
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        orgs_slice = organizers[start:end]
+        
+        data = []
+        for u in orgs_slice:
+            event_count = Event.objects.filter(organizer=u).count()
+            data.append({
+                'id': u.id,
+                'business_name': u.organization_name or u.username,
+                'contact_name': u.get_full_name() or u.username,
+                'email': u.email,
+                'phone': u.phone or 'N/A',
+                'event_count': event_count,
+                'status': 'active' if u.is_active else 'suspended'
+            })
+            
+        pagination = {
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_items': total_items
+        }
+        return JsonResponse({'success': True, 'organizers': data, 'pagination': pagination})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def organizers_suspended_api(request):
+    try:
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        
+        query = Q(role='organizer', is_active=False)
+        organizers = User.objects.filter(query).order_by('-date_joined')
+        
+        total_items = organizers.count()
+        total_pages = max(1, (total_items + page_size - 1) // page_size)
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        orgs_slice = organizers[start:end]
+        
+        data = []
+        for u in orgs_slice:
+            data.append({
+                'id': u.id,
+                'business_name': u.organization_name or u.username,
+                'email': u.email,
+                'suspended_at': u.date_joined.isoformat(),
+                'suspension_reason': 'Suspended by Administrator'
+            })
+            
+        pagination = {
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_items': total_items
+        }
+        return JsonResponse({'success': True, 'organizers': data, 'pagination': pagination})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def _pending_organizers_queryset():
+    approved_ids = set(get_approved_organizer_ids())
+    pending = []
+    for org in User.objects.filter(role='organizer', is_active=True).order_by('-date_joined'):
+        if org.id in approved_ids or org.has_mpesa_payment_config():
+            continue
+        if Event.objects.filter(organizer=org).count() > 0:
+            continue
+        pending.append(org)
+    return pending
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def organizers_pending_stats_api(request):
+    try:
+        pending = _pending_organizers_queryset()
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'pending': len(pending),
+                'approved_this_week': len(get_approved_organizer_ids()),
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def organizers_pending_api(request):
+    try:
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        pending = _pending_organizers_queryset()
+        total_items = len(pending)
+        total_pages = max(1, (total_items + page_size - 1) // page_size)
+        start = (page - 1) * page_size
+        end = start + page_size
+        orgs_slice = pending[start:end]
+        data = [{
+            'id': u.id,
+            'business_name': u.organization_name or u.username,
+            'contact_name': u.get_full_name() or u.username,
+            'email': u.email,
+            'phone': u.phone or 'N/A',
+            'created_at': u.date_joined.isoformat(),
+            'status': 'pending',
+        } for u in orgs_slice]
+        pagination = {
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_items': total_items
+        }
+        return JsonResponse({'success': True, 'organizers': data, 'pagination': pagination})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def organizer_detail_api(request, organizer_id):
+    try:
+        u = get_object_or_404(User, id=organizer_id, role='organizer')
+        event_count = Event.objects.filter(organizer=u).count()
+        data = {
+            'id': u.id,
+            'business_name': u.organization_name or u.username,
+            'contact_name': u.get_full_name() or u.username,
+            'email': u.email,
+            'phone': u.phone or 'N/A',
+            'event_count': event_count,
+            'status': 'active' if u.is_active else 'suspended',
+            'document_url': '#',
+            'tax_id': 'N/A'
+        }
+        return JsonResponse({'success': True, 'organizer': data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def organizer_create_api(request):
+    try:
+        data = json.loads(request.body)
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
+        business_name = data.get('business_name')
+        contact_name = data.get('contact_name')
+        phone = data.get('phone', '')
+        
+        if not username or not email or not password or not business_name or not contact_name:
+            return JsonResponse({'success': False, 'message': 'All fields are required.'}, status=400)
+            
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'message': 'Username already exists.'}, status=400)
+            
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'Email already registered.'}, status=400)
+            
+        name_parts = contact_name.split(' ', 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+        
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            role='organizer',
+            organization_name=business_name,
+            phone=phone,
+            is_active=True
+        )
+        return JsonResponse({'success': True, 'message': 'Organizer created successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def organizer_suspend_api(request, organizer_id):
+    try:
+        u = get_object_or_404(User, id=organizer_id, role='organizer')
+        u.is_active = False
+        u.save()
+        return JsonResponse({'success': True, 'message': 'Organizer suspended successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def organizer_verify_api(request, organizer_id):
+    try:
+        u = get_object_or_404(User, id=organizer_id, role='organizer')
+        approve_organizer(u.id)
+        return JsonResponse({'success': True, 'message': 'Organizer verified successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def organizer_reject_api(request, organizer_id):
+    try:
+        data = json.loads(request.body) if request.body else {}
+        reason = data.get('reason', 'Application rejected by administrator')
+        u = get_object_or_404(User, id=organizer_id, role='organizer')
+        u.is_active = False
+        u.save()
+        return JsonResponse({'success': True, 'message': f'Organizer rejected. Reason: {reason}'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def organizer_reactivate_api(request, organizer_id):
+    try:
+        u = get_object_or_404(User, id=organizer_id, role='organizer')
+        u.is_active = True
+        u.save()
+        return JsonResponse({'success': True, 'message': 'Organizer reactivated successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def organizer_delete_api(request, organizer_id):
+    try:
+        u = get_object_or_404(User, id=organizer_id, role='organizer')
+        u.delete()
+        return JsonResponse({'success': True, 'message': 'Organizer deleted successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -1358,6 +1734,7 @@ def transaction_refund_api(request):
         t = get_object_or_404(Ticket, ticket_number=ticket_number)
         t.status = 'refunded'
         t.save()
+        expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund completed successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1468,6 +1845,39 @@ def payout_process(request):
 @admin_required_json
 def payout_process_all(request):
     return JsonResponse({'success': True, 'message': 'All pending payouts processed successfully'})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def payout_detail_api(request, payout_id):
+    try:
+        e = get_object_or_404(Event, id=payout_id)
+        sales_agg = Ticket.objects.filter(event=e).exclude(status='cancelled').aggregate(
+            total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+        )
+        total_sales = float(sales_agg['total'] or 0.0)
+        platform_fee = total_sales * 0.05
+        amount = total_sales - platform_fee
+        payout_status = 'paid' if e.start_date < timezone.now() else 'pending'
+        payout = {
+            'id': e.id,
+            'organizer_name': e.organizer.organization_name or e.organizer.get_full_name() or e.organizer.username,
+            'organizer_email': e.organizer.email,
+            'event_title': e.title,
+            'period': e.start_date.strftime('%B %Y'),
+            'events_count': 1,
+            'ticket_sales': total_sales,
+            'platform_fee': platform_fee,
+            'payout_amount': amount,
+            'amount': amount,
+            'status': payout_status,
+            'payment_method': 'bank_transfer',
+            'requested_date': e.created_at.isoformat(),
+        }
+        return JsonResponse({'success': True, 'payout': payout})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 # ============ 8. REPORTS & ANALYTICS APIS ============
@@ -1702,40 +2112,173 @@ def api_notifications_mark_all_read(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+@csrf_exempt
+@require_http_methods(["DELETE"])
+@admin_required_json
+def api_notification_delete(request, notification_id):
+    try:
+        deleted = delete_notification(notification_id)
+        if not deleted:
+            return JsonResponse({'success': False, 'message': 'Notification not found'}, status=404)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def api_notification_dismiss(request, notification_id):
+    try:
+        data = json.loads(request.body) if request.body else {}
+        on_view = bool(data.get('on_view', False))
+        force = bool(data.get('force', False))
+        dismissed = dismiss_notification(notification_id, on_view=on_view, force=force)
+        return JsonResponse({'success': True, 'dismissed': dismissed})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def api_notifications_prune(request):
+    try:
+        notifications = get_notifications()
+        return JsonResponse({'success': True, 'notifications': notifications})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
 
 # ============ 11. PROFILE & SETTINGS APIS ============
 
+def _serialize_admin_profile(u):
+    return {
+        'username': u.username,
+        'full_name': u.get_full_name() or u.username,
+        'email': u.email,
+        'phone': u.phone or '',
+        'role': u.role,
+        'avatar_url': u.get_avatar_url(),
+    }
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
+@admin_required_json
 def user_profile(request):
-    # Returns details of the logged in user or admin
     try:
         u = request.user
         if not u.is_authenticated:
             return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
-        data = {
-            'username': u.username,
-            'full_name': u.get_full_name() or u.username,
-            'email': u.email
-        }
-        return JsonResponse({'success': True, 'user': data})
+        data = _serialize_admin_profile(u)
+        return JsonResponse({'success': True, 'user': data, **data})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def user_profile_update(request):
+    try:
+        data = json.loads(request.body) if request.body else {}
+        u = request.user
+        if data.get('full_name'):
+            parts = data['full_name'].strip().split(' ', 1)
+            u.first_name = parts[0]
+            u.last_name = parts[1] if len(parts) > 1 else ''
+        if data.get('email'):
+            u.email = data['email'].strip()
+        if 'phone' in data:
+            u.phone = data.get('phone', '').strip()
+        u.save()
+        profile = _serialize_admin_profile(u)
+        return JsonResponse({'success': True, 'message': 'Profile updated', 'user': profile, **profile})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def user_profile_change_password(request):
+    try:
+        data = json.loads(request.body) if request.body else {}
+        current = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        if not request.user.check_password(current):
+            return JsonResponse({'success': False, 'message': 'Current password is incorrect'}, status=400)
+        if len(new_password) < 8:
+            return JsonResponse({'success': False, 'message': 'Password must be at least 8 characters'}, status=400)
+        request.user.set_password(new_password)
+        request.user.save()
+        return JsonResponse({'success': True, 'message': 'Password changed successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def user_profile_stats(request):
+    try:
+        rev_agg = Ticket.objects.exclude(status='cancelled').aggregate(
+            total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+        )
+        stats = {
+            'events_managed': Event.objects.count(),
+            'users_managed': User.objects.count(),
+            'tickets_processed': Ticket.objects.count(),
+            'pending_approvals': Event.objects.filter(status='pending').count(),
+            'revenue_generated': float(rev_agg['total'] or 0.0),
+        }
+        return JsonResponse({'success': True, 'stats': stats})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+def _default_settings():
+    return {
+        'site_name': 'EventHub',
+        'site_tagline': 'Discover Amazing Events in Kenya',
+        'site_description': 'Event Management Platform',
+        'logo_url': '',
+        'support_email': 'support@eventhub.co.ke',
+        'support_phone': '+254 700 000000',
+        'company_address': 'Nairobi, Kenya',
+        'contact_email': 'info@eventhub.com',
+        'timezone': 'Africa/Nairobi',
+        'date_format': 'DD/MM/YYYY',
+        'currency': 'KES',
+        'platform_fee': 5,
+        'processing_fee': 0,
+        'min_payout': 500,
+        'facebook_url': '',
+        'twitter_url': '',
+        'instagram_url': '',
+        'linkedin_url': '',
+    }
+
 
 @csrf_exempt
 @require_http_methods(["GET"])
 @admin_required_json
 def settings_api(request):
     try:
-        return JsonResponse({
-            'success': True,
-            'site_name': 'EventHub',
-            'site_description': 'Event Management Platform',
-            'contact_email': 'info@eventhub.com',
-            'timezone': 'Africa/Nairobi',
-            'currency': 'KES',
-            'platform_fee': 5
-        })
+        settings = _default_settings()
+        return JsonResponse({'success': True, 'settings': settings, **settings})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@admin_required_json
+def settings_general_api(request):
+    try:
+        if request.method == 'GET':
+            settings = _default_settings()
+            return JsonResponse({'success': True, 'settings': settings})
+        return JsonResponse({'success': True, 'message': 'Settings saved successfully'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 

@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function goBack() {
+    const referrer = document.referrer;
+    if (referrer && referrer.includes('/admin-portal/')) {
+        window.location.href = referrer;
+        return;
+    }
     window.location.href = '/admin-portal/events/pending/';
 }
 
@@ -52,9 +57,33 @@ async function loadEventDetail() {
             document.getElementById('eventBanner').style.backgroundImage = `url('${event.banner_image}')`;
         }
         
-        // Show approval banner if status is pending
-        if (event.status === 'pending') {
-            document.getElementById('approvalBanner').style.display = 'block';
+        // Show approval banner if status is pending or approved
+        if (event.status === 'pending' || event.status === 'approved') {
+            const banner = document.getElementById('approvalBanner');
+            const bannerTitle = banner.querySelector('h3');
+            const bannerDesc = banner.querySelector('p');
+            const btnApprove = banner.querySelector('.btn-approve');
+            const btnReject = banner.querySelector('.btn-reject');
+            
+            banner.style.display = 'block';
+            
+            if (event.status === 'pending') {
+                if (bannerTitle) bannerTitle.textContent = 'Event Awaiting Approval';
+                if (bannerDesc) bannerDesc.textContent = 'Review the event details below before making a decision.';
+                if (btnApprove) btnApprove.style.display = 'inline-flex';
+                if (btnReject) {
+                    btnReject.style.display = 'inline-flex';
+                    btnReject.innerHTML = '<i class="fas fa-times-circle"></i> Reject';
+                }
+            } else if (event.status === 'approved') {
+                if (bannerTitle) bannerTitle.textContent = 'Event Approved';
+                if (bannerDesc) bannerDesc.textContent = 'This event has been approved. It is currently waiting to be published by the organizer.';
+                if (btnApprove) btnApprove.style.display = 'none';
+                if (btnReject) {
+                    btnReject.style.display = 'inline-flex';
+                    btnReject.innerHTML = '<i class="fas fa-times-circle"></i> Revoke Approval';
+                }
+            }
         }
         
         // Show ticket types if available
@@ -62,7 +91,7 @@ async function loadEventDetail() {
             document.getElementById('ticketTypesCard').style.display = 'block';
             displayTicketTypes(event.ticket_types);
         }
-        
+
     } catch (error) {
         console.error('Error loading event:', error);
         showToast('Failed to load event details', 'error');
@@ -116,6 +145,8 @@ async function approveEvent() {
     showConfirm('Approve this event? It will be published immediately.', async () => {
         try {
             await apiRequest(`/api/admin/events/${eventId}/approve/`, 'POST');
+            if (typeof clearActiveNotification === 'function') clearActiveNotification();
+            if (typeof loadNotifications === 'function') loadNotifications();
             showToast('Event approved successfully', 'success');
             setTimeout(() => location.reload(), 1500);
         } catch (error) {
@@ -125,6 +156,27 @@ async function approveEvent() {
 }
 
 function openRejectModal() {
+    const isApproved = document.getElementById('eventStatus').textContent.toLowerCase().includes('approved');
+    const title = document.getElementById('rejectModalTitle') || document.querySelector('#rejectModal h3');
+    const warning = document.getElementById('rejectModalWarning') || document.querySelector('#rejectModal .warning-text');
+    const label = document.getElementById('rejectModalLabel') || document.querySelector('#rejectModal label');
+    const textarea = document.getElementById('rejectionReason');
+    const submitBtn = document.getElementById('rejectModalSubmit') || document.querySelector('#rejectModal .btn-danger');
+    
+    if (isApproved) {
+        if (title) title.innerHTML = '<i class="fas fa-times-circle"></i> Revoke Approval';
+        if (warning) warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Provide a reason for revoking approval. The organizer will be notified.';
+        if (label) label.innerHTML = 'Revocation Reason <span class="required">*</span>';
+        if (textarea) textarea.placeholder = 'Explain why approval is being revoked...';
+        if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-times-circle"></i> Revoke Approval';
+    } else {
+        if (title) title.innerHTML = '<i class="fas fa-times-circle"></i> Reject Event';
+        if (warning) warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Provide a reason for rejection. The organizer will be notified.';
+        if (label) label.innerHTML = 'Rejection Reason <span class="required">*</span>';
+        if (textarea) textarea.placeholder = 'Explain why this event is being rejected...';
+        if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-times-circle"></i> Reject Event';
+    }
+    
     document.getElementById('rejectModal').style.display = 'flex';
 }
 
@@ -136,13 +188,21 @@ async function confirmReject() {
     const reason = document.getElementById('rejectionReason')?.value;
     
     if (!reason) {
-        showToast('Please provide a rejection reason', 'error');
+        showToast('Please provide a reason', 'error');
         return;
     }
     
+    const isApproved = document.getElementById('eventStatus').textContent.toLowerCase().includes('approved');
+    
     try {
         await apiRequest(`/api/admin/events/${eventId}/reject/`, 'POST', { reason: reason });
-        showToast('Event rejected. Organizer notified.', 'success');
+        if (typeof clearActiveNotification === 'function') clearActiveNotification();
+        if (typeof loadNotifications === 'function') loadNotifications();
+        if (isApproved) {
+            showToast('Event approval revoked.', 'success');
+        } else {
+            showToast('Event rejected. Organizer notified.', 'success');
+        }
         setTimeout(() => location.reload(), 1500);
     } catch (error) {
         showToast('Failed to reject event', 'error');

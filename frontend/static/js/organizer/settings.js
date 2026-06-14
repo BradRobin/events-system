@@ -25,6 +25,32 @@ async function saveGeneral(e) {
     } catch(e) { if(window.showToast) window.showToast(e.message, 'error'); }
 }
 
+async function loadMpesaSettings() {
+    try {
+        const m = await OrganizerAPI.settings.getMpesa();
+        document.getElementById('mpesaDisplayName').value = m.mpesa_display_name || '';
+        document.getElementById('mpesaPaybill').value = m.mpesa_paybill || '';
+        document.getElementById('mpesaTill').value = m.mpesa_till || '';
+        document.getElementById('mpesaPochi').value = m.mpesa_pochi || '';
+        document.getElementById('mpesaSendMoney').value = m.mpesa_send_money || '';
+    } catch(e) {}
+}
+
+async function saveMpesa(e) {
+    e.preventDefault();
+    const data = {
+        mpesa_display_name: document.getElementById('mpesaDisplayName').value,
+        mpesa_paybill: document.getElementById('mpesaPaybill').value,
+        mpesa_till: document.getElementById('mpesaTill').value,
+        mpesa_pochi: document.getElementById('mpesaPochi').value,
+        mpesa_send_money: document.getElementById('mpesaSendMoney').value,
+    };
+    try {
+        await OrganizerAPI.settings.updateMpesa(data);
+        if(window.showToast) window.showToast('M-Pesa settings saved', 'success');
+    } catch(e) { if(window.showToast) window.showToast(e.message, 'error'); }
+}
+
 async function loadPaymentSettings() {
     try {
         const p = await OrganizerAPI.payouts.getSettings();
@@ -117,12 +143,14 @@ async function createApiKey() {
 }
 
 document.getElementById('generalForm')?.addEventListener('submit', saveGeneral);
+document.getElementById('mpesaForm')?.addEventListener('submit', saveMpesa);
 document.getElementById('paymentForm')?.addEventListener('submit', savePayment);
 document.getElementById('addTeamBtn')?.addEventListener('click', addTeamMember);
 document.getElementById('createApiKeyBtn')?.addEventListener('click', createApiKey);
 
 document.addEventListener('DOMContentLoaded', () => {
     loadGeneral();
+    loadMpesaSettings();
     loadPaymentSettings();
     loadTeam();
     loadApiKeys();

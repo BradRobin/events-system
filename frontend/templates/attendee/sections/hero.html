@@ -30,7 +30,7 @@
                 <a href="/events/" class="hero-btn hero-btn-primary">
                     Browse Events
                 </a>
-                <a href="/register/" class="hero-btn hero-btn-secondary">
+                <a href="/register/" id="heroGetStartedBtn" class="hero-btn hero-btn-secondary">
                     Get Started
                 </a>
             </div>
@@ -54,6 +54,44 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ========== LOGIN STATE CHECK FOR "GET STARTED" BUTTON ==========
+    const accessToken = localStorage.getItem('attendee_access_token');
+    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+    const isLoggedIn = accessToken && user && Object.keys(user).length > 0;
+    
+    const getStartedBtn = document.getElementById('heroGetStartedBtn');
+    
+    if (getStartedBtn) {
+        if (isLoggedIn) {
+            // Logged in - change to Dashboard button
+            getStartedBtn.href = '/dashboard/';
+            getStartedBtn.innerHTML = 'Go to Dashboard <i class="fas fa-tachometer-alt"></i>';
+            getStartedBtn.classList.add('logged-in-btn');
+        } else {
+            // Not logged in - keep as Get Started
+            getStartedBtn.href = '/register/';
+            getStartedBtn.innerHTML = 'Get Started';
+            getStartedBtn.classList.remove('logged-in-btn');
+        }
+    }
+    
+    // Listen for auth state changes (if user logs in/out from another tab)
+    window.addEventListener('auth-state-changed', function(event) {
+        const isLoggedInEvent = event.detail?.isLoggedIn || false;
+        
+        if (getStartedBtn) {
+            if (isLoggedInEvent) {
+                getStartedBtn.href = '/dashboard/';
+                getStartedBtn.innerHTML = 'Go to Dashboard <i class="fas fa-tachometer-alt"></i>';
+                getStartedBtn.classList.add('logged-in-btn');
+            } else {
+                getStartedBtn.href = '/register/';
+                getStartedBtn.innerHTML = 'Get Started';
+                getStartedBtn.classList.remove('logged-in-btn');
+            }
+        }
+    });
+    
     // ========== BACKGROUND SLIDESHOW (8 images) ==========
     const slides = document.querySelectorAll('.hero-slideshow .slide');
     let currentSlide = 0;
@@ -181,3 +219,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<style>
+/* Optional: Add a small icon spacing for the logged-in button */
+.hero-btn.logged-in-btn i {
+    margin-left: 8px;
+    font-size: 0.85rem;
+}
+
+.hero-btn.logged-in-btn:hover i {
+    transform: translateX(3px);
+    transition: transform 0.3s ease;
+}
+</style>

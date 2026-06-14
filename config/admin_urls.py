@@ -23,6 +23,7 @@ urlpatterns = [
     # Users Management
     path('users/', TemplateView.as_view(template_name='admin/users/all_users.html'), name='admin_users'),
     path('users/organizers/', TemplateView.as_view(template_name='admin/users/organizers.html'), name='admin_organizers'),
+    path('users/pending-organizers/', TemplateView.as_view(template_name='admin/users/pending_organizers.html'), name='admin_pending_organizers'),
     path('users/detail/', TemplateView.as_view(template_name='admin/users/detail.html'), name='admin_user_detail'),
     
     # Tickets Management

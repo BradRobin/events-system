@@ -23,10 +23,6 @@
     .events-grid {
         gap: 1.5rem;
     }
-    
-    .event-detail-layout {
-        gap: 1.5rem;
-    }
 }
 
 /* Tablet (768px to 991px) */
@@ -42,6 +38,21 @@
     
     .events-grid {
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+    
+    /* Category Filters */
+    .categories-wrapper {
+        gap: 0.6rem;
+    }
+    
+    .category-btn {
+        padding: 0.45rem 1rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Search Wrapper */
+    .search-wrapper {
+        max-width: 400px;
     }
     
     /* Event Detail */
@@ -63,22 +74,6 @@
     
     .event-image-container {
         aspect-ratio: 16/9;
-    }
-    
-    /* Filters */
-    .filters-wrapper {
-        gap: 0.8rem;
-    }
-    
-    .filter-select {
-        padding: 0.6rem 1.8rem 0.6rem 1rem;
-        font-size: 0.8rem;
-    }
-    
-    .search-group input {
-        padding: 0.6rem 1rem 0.6rem 2.2rem;
-        width: 220px;
-        font-size: 0.8rem;
     }
 }
 
@@ -109,27 +104,45 @@
         margin-bottom: 1.5rem;
     }
     
-    .filters-wrapper {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.6rem;
+    /* Category Filters */
+    .categories-wrapper {
+        gap: 0.5rem;
+        margin-bottom: 1rem;
     }
     
-    .filter-select,
-    .search-group input {
-        width: 100%;
-        padding: 0.6rem 1rem;
+    .category-btn {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.75rem;
     }
     
-    .search-group input {
-        padding-left: 2.2rem;
+    .category-btn i {
+        font-size: 0.7rem;
     }
     
+    /* Search Wrapper */
+    .search-wrapper {
+        max-width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .search-wrapper input {
+        padding: 0.7rem 1rem 0.7rem 2.5rem;
+        font-size: 0.85rem;
+    }
+    
+    /* Search Stats */
+    .search-stats {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    /* Events Grid */
     .events-grid {
         gap: 1rem;
         grid-template-columns: 1fr;
     }
     
+    /* Pagination */
     .pagination-wrapper {
         gap: 0.4rem;
     }
@@ -138,6 +151,29 @@
         padding: 0.4rem 0.8rem;
         font-size: 0.75rem;
         min-width: 35px;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        padding: 2rem 1rem;
+        margin: 1rem;
+    }
+    
+    .empty-state i {
+        font-size: 2.5rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1rem;
+    }
+    
+    .empty-state p {
+        font-size: 0.75rem;
+    }
+    
+    .btn-browse {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
     }
     
     /* Event Detail */
@@ -164,7 +200,7 @@
         gap: 0.5rem;
     }
     
-    .event-meta span {
+    .event-meta .meta-item {
         font-size: 0.75rem;
     }
     
@@ -192,31 +228,14 @@
         padding: 0.4rem;
     }
     
-    /* Location Tab */
-    .location-map iframe {
-        height: 200px;
-    }
-    
-    .location-controls {
+    /* Venue Section */
+    .venue-amenities {
         flex-direction: column;
         gap: 0.5rem;
     }
     
-    .btn-live-location,
-    .btn-refresh-location {
-        justify-content: center;
-        padding: 0.6rem;
-        font-size: 0.7rem;
-    }
-    
-    .directions .btn-outline {
-        padding: 0.5rem 1rem;
-        font-size: 0.7rem;
-        justify-content: center;
-    }
-    
-    .location-tips {
-        font-size: 0.65rem;
+    .amenity-item {
+        width: fit-content;
     }
     
     /* Ticket Card */
@@ -251,12 +270,59 @@
         padding: 0.6rem;
         font-size: 0.75rem;
     }
+    
+    /* Reviews Section */
+    .reviews-summary {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .rating-number {
+        font-size: 1.5rem;
+    }
+    
+    .review-card {
+        padding: 0.8rem;
+    }
+    
+    .reviewer-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+    
+    .review-title {
+        font-size: 0.85rem;
+    }
+    
+    .review-content {
+        font-size: 0.75rem;
+    }
+    
+    /* Modal */
+    .modal-content {
+        padding: 1.25rem;
+    }
 }
 
 /* Mobile Portrait (up to 575px) */
 @media (max-width: 575px) {
     .events-header h1 {
         font-size: 1.4rem;
+    }
+    
+    .category-btn {
+        padding: 0.35rem 0.8rem;
+        font-size: 0.7rem;
+    }
+    
+    .search-wrapper input {
+        padding: 0.6rem 1rem 0.6rem 2.2rem;
+        font-size: 0.8rem;
+    }
+    
+    .search-stats {
+        font-size: 0.7rem;
     }
     
     .event-title-section h1 {
@@ -269,19 +335,22 @@
     }
     
     .event-description h3,
-    .event-organizer h3,
     .event-features h3,
-    .event-location h3 {
+    .event-venue h3,
+    .organizer-info h3 {
         font-size: 0.9rem;
     }
     
-    .event-description p,
-    .event-organizer p {
+    .event-description p {
         font-size: 0.75rem;
     }
     
-    .location-map iframe {
-        height: 180px;
+    .venue-name {
+        font-size: 0.9rem;
+    }
+    
+    .venue-address {
+        font-size: 0.75rem;
     }
     
     .current-price {
@@ -316,11 +385,6 @@
         font-size: 0.55rem;
     }
     
-    .reviews-summary {
-        flex-direction: column;
-        text-align: center;
-    }
-    
     .rating-number {
         font-size: 1.3rem;
     }
@@ -347,20 +411,17 @@
         padding: 1rem;
         width: 95%;
     }
-    
-    .toast {
-        bottom: 0.5rem;
-        right: 0.5rem;
-        left: 0.5rem;
-        max-width: calc(100% - 1rem);
-        text-align: center;
-    }
 }
 
 /* Small Mobile (up to 360px) */
 @media (max-width: 360px) {
     .events-header h1 {
         font-size: 1.2rem;
+    }
+    
+    .category-btn {
+        padding: 0.3rem 0.7rem;
+        font-size: 0.65rem;
     }
     
     .event-title-section h1 {
@@ -395,15 +456,17 @@
 /* Print Styles */
 @media print {
     .event-sidebar,
-    .event-tabs,
-    .filters-section,
-    .pagination,
-    .location-controls,
+    .directions-btn,
     .book-now-btn,
     .write-review-btn,
+    .wishlist-sidebar-btn,
     .wishlist-btn,
-    .directions,
-    .toast-container {
+    .modal,
+    .toast,
+    .toast-container,
+    .filters-section,
+    .pagination,
+    .event-tabs button:not(.active) {
         display: none !important;
     }
     
@@ -415,8 +478,12 @@
         display: block !important;
     }
     
+    .event-tabs {
+        display: none;
+    }
+    
     .event-main-image {
-        max-height: 250px;
+        max-height: 200px;
     }
     
     .event-features ul {

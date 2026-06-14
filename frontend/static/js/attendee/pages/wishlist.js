@@ -217,39 +217,56 @@ function addToCart(eventId) {
         return;
     }
     
+    if (window.CheckoutFlow) {
+        window.CheckoutFlow.startCheckout(eventId, 'Regular', 1);
+        return;
+    }
+
     try {
-        let cart = localStorage.getItem('eventhub_cart');
-        cart = cart ? JSON.parse(cart) : { items: [], subtotal: 0, platform_fee: 0, total: 0 };
-        
+        const storage = window.EventhubCartStorage;
+        const cart = storage ? storage.loadEventhubCart() : { items: [], subtotal: 0, platform_fee: 0, total: 0 };
+
         const existingItem = cart.items.find(i => i.id === eventId);
         if (existingItem) {
             showToast('This event is already in your cart!', 'info');
             return;
         }
-        
-        // Add full event details to cart
-        cart.items.push({
-            id: event.id,
-            title: event.title,
-            price: event.price,
-            quantity: 1,
-            image: event.image,
-            location: event.location,
-            date: event.date,
-            category: event.category
-        });
-        
-        // Recalculate totals
+
+        const item = storage
+            ? storage.slimCartItem({
+                id: event.id,
+                title: event.title,
+                price: event.price,
+                quantity: 1,
+                image: event.image,
+                location: event.location,
+                date: event.date,
+                category: event.category,
+            })
+            : {
+                id: event.id,
+                title: event.title,
+                price: event.price,
+                quantity: 1,
+                location: event.location,
+                date: event.date,
+                category: event.category,
+            };
+
+        cart.items.push(item);
         cart.subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        cart.platform_fee = Math.ceil(cart.subtotal * 0.05);
-        cart.total = cart.subtotal + cart.platform_fee;
-        
-        localStorage.setItem('eventhub_cart', JSON.stringify(cart));
-        
+        cart.platform_fee = 0;
+        cart.total = cart.subtotal;
+
+        if (storage) {
+            storage.saveEventhubCart(cart);
+        } else {
+            localStorage.setItem('eventhub_cart', JSON.stringify(cart));
+        }
+
         showToast('Added to cart!', 'success');
         updateCartCount();
         window.dispatchEvent(new Event('cart-updated'));
-        
     } catch (error) {
         console.error('Error adding to cart:', error);
         showToast('Failed to add to cart', 'error');

@@ -5,6 +5,7 @@
 let currentPage = 1;
 let totalPages = 1;
 let currentQuery = '';
+let lastSearchResults = [];
 let currentFilters = {
     category: '',
     city: '',
@@ -25,8 +26,62 @@ const categoryFilter = document.getElementById('categoryFilter');
 const cityFilter = document.getElementById('cityFilter');
 const sortSelect = document.getElementById('sortBy');
 
+function renderStreamLoader(isSearch = false) {
+    const grid = document.getElementById('searchResultsGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = `
+        <div class="stream-loader">
+            <div class="stream-loader-spinner"></div>
+            <h3 class="stream-loader-title">${isSearch ? "Searching Event Registry" : "Scanning Event Registry"}</h3>
+            <div class="stream-loader-steps">
+                <div class="loader-step active" id="step-connect">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                    <span>Connecting to database...</span>
+                </div>
+                <div class="loader-step pending" id="step-categories">
+                    <i class="far fa-circle"></i>
+                    <span>Loading filter categories...</span>
+                </div>
+                <div class="loader-step pending" id="step-events">
+                    <i class="far fa-circle"></i>
+                    <span>Retrieving matches...</span>
+                </div>
+                <div class="loader-step pending" id="step-render">
+                    <i class="far fa-circle"></i>
+                    <span>Rendering displays...</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function updateStep(stepId, status) {
+    const el = document.getElementById(stepId);
+    if (!el) return;
+    
+    const icon = el.querySelector('i');
+    
+    if (status === 'completed') {
+        el.className = 'loader-step completed';
+        if (icon) {
+            icon.className = 'fas fa-check-circle';
+        }
+    } else if (status === 'active') {
+        el.className = 'loader-step active';
+        if (icon) {
+            icon.className = 'fas fa-circle-notch fa-spin';
+        }
+    } else if (status === 'pending') {
+        el.className = 'loader-step pending';
+        if (icon) {
+            icon.className = 'far fa-circle';
+        }
+    }
+}
+
 // Initialize
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const urlParams = new URLSearchParams(window.location.search);
     currentQuery = urlParams.get('q') || '';
     
@@ -34,10 +89,27 @@ document.addEventListener('DOMContentLoaded', function() {
         searchQueryInfo.innerHTML = `Showing results for "<strong>${escapeHtml(currentQuery)}</strong>"`;
     }
     
-    loadCategories();
-    loadSearchResults();
     setupEventListeners();
+    await runSearchSequence();
 });
+
+async function runSearchSequence() {
+    renderStreamLoader(true);
+    updateStep('step-connect', 'active');
+    
+    // Start both fetches concurrently
+    const categoriesPromise = loadCategories();
+    const searchPromise = loadSearchResults(true);
+    
+    updateStep('step-connect', 'completed');
+    updateStep('step-categories', 'active');
+    updateStep('step-events', 'active');
+    
+    await categoriesPromise;
+    updateStep('step-categories', 'completed');
+    
+    await searchPromise;
+}
 
 function setupEventListeners() {
     if (categoryFilter) {
@@ -84,7 +156,18 @@ async function loadCategories() {
     }
 }
 
-async function loadSearchResults() {
+async function loadSearchResults(isInitialLoad = false) {
+    if (!isInitialLoad) {
+        if (searchResultsGrid) {
+            searchResultsGrid.innerHTML = `
+                <div class="stream-loader">
+                    <div class="stream-loader-spinner"></div>
+                    <h3 class="stream-loader-title">Searching registry...</h3>
+                </div>
+            `;
+        }
+    }
+
     try {
         const params = new URLSearchParams({
             q: currentQuery,
@@ -106,6 +189,12 @@ async function loadSearchResults() {
         
         const response = await fetch(`${API.search}?${params}`);
         const data = await response.json();
+        
+        if (isInitialLoad) {
+            updateStep('step-events', 'completed');
+            updateStep('step-render', 'active');
+            await new Promise(resolve => setTimeout(resolve, 50)); // smooth visual transition
+        }
         
         if (data.success) {
             const events = data.events || [];
@@ -139,6 +228,8 @@ async function loadSearchResults() {
 
 function displayResults(events) {
     if (!searchResultsGrid) return;
+
+    lastSearchResults = events || [];
     
     if (!events || events.length === 0) {
         searchResultsGrid.innerHTML = `
@@ -173,7 +264,7 @@ function displayResults(events) {
                 <button class="card-action-btn view-details-btn" onclick="event.stopPropagation(); window.location.href='/events/detail/?id=${event.id}'">
                     <i class="fas fa-info-circle"></i> Details
                 </button>
-                <button class="card-action-btn add-to-cart-btn" onclick="event.stopPropagation(); addToCart(${event.id}, '${escapeHtml(event.title)}', ${event.price || 0}, '${event.image || ''}')">
+                <button class="card-action-btn add-to-cart-btn" data-event-id="${event.id}" onclick="event.stopPropagation(); addToCart(${event.id})">
                     <i class="fas fa-cart-plus"></i> Book Now
                 </button>
             </div>
@@ -248,53 +339,69 @@ function showToast(message, type) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-function addToCart(eventId, title, price, image) {
+function addToCart(eventId) {
+    const event = lastSearchResults.find((e) => e.id == eventId);
+    if (!event) {
+        showToast('Event not found. Please refresh and try again.', 'error');
+        return;
+    }
+
     const token = localStorage.getItem('attendee_access_token');
     
     if (!token) {
         showToast('Please login to book tickets', 'info');
         setTimeout(() => {
-            localStorage.setItem('redirect_after_login', window.location.pathname);
+            localStorage.setItem('redirect_after_login', window.location.pathname + window.location.search);
             window.location.href = '/login/';
         }, 1500);
         return;
     }
     
-    let cart = localStorage.getItem('eventhub_cart');
-    if (cart) {
-        try {
-            cart = JSON.parse(cart);
-        } catch(e) {
-            cart = { items: [], subtotal: 0, platform_fee: 0, total: 0 };
-        }
-    } else {
-        cart = { items: [], subtotal: 0, platform_fee: 0, total: 0 };
-    }
-    
+    const storage = window.EventhubCartStorage;
+    const cart = storage ? storage.loadEventhubCart() : { items: [], subtotal: 0, platform_fee: 0, total: 0 };
+
     const existingItem = cart.items.find(i => i.id == eventId);
     if (existingItem) {
-        showToast(`${title} is already in your cart!`, 'info');
+        showToast(`${event.title} is already in your cart!`, 'info');
         return;
     }
-    
-    cart.items.push({
-        id: eventId,
-        title: title,
-        price: price,
-        quantity: 1,
-        image: image,
-        location: 'Event Venue',
-        date: new Date().toISOString()
-    });
-    
+
+    const item = storage
+        ? storage.slimCartItem({
+            id: event.id,
+            title: event.title,
+            price: event.price || 0,
+            quantity: 1,
+            image: event.image || event.banner_image || '',
+            location: event.location || event.venue || 'Event Venue',
+            date: event.date || event.start_date || new Date().toISOString(),
+        })
+        : {
+            id: event.id,
+            title: event.title,
+            price: event.price || 0,
+            quantity: 1,
+            location: event.location || event.venue || 'Event Venue',
+            date: event.date || event.start_date || new Date().toISOString(),
+        };
+
+    cart.items.push(item);
     cart.subtotal = cart.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-    cart.platform_fee = Math.ceil(cart.subtotal * 0.05);
-    cart.total = cart.subtotal + cart.platform_fee;
-    
-    localStorage.setItem('eventhub_cart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('cart-updated'));
-    
-    showToast(`${title} added to cart!`, 'success');
+    cart.platform_fee = 0;
+    cart.total = cart.subtotal;
+
+    try {
+        if (storage) {
+            storage.saveEventhubCart(cart);
+        } else {
+            localStorage.setItem('eventhub_cart', JSON.stringify(cart));
+        }
+        window.dispatchEvent(new Event('cart-updated'));
+        showToast(`${event.title} added to cart!`, 'success');
+    } catch (error) {
+        console.error('Failed to save cart:', error);
+        showToast('Could not save cart. Please clear site data or book from the event page.', 'error');
+    }
 }
 
 window.changePage = changePage;

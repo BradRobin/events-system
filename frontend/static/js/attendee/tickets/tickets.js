@@ -6,19 +6,24 @@ let allTickets = [];
 let currentTab = 'upcoming';
 let currentSearch = '';
 let currentBookingId = null;
+let userReviewsByEvent = {};
+let reviewModalState = { eventId: null, reviewId: null, rating: 0 };
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const urlParams = new URLSearchParams(window.location.search);
     currentBookingId = urlParams.get('booking_id');
-    
-    loadTickets();
+    applyInitialTabFromUrl(urlParams.get('tab'));
+
     setupEventListeners();
-    
+    setupReviewModal();
+
+    await loadTickets();
+
     const path = window.location.pathname;
     if (path.includes('/detail/')) {
-        loadTicketDetail();
+        await loadTicketDetail();
     } else if (path.includes('/qr/')) {
-        loadQRCode();
+        await loadQRCode();
     }
 });
 
@@ -32,76 +37,240 @@ function setupEventListeners() {
     }
 }
 
-function loadTickets() {
+function mapApiTicket(t) {
+    return {
+        id: t.ticket_number,
+        booking_id: t.ticket_number,
+        event_id: t.event?.id,
+        title: t.event?.title || 'Event',
+        category: 'Event',
+        date: t.event?.start_date,
+        location: t.event?.venue_name || t.event?.location || '',
+        price: t.price,
+        image: t.event?.banner_image,
+        ticket_code: t.ticket_number,
+        ticket_type: t.ticket_type || 'Regular',
+        status: t.status,
+        purchased_date: t.purchase_date,
+        quantity: t.quantity,
+    };
+}
+
+function applyInitialTabFromUrl(tab) {
+    if (tab !== 'past' && tab !== 'upcoming') return;
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+    });
+}
+
+async function loadUserReviews() {
+    userReviewsByEvent = {};
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) return;
+
     try {
-        // Try to load from eventhub_tickets first
-        const savedTickets = localStorage.getItem('eventhub_tickets');
-        
-        if (savedTickets && JSON.parse(savedTickets).length > 0) {
-            allTickets = JSON.parse(savedTickets);
+        const res = await fetch('/api/attendee/reviews/', {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'same-origin',
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        (data.results || []).forEach(review => {
+            userReviewsByEvent[review.event_id] = review;
+        });
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+    }
+}
+
+function renderStarsHtml(rating, interactive = false) {
+    const stars = [];
+    for (let i = 1; i <= 5; i += 1) {
+        const filled = i <= rating;
+        const icon = filled ? 'fas' : 'far';
+        if (interactive) {
+            stars.push(`<button type="button" class="event-review-star is-active" data-rating="${i}" aria-label="${i} star${i > 1 ? 's' : ''}"><i class="${icon} fa-star"></i></button>`);
         } else {
-            // Fallback to generating from bookings
-            const savedBookings = localStorage.getItem('eventhub_bookings');
-            if (savedBookings) {
-                const bookings = JSON.parse(savedBookings);
-                allTickets = [];
-                
-                let filteredBookings = bookings;
-                if (currentBookingId) {
-                    filteredBookings = bookings.filter(booking => booking.id === currentBookingId);
-                }
-                
-                filteredBookings.forEach(booking => {
-                    booking.items.forEach((item, itemIndex) => {
-                        if (item.ticket_codes && item.ticket_codes.length > 0) {
-                            item.ticket_codes.forEach((code, idx) => {
-                                allTickets.push({
-                                    id: `${booking.id}_${item.id}_${idx}`,
-                                    booking_id: booking.id,
-                                    title: item.title,
-                                    category: item.category,
-                                    date: item.date,
-                                    location: item.location,
-                                    price: item.price,
-                                    image: item.image,
-                                    ticket_code: code,
-                                    status: 'active',
-                                    purchased_date: booking.booking_date,
-                                    receipt_number: booking.receipt_number,
-                                    quantity: 1
-                                });
-                            });
-                        } else {
-                            for (let i = 0; i < item.quantity; i++) {
-                                allTickets.push({
-                                    id: `${booking.id}_${item.id}_${i}`,
-                                    booking_id: booking.id,
-                                    title: item.title,
-                                    category: item.category,
-                                    date: item.date,
-                                    location: item.location,
-                                    price: item.price,
-                                    image: item.image,
-                                    ticket_code: item.ticket_code || `TKT${Math.floor(Math.random() * 1000000)}`,
-                                    status: 'active',
-                                    purchased_date: booking.booking_date,
-                                    receipt_number: booking.receipt_number,
-                                    quantity: 1
-                                });
-                            }
-                        }
-                    });
-                });
-            }
+            stars.push(`<span class="event-review-star-display" aria-hidden="true"><i class="${icon} fa-star"></i></span>`);
         }
-        
+    }
+    return stars.join('');
+}
+
+function renderPastEventReviewPanel(ticket) {
+    const review = userReviewsByEvent[ticket.event_id];
+    if (review) {
+        const commentHtml = review.comment
+            ? `<p class="past-event-review-comment">${escapeHtml(review.comment)}</p>`
+            : '';
+        return `
+            <div class="past-event-review past-event-review--submitted">
+                <div class="past-event-review-header">
+                    <span class="past-event-review-label"><i class="fas fa-star"></i> Your review</span>
+                    <button type="button" class="past-event-review-edit" data-event-id="${ticket.event_id}" data-review-id="${review.id}">
+                        Edit
+                    </button>
+                </div>
+                <div class="past-event-review-stars">${renderStarsHtml(review.rating)}</div>
+                ${commentHtml}
+            </div>
+        `;
+    }
+
+    return `
+        <div class="past-event-review">
+            <p class="past-event-review-prompt">How was this event?</p>
+            <button type="button" class="past-event-review-btn" data-event-id="${ticket.event_id}">
+                <i class="fas fa-star"></i> Rate &amp; review
+            </button>
+        </div>
+    `;
+}
+
+function tierBadgeClass(tier) {
+    if (tier === 'VIP') return 'ticket-tier-vip';
+    if (tier === 'VVIP') return 'ticket-tier-vvip';
+    return 'ticket-tier-regular';
+}
+
+function statusLabel(status) {
+    const map = {
+        valid: 'Active',
+        checked_in: 'Used',
+        cancelled: 'Cancelled',
+        active: 'Active',
+    };
+    return map[status] || 'Active';
+}
+
+function statusClass(status) {
+    if (status === 'checked_in' || status === 'used') return 'status-used';
+    if (status === 'cancelled' || status === 'expired') return 'status-cancelled';
+    return 'status-active';
+}
+
+function buildQrUrl(ticketCode) {
+    const payload = encodeURIComponent(ticketCode);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${payload}&bgcolor=ffffff&color=1a1a2e&margin=8`;
+}
+
+function getTicketImageUrl(image) {
+    if (!image) return '/static/images/placeholder.jpg';
+    return String(image).replace(/'/g, '%27');
+}
+
+function renderFlipTicketCard(ticket, index) {
+    const imageUrl = getTicketImageUrl(ticket.image);
+    const qrUrl = buildQrUrl(ticket.ticket_code);
+    const amountPaid = Number(ticket.price) * (ticket.quantity || 1);
+    const venue = escapeHtml((ticket.location || 'Venue TBA').split(',')[0]);
+    const status = statusLabel(ticket.status);
+    const statusCls = statusClass(ticket.status);
+
+    return `
+        <div class="flip-ticket-wrapper" style="animation-delay: ${Math.min(index * 0.06, 0.4)}s">
+            <button type="button" class="flip-ticket" aria-label="Flip ticket for ${escapeHtml(ticket.title)}" data-ticket-code="${escapeHtml(ticket.ticket_code)}">
+                <div class="flip-ticket-inner">
+                    <div class="flip-ticket-face flip-ticket-front">
+                        <div class="flip-ticket-zone-top">
+                            <div class="flip-ticket-media" style="background-image: url('${imageUrl}')"></div>
+                            <span class="flip-ticket-status ${statusCls}">${status}</span>
+                        </div>
+                        <div class="flip-ticket-zone-bottom">
+                            <h3 class="flip-ticket-event-title">${escapeHtml(ticket.title)}</h3>
+                            <div class="flip-ticket-meta-grid">
+                                <div class="flip-ticket-meta-item">
+                                    <i class="fas fa-ticket-alt"></i>
+                                    <span class="checkout-tier-badge ${tierBadgeClass(ticket.ticket_type)}">${escapeHtml(ticket.ticket_type || 'Regular')}</span>
+                                </div>
+                                <div class="flip-ticket-meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>${formatTime(ticket.date)}</span>
+                                </div>
+                                <div class="flip-ticket-meta-item span-2">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>${venue}</span>
+                                </div>
+                                <div class="flip-ticket-meta-item span-2">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>${formatDate(ticket.date)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flip-ticket-face flip-ticket-back">
+                        <div class="flip-ticket-zone-top flip-ticket-qr-zone">
+                            <div class="flip-ticket-qr-frame">
+                                <img src="${qrUrl}" alt="QR code for ticket ${escapeHtml(ticket.ticket_code)}" loading="lazy" width="180" height="180">
+                            </div>
+                            <p class="flip-ticket-qr-hint">Scan at venue entrance</p>
+                        </div>
+                        <div class="flip-ticket-zone-bottom">
+                            <div class="flip-ticket-back-row">
+                                <span class="flip-ticket-back-label">Ticket code</span>
+                                <span class="flip-ticket-back-value mono">${escapeHtml(ticket.ticket_code)}</span>
+                            </div>
+                            <div class="flip-ticket-back-row">
+                                <span class="flip-ticket-back-label">Purchased</span>
+                                <span class="flip-ticket-back-value">${formatDateTime(ticket.purchased_date)}</span>
+                            </div>
+                            <div class="flip-ticket-back-row">
+                                <span class="flip-ticket-back-label">Amount paid</span>
+                                <span class="flip-ticket-back-value price">${formatCurrency(amountPaid)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </button>
+            <span class="flip-ticket-flip-hint"><i class="fas fa-sync-alt"></i> Tap to flip</span>
+        </div>
+    `;
+}
+
+function setupFlipTickets() {
+    document.querySelectorAll('.flip-ticket').forEach(card => {
+        if (card.dataset.flipBound) return;
+        card.dataset.flipBound = '1';
+        card.addEventListener('click', () => {
+            card.classList.toggle('is-flipped');
+            const hint = card.parentElement?.querySelector('.flip-ticket-flip-hint');
+            if (hint) {
+                hint.innerHTML = card.classList.contains('is-flipped')
+                    ? '<i class="fas fa-sync-alt"></i> Tap to view event'
+                    : '<i class="fas fa-sync-alt"></i> Tap to flip';
+            }
+        });
+    });
+}
+
+async function loadTickets() {
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) {
+        allTickets = [];
+        renderTickets();
+        return;
+    }
+    try {
+        const headers = { Authorization: `Bearer ${token}` };
+        const [upRes, pastRes] = await Promise.all([
+            fetch('/api/attendee/tickets/upcoming/', { headers, credentials: 'same-origin' }),
+            fetch('/api/attendee/tickets/past/', { headers, credentials: 'same-origin' }),
+            loadUserReviews(),
+        ]);
+        const up = await upRes.json();
+        const past = await pastRes.json();
+        allTickets = [...(up.results || []), ...(past.results || [])].map(mapApiTicket);
+        if (currentBookingId) {
+            allTickets = allTickets.filter(t => t.booking_id === currentBookingId);
+        }
         renderTickets();
         updateHeaderInfo();
     } catch (error) {
         console.error('Error loading tickets:', error);
         const container = document.getElementById('ticketsList');
         if (container) {
-            container.innerHTML = '<div class="error-state">Failed to load tickets. Please try again.</div>';
+            container.innerHTML = '<div class="error-state">Failed to load tickets. Please log in and try again.</div>';
         }
     }
 }
@@ -162,39 +331,181 @@ function renderTickets() {
         return;
     }
     
-    container.innerHTML = filtered.map(ticket => `
-        <div class="ticket-card">
-            <div class="ticket-header">
-                <div class="ticket-image" style="background-image: url('${ticket.image || '/static/images/placeholder.jpg'}')"></div>
-                <div class="ticket-info">
-                    <div class="ticket-title">${escapeHtml(ticket.title)}</div>
-                    <div class="ticket-meta">
-                        <span><i class="fas fa-calendar"></i> ${formatDate(ticket.date)}</span>
-                        <span><i class="fas fa-map-marker-alt"></i> ${escapeHtml(ticket.location.split(',')[0])}</span>
-                    </div>
-                </div>
-                <div class="ticket-status status-active">Active</div>
-            </div>
-            <div class="ticket-body">
-                <div class="ticket-code">
-                    <span class="code-label">Ticket Code:</span>
-                    <span class="code-value">${ticket.ticket_code}</span>
-                </div>
-                <div class="ticket-price">
-                    <span>Price:</span>
-                    <strong>${formatCurrency(ticket.price)}</strong>
-                </div>
-            </div>
-            <div class="ticket-footer">
-                <button class="btn-qr" onclick="viewQRCode('${ticket.ticket_code}')">
-                    <i class="fas fa-qrcode"></i> View QR
-                </button>
-                <button class="btn-detail" onclick="viewTicketDetail('${ticket.id}')">
-                    <i class="fas fa-info-circle"></i> Details
-                </button>
-            </div>
-        </div>
-    `).join('');
+    const reviewEventsShown = new Set();
+    container.innerHTML = filtered.map((ticket, index) => {
+        const card = renderFlipTicketCard(ticket, index);
+        const showReview = currentTab === 'past'
+            && ticket.event_id
+            && !reviewEventsShown.has(ticket.event_id);
+        if (showReview) {
+            reviewEventsShown.add(ticket.event_id);
+            return `<div class="ticket-with-review">${card}${renderPastEventReviewPanel(ticket)}</div>`;
+        }
+        return card;
+    }).join('');
+    setupFlipTickets();
+    setupPastEventReviewHandlers();
+}
+
+function setupPastEventReviewHandlers() {
+    document.querySelectorAll('.past-event-review-btn, .past-event-review-edit').forEach(btn => {
+        if (btn.dataset.reviewBound) return;
+        btn.dataset.reviewBound = '1';
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const eventId = parseInt(btn.dataset.eventId, 10);
+            const ticket = allTickets.find(t => t.event_id === eventId);
+            const reviewId = btn.dataset.reviewId ? parseInt(btn.dataset.reviewId, 10) : null;
+            openReviewModal(eventId, ticket?.title || 'Event', reviewId);
+        });
+    });
+}
+
+function setupReviewModal() {
+    const modal = document.getElementById('eventReviewModal');
+    if (!modal) return;
+
+    modal.querySelectorAll('[data-close-review-modal]').forEach(el => {
+        el.addEventListener('click', closeReviewModal);
+    });
+
+    document.getElementById('eventReviewStars')?.querySelectorAll('.event-review-star').forEach(star => {
+        star.addEventListener('click', () => {
+            setReviewModalRating(parseInt(star.dataset.rating, 10));
+        });
+        star.addEventListener('mouseenter', () => {
+            highlightReviewStars(parseInt(star.dataset.rating, 10));
+        });
+    });
+
+    document.getElementById('eventReviewStars')?.addEventListener('mouseleave', () => {
+        highlightReviewStars(reviewModalState.rating);
+    });
+
+    document.getElementById('eventReviewSubmitBtn')?.addEventListener('click', submitEventReview);
+}
+
+function openReviewModal(eventId, eventTitle, reviewId = null) {
+    const modal = document.getElementById('eventReviewModal');
+    if (!modal) return;
+
+    const existing = userReviewsByEvent[eventId];
+    reviewModalState = {
+        eventId,
+        reviewId: reviewId || existing?.id || null,
+        rating: existing?.rating || 0,
+    };
+
+    const titleEl = document.getElementById('eventReviewModalTitle');
+    const eventEl = document.getElementById('eventReviewModalEventName');
+    const commentEl = document.getElementById('eventReviewComment');
+    const submitBtn = document.getElementById('eventReviewSubmitBtn');
+
+    if (titleEl) titleEl.textContent = reviewModalState.reviewId ? 'Update your review' : 'Rate this event';
+    if (eventEl) eventEl.textContent = eventTitle;
+    if (commentEl) commentEl.value = existing?.comment || '';
+    if (submitBtn) submitBtn.textContent = reviewModalState.reviewId ? 'Save changes' : 'Submit review';
+
+    setReviewModalRating(reviewModalState.rating);
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('review-modal-open');
+}
+
+function closeReviewModal() {
+    const modal = document.getElementById('eventReviewModal');
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('review-modal-open');
+    reviewModalState = { eventId: null, reviewId: null, rating: 0 };
+}
+
+function ratingLabel(rating) {
+    const labels = ['Select a rating', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
+    return labels[rating] || labels[0];
+}
+
+function highlightReviewStars(rating) {
+    document.getElementById('eventReviewStars')?.querySelectorAll('.event-review-star').forEach(star => {
+        const value = parseInt(star.dataset.rating, 10);
+        const icon = star.querySelector('i');
+        const active = value <= rating;
+        star.classList.toggle('is-selected', active);
+        if (icon) icon.className = `${active ? 'fas' : 'far'} fa-star`;
+    });
+}
+
+function setReviewModalRating(rating) {
+    reviewModalState.rating = rating;
+    highlightReviewStars(rating);
+    const label = document.getElementById('eventReviewRatingLabel');
+    const submitBtn = document.getElementById('eventReviewSubmitBtn');
+    if (label) label.textContent = ratingLabel(rating);
+    if (submitBtn) submitBtn.disabled = rating < 1;
+}
+
+async function submitEventReview() {
+    const { eventId, reviewId, rating } = reviewModalState;
+    if (!eventId || rating < 1) return;
+
+    const comment = (document.getElementById('eventReviewComment')?.value || '').trim();
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) {
+        alert('Please log in to submit a review.');
+        return;
+    }
+
+    const submitBtn = document.getElementById('eventReviewSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving…';
+    }
+
+    try {
+        const url = reviewId
+            ? `/api/attendee/reviews/update/${reviewId}/`
+            : `/api/attendee/reviews/create/${eventId}/`;
+        const res = await fetch(url, {
+            method: reviewId ? 'PUT' : 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ rating, comment }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'Failed to save review.');
+        }
+
+        const review = data.review;
+        userReviewsByEvent[review.event_id] = review;
+        closeReviewModal();
+        renderTickets();
+        showReviewToast(reviewId ? 'Review updated!' : 'Thank you for your review!');
+    } catch (error) {
+        console.error('Error saving review:', error);
+        alert(error.message || 'Could not save your review. Please try again.');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = reviewModalState.rating < 1;
+            submitBtn.textContent = reviewModalState.reviewId ? 'Save changes' : 'Submit review';
+        }
+    }
+}
+
+function showReviewToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'event-review-toast';
+    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(message)}`;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('is-visible'));
+    setTimeout(() => {
+        toast.classList.remove('is-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 2800);
 }
 
 function viewTicketDetail(ticketId) {
@@ -205,22 +516,43 @@ function viewQRCode(ticketCode) {
     window.location.href = `/tickets/qr/?code=${encodeURIComponent(ticketCode)}`;
 }
 
-function loadTicketDetail() {
+async function fetchTicketFromApi(ticketNumber) {
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) return null;
+    try {
+        const res = await fetch(`/api/attendee/tickets/${encodeURIComponent(ticketNumber)}/`, {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'same-origin',
+        });
+        if (!res.ok) return null;
+        const t = await res.json();
+        if (!t.ticket_number) return null;
+        return mapApiTicket(t);
+    } catch (error) {
+        console.error('Error fetching ticket:', error);
+        return null;
+    }
+}
+
+async function loadTicketDetail() {
     const container = document.getElementById('ticketDetailContent');
     if (!container) return;
     
     const urlParams = new URLSearchParams(window.location.search);
-    const ticketId = urlParams.get('id');
+    const ticketId = urlParams.get('id') || urlParams.get('ticket');
     
     if (!ticketId) {
         container.innerHTML = '<div class="error-state">Ticket ID not provided</div>';
         return;
     }
     
-    let ticket = allTickets.find(t => t.id === ticketId);
+    let ticket = allTickets.find(t => t.id === ticketId || t.ticket_code === ticketId);
+
+    if (!ticket) {
+        ticket = await fetchTicketFromApi(ticketId);
+    }
     
     if (!ticket) {
-        // Try to find in bookings if not in tickets
         const savedBookings = localStorage.getItem('eventhub_bookings');
         if (savedBookings) {
             const bookings = JSON.parse(savedBookings);
@@ -339,7 +671,7 @@ function renderTicketDetail(ticket) {
     `;
 }
 
-function loadQRCode() {
+async function loadQRCode() {
     const container = document.getElementById('qrCodeDisplay');
     const ticketInfoDiv = document.getElementById('ticketInfo');
     
@@ -354,6 +686,10 @@ function loadQRCode() {
     }
     
     let ticket = allTickets.find(t => t.ticket_code === ticketCode);
+
+    if (!ticket) {
+        ticket = await fetchTicketFromApi(ticketCode);
+    }
     
     if (!ticket) {
         const savedBookings = localStorage.getItem('eventhub_bookings');
@@ -578,14 +914,22 @@ function exportTicketAsPDF(ticket) {
 
 function switchTab(tab) {
     currentTab = tab;
-    
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
         if (btn.getAttribute('data-tab') === tab) {
             btn.classList.add('active');
         }
     });
-    
+
+    const url = new URL(window.location.href);
+    if (tab === 'past') {
+        url.searchParams.set('tab', 'past');
+    } else {
+        url.searchParams.delete('tab');
+    }
+    window.history.replaceState({}, '', url);
+
     renderTickets();
 }
 
@@ -595,6 +939,35 @@ function formatDate(dateString) {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'TBA';
         return date.toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch (e) {
+        return 'TBA';
+    }
+}
+
+function formatTime(dateString) {
+    if (!dateString) return 'TBA';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'TBA';
+        return date.toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit', hour12: true });
+    } catch (e) {
+        return 'TBA';
+    }
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return 'TBA';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'TBA';
+        return date.toLocaleString('en-KE', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+        });
     } catch (e) {
         return 'TBA';
     }

@@ -1,6 +1,6 @@
-
 /* ============================================
    DASHBOARD MAIN CSS - EventHub Attendee
+   IMPROVED: Better organization, responsive, consistent
    ============================================ */
 
 @import url('stats-cards.css');
@@ -8,15 +8,16 @@
 @import url('activity.css');
 @import url('recommendations.css');
 
+/* ========== DASHBOARD CONTAINER ========== */
 .dashboard-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 2rem;
     background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-    min-height: calc(100vh - 200px);
+    min-height: calc(100vh - 70px - 300px);
 }
 
-/* Welcome Section */
+/* ========== WELCOME SECTION ========== */
 .welcome-section {
     display: flex;
     justify-content: space-between;
@@ -26,12 +27,22 @@
     gap: 1rem;
 }
 
+.welcome-content {
+    flex: 1;
+}
+
 .welcome-content h1 {
     font-family: 'Kaushan Script', cursive;
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 400;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
     color: #1e293b;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    text-align: left !important;
+    padding: 0 !important;
+    line-height: 1.3;
 }
 
 .welcome-content h1 span {
@@ -39,20 +50,24 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    display: inline-block;
 }
 
 .welcome-content p {
     color: #64748b;
     font-size: 0.85rem;
+    margin: 0;
 }
 
 .welcome-date {
     background: white;
-    padding: 0.5rem 1.2rem;
+    padding: 0.6rem 1.5rem;
     border-radius: 40px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: #1e293b;
+    white-space: nowrap;
+    border: 1px solid #e2e8f0;
 }
 
 .welcome-date i {
@@ -60,73 +75,94 @@
     margin-right: 0.5rem;
 }
 
-/* Dashboard Grid */
+/* ========== DASHBOARD GRID ========== */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 1fr 360px;
     gap: 1.5rem;
 }
 
-/* Cards */
-.card {
+/* ========== CARDS ========== */
+.dashboard-card {
     background: white;
-    border-radius: 20px;
+    border-radius: 1rem;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
     margin-bottom: 1.5rem;
+    transition: all 0.2s ease;
 }
 
-.card:last-child {
+.dashboard-card:last-child {
     margin-bottom: 0;
+}
+
+.dashboard-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.2rem;
+    padding: 1rem 1.25rem;
+    background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
-    background: linear-gradient(135deg, #f8fafc, #ffffff);
 }
 
 .card-header h3 {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 600;
     margin: 0;
     color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .card-header h3 i {
     color: #f59e0b;
-    margin-right: 0.5rem;
+    font-size: 0.9rem;
 }
 
 .card-body {
     padding: 1rem;
 }
 
-/* Buttons */
+/* ========== BUTTONS ========== */
 .btn-sm {
-    padding: 0.3rem 0.8rem;
+    padding: 0.35rem 0.9rem;
     background: linear-gradient(135deg, #f59e0b, #ec6408);
     color: white;
-    border-radius: 20px;
+    border-radius: 30px;
     text-decoration: none;
     font-size: 0.7rem;
+    font-weight: 600;
     border: none;
     cursor: pointer;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: 0.4rem;
 }
 
 .btn-sm:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
-/* Loading & Empty States */
+.btn-outline-sm {
+    background: transparent;
+    color: #f59e0b;
+    border: 1px solid #f59e0b;
+}
+
+.btn-outline-sm:hover {
+    background: #fef3c7;
+    transform: translateY(-1px);
+}
+
+/* ========== LOADING STATES ========== */
 .loading-state {
     text-align: center;
     padding: 2rem;
@@ -134,59 +170,80 @@
 }
 
 .loading-spinner {
-    width: 30px;
-    height: 30px;
-    border: 3px solid rgba(245, 158, 11, 0.2);
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(245, 158, 11, 0.15);
     border-top-color: #f59e0b;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-    margin: 0 auto 0.5rem;
+    margin: 0 auto 0.75rem;
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
+/* ========== EMPTY STATES ========== */
 .empty-state {
     text-align: center;
     padding: 2rem;
     color: #64748b;
 }
 
+.empty-state i {
+    font-size: 2.5rem;
+    color: #cbd5e1;
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+.empty-state p {
+    font-size: 0.85rem;
+    margin: 0 0 0.5rem;
+}
+
 .empty-state a {
     color: #f59e0b;
     text-decoration: none;
+    font-size: 0.8rem;
 }
 
-/* Upcoming Tickets List */
+.empty-state a:hover {
+    text-decoration: underline;
+}
+
+/* ========== UPCOMING TICKETS ========== */
 .upcoming-tickets-list {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 0.75rem;
 }
 
 .ticket-item {
     display: flex;
-    gap: 0.8rem;
-    padding: 0.8rem;
+    gap: 0.75rem;
+    padding: 0.75rem;
     background: #f8fafc;
-    border-radius: 12px;
+    border-radius: 0.75rem;
     transition: all 0.2s ease;
     cursor: pointer;
+    border: 1px solid transparent;
 }
 
 .ticket-item:hover {
     background: #fef3c7;
-    transform: translateX(3px);
+    border-color: #f59e0b20;
+    transform: translateX(4px);
 }
 
 .ticket-item-image {
-    width: 50px;
-    height: 50px;
-    border-radius: 10px;
+    width: 48px;
+    height: 48px;
+    border-radius: 0.5rem;
     background-size: cover;
     background-position: center;
     background-color: #e2e8f0;
+    flex-shrink: 0;
 }
 
 .ticket-item-info {
@@ -198,24 +255,34 @@
     font-size: 0.85rem;
     color: #1e293b;
     margin-bottom: 0.2rem;
+    line-height: 1.3;
 }
 
 .ticket-item-date {
     font-size: 0.7rem;
     color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.ticket-item-date i {
+    font-size: 0.6rem;
+    color: #f59e0b;
 }
 
 .ticket-item-price {
     font-weight: 600;
     color: #f59e0b;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
 }
 
-/* Stats Overview */
+/* ========== STATS OVERVIEW ========== */
 .stats-overview {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: 0.75rem;
 }
 
 .overview-item {
@@ -226,91 +293,78 @@
     border-bottom: 1px solid #e2e8f0;
 }
 
+.overview-item:last-child {
+    border-bottom: none;
+}
+
 .overview-label {
     font-size: 0.75rem;
     color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.overview-label i {
+    color: #f59e0b;
+    width: 16px;
 }
 
 .overview-value {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: #1e293b;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .dashboard-container {
-        padding: 1rem;
-    }
-    
-    .welcome-content h1 {
-        font-size: 1.4rem;
-    }
-    
-    .welcome-section {
-        flex-direction: column;
-        text-align: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .ticket-item {
-        flex-wrap: wrap;
-    }
-    
-    .ticket-item-image {
-        width: 40px;
-        height: 40px;
-    }
-}
-
-/* Dashboard Search Section */
+/* ========== DASHBOARD SEARCH SECTION ========== */
 .dashboard-search-section {
     background: white;
-    padding: 1.5rem 2rem;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    margin-bottom: 2rem;
-    border: 1px solid rgba(245, 158, 11, 0.1);
+    padding: 3rem 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin: 1rem 0 2rem;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+}
+
+.search-title {
+    font-family: 'Kaushan Script', cursive;
+    font-size: 2rem;
+    font-weight: 400;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
 }
 
 .dashboard-search-form {
-    display: flex;
-    gap: 1rem;
-    align-items: stretch;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .search-input-wrapper {
     position: relative;
-    flex: 1;
+    width: 100%;
 }
 
 .search-input-wrapper .search-icon {
     position: absolute;
-    left: 16px;
+    left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #64748b;
-    font-size: 1.1rem;
+    color: #94a3b8;
+    font-size: 1rem;
     pointer-events: none;
 }
 
 .search-input-wrapper input {
     width: 100%;
-    padding: 1rem 1rem 1rem 3rem;
+    padding: 0.9rem 1rem 0.9rem 2.8rem;
     background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 0.95rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    font-size: 0.9rem;
     color: #1e293b;
     outline: none;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .search-input-wrapper input::placeholder {
@@ -320,72 +374,55 @@
 .search-input-wrapper input:focus {
     border-color: #f59e0b;
     background: white;
-    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 }
 
-.dashboard-search-btn {
-    background: linear-gradient(135deg, #f59e0b, #ec6408);
-    border: none;
-    padding: 0 2rem;
-    border-radius: 12px;
-    color: white;
-    font-size: 0.95rem;
+.detected-location-badge {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(245, 158, 11, 0.1);
+    color: #ec6408;
+    padding: 0.3rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    white-space: nowrap;
+    pointer-events: none;
 }
 
-.dashboard-search-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-}
-
-.dashboard-search-btn:active {
-    transform: translateY(0);
-}
-
-@media (max-width: 768px) {
-    .dashboard-search-form {
-        flex-direction: column;
-    }
-    
-    .dashboard-search-btn {
-        padding: 0.9rem;
-    }
-        flex-direction: column;
-    }
-    
-    .dashboard-search-btn {
-        padding: 0.9rem;
-    }
-}
-
-/* ============================================
-   DISCOVERY RESULTS - Location-Based Event Search
-   ============================================ */
-
+/* ========== DISCOVERY RESULTS ========== */
 #discoveryResultsSection {
     margin-bottom: 2rem;
-    animation: fadeInUp 0.35s ease;
-    border-radius: 20px;
+    animation: fadeInUp 0.3s ease;
+    border-radius: 1rem;
     overflow: hidden;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    background: white;
+    border: 1px solid #e2e8f0;
 }
 
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-/* ---- Header ---- */
+/* Discovery Header */
 .discovery-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 1.5rem;
-    background: white;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 1rem 1.25rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
     flex-wrap: wrap;
     gap: 0.75rem;
 }
@@ -397,14 +434,8 @@
     flex-wrap: wrap;
 }
 
-.discovery-header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
 .discovery-title {
-    font-size: 1.15rem;
+    font-size: 1rem;
     font-weight: 700;
     color: #1e293b;
     margin: 0;
@@ -412,25 +443,23 @@
 
 .discovery-title i {
     color: #f59e0b;
-    margin-right: 0.25rem;
+    margin-right: 0.3rem;
 }
 
 .discovery-location-pill {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.72rem;
+    background: #f1f5f9;
+    border-radius: 2rem;
+    padding: 0.2rem 0.75rem;
+    font-size: 0.7rem;
     color: #64748b;
 }
 
 .discovery-count {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #64748b;
     background: #f1f5f9;
-    padding: 0.3rem 0.85rem;
-    border-radius: 20px;
-    font-weight: 500;
+    padding: 0.2rem 0.75rem;
+    border-radius: 2rem;
 }
 
 .disc-close-btn {
@@ -445,7 +474,6 @@
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    flex-shrink: 0;
 }
 
 .disc-close-btn:hover {
@@ -453,32 +481,31 @@
     color: #ef4444;
 }
 
-/* ---- Section groups ---- */
+/* Discovery Sections */
 .discovery-section {
-    background: white;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #f8fafc;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-.discovery-section:last-of-type {
+.discovery-section:last-child {
     border-bottom: none;
 }
 
 .discovery-section-header {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-    margin-bottom: 1.25rem;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
 }
 
 .discovery-section-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 1rem;
-    border-radius: 20px;
-    font-size: 0.78rem;
+    gap: 0.3rem;
+    padding: 0.25rem 0.9rem;
+    border-radius: 2rem;
+    font-size: 0.7rem;
     font-weight: 600;
 }
 
@@ -494,57 +521,54 @@
 }
 
 .discovery-section-note {
-    font-size: 0.72rem;
+    font-size: 0.65rem;
     color: #94a3b8;
 }
 
-/* ---- Card grid ---- */
+/* Discovery Grid */
 .discovery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-    gap: 1.1rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
 }
 
-/* ---- Event cards ---- */
+/* Discovery Cards */
 .discovery-card {
     background: white;
-    border-radius: 16px;
+    border-radius: 0.75rem;
     overflow: hidden;
-    border: 1px solid #f1f5f9;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
 }
 
 .discovery-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.09);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    border-color: #f59e0b30;
 }
 
 .discovery-card--internal {
-    border-color: rgba(245, 158, 11, 0.18);
+    border-left: 3px solid #f59e0b;
 }
 
 .disc-img {
-    height: 155px;
+    height: 140px;
     background-size: cover;
     background-position: center;
     background-color: #f1f5f9;
     position: relative;
-    flex-shrink: 0;
 }
 
 .disc-platform-badge {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    padding: 0.2rem 0.65rem;
-    border-radius: 20px;
-    font-size: 0.68rem;
-    font-weight: 700;
+    top: 8px;
+    left: 8px;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2rem;
+    font-size: 0.6rem;
+    font-weight: 600;
     color: white;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(4px);
 }
 
 .disc-platform-badge--eh {
@@ -552,36 +576,32 @@
 }
 
 .disc-platform-badge--ext {
-    /* background set inline via JS */
-    background: rgba(15, 23, 42, 0.72);
+    background: rgba(0, 0, 0, 0.7);
 }
 
 .disc-category-tag {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(0, 0, 0, 0.55);
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.6);
     color: white;
-    padding: 0.18rem 0.55rem;
-    border-radius: 20px;
-    font-size: 0.62rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.6rem;
     font-weight: 500;
     backdrop-filter: blur(4px);
 }
 
-/* Card body */
+/* Card Body */
 .disc-body {
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
+    padding: 0.9rem;
 }
 
 .disc-title {
-    font-size: 0.92rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: #1e293b;
-    margin: 0 0 0.6rem;
+    margin: 0 0 0.5rem;
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -592,59 +612,63 @@
 .disc-meta {
     display: flex;
     flex-direction: column;
-    gap: 0.28rem;
-    margin-bottom: 0.7rem;
-    font-size: 0.73rem;
+    gap: 0.25rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.7rem;
     color: #64748b;
 }
 
 .disc-meta span {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
 }
 
 .disc-meta i {
     color: #f59e0b;
-    width: 13px;
-    flex-shrink: 0;
+    width: 12px;
+    font-size: 0.65rem;
 }
 
 .disc-desc {
-    font-size: 0.73rem;
+    font-size: 0.7rem;
     color: #94a3b8;
-    line-height: 1.45;
-    margin-bottom: 0.7rem;
+    line-height: 1.4;
+    margin-bottom: 0.6rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .disc-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.6rem;
     flex-wrap: wrap;
     gap: 0.4rem;
 }
 
 .disc-price {
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     color: #f59e0b;
 }
 
 .disc-price-ext {
-    font-size: 0.73rem;
+    font-size: 0.7rem;
     color: #64748b;
     font-weight: 500;
 }
 
 .disc-seats {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: #10b981;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.2rem;
 }
 
 .disc-seats--sold {
@@ -652,29 +676,28 @@
 }
 
 .disc-ext-label {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: #94a3b8;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.2rem;
 }
 
-/* ---- Action buttons ---- */
+/* Discovery Buttons */
 .disc-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    gap: 0.4rem;
     width: 100%;
-    padding: 0.62rem 1rem;
-    border-radius: 10px;
-    font-size: 0.8rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
     font-weight: 600;
     text-decoration: none;
     border: none;
     cursor: pointer;
-    transition: all 0.22s ease;
-    margin-top: auto;
+    transition: all 0.2s ease;
 }
 
 .disc-btn--book {
@@ -684,8 +707,7 @@
 
 .disc-btn--book:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.38);
-    color: white;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .disc-btn--view {
@@ -698,52 +720,38 @@
     background: #f1f5f9;
     color: #1e293b;
     transform: translateY(-2px);
-    border-color: var(--src-color, #cbd5e1);
 }
 
-.disc-btn--ghost {
-    background: #f1f5f9;
-    color: #64748b;
-    border: none;
-    width: auto;
-    padding: 0.5rem 1.5rem;
-}
-
-.disc-btn--ghost:hover {
-    background: #e2e8f0;
-}
-
-/* ---- Loading state ---- */
+/* Discovery Loading */
 .discovery-loading {
-    background: white;
-    padding: 3rem 2rem;
+    padding: 2rem;
     text-align: center;
 }
 
 .disc-spinner-wrap {
     display: flex;
     justify-content: center;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
 }
 
 .disc-spinner {
-    width: 46px;
-    height: 46px;
-    border: 4px solid rgba(245, 158, 11, 0.15);
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(245, 158, 11, 0.15);
     border-top-color: #f59e0b;
     border-radius: 50%;
-    animation: spin 0.85s linear infinite;
+    animation: spin 0.8s linear infinite;
 }
 
 .disc-loading-msg {
     color: #64748b;
-    font-size: 0.88rem;
-    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
 }
 
 .disc-sources-row {
     display: flex;
-    gap: 0.45rem;
+    gap: 0.5rem;
     justify-content: center;
     flex-wrap: wrap;
 }
@@ -751,88 +759,180 @@
 .disc-src-chip {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    padding: 0.28rem 0.7rem;
-    border-radius: 20px;
-    font-size: 0.68rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 2rem;
+    font-size: 0.65rem;
     color: #64748b;
     display: inline-flex;
     align-items: center;
-    gap: 0.28rem;
-    animation: pulseChip 1.6s ease-in-out infinite;
+    gap: 0.25rem;
 }
 
-.disc-src-chip:nth-child(2) { animation-delay: 0.2s; }
-.disc-src-chip:nth-child(3) { animation-delay: 0.4s; }
-.disc-src-chip:nth-child(4) { animation-delay: 0.6s; }
-
-@keyframes pulseChip {
-    0%, 100% { opacity: 0.45; }
-    50%       { opacity: 1; }
-}
-
-/* ---- Generic state boxes (error / empty) ---- */
+/* Discovery State Boxes */
 .discovery-state-box {
-    background: white;
-    padding: 3rem 2rem;
+    padding: 2rem;
     text-align: center;
 }
 
 .discovery-state-box i {
-    font-size: 2.4rem;
+    font-size: 2rem;
     color: #cbd5e1;
+    margin-bottom: 0.75rem;
     display: block;
-    margin-bottom: 1rem;
 }
 
 .discovery-state-box h3 {
-    font-size: 1.05rem;
+    font-size: 1rem;
     color: #1e293b;
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.3rem;
 }
 
 .discovery-state-box p {
     color: #64748b;
-    font-size: 0.85rem;
-    margin-bottom: 0;
+    font-size: 0.8rem;
 }
 
 .discovery-state-box--error i {
     color: #fca5a5;
 }
 
-/* ---- Disclaimer footer ---- */
+/* Discovery Disclaimer */
 .discovery-disclaimer {
     background: #f8fafc;
-    padding: 0.7rem 1.5rem;
-    font-size: 0.7rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.65rem;
     color: #94a3b8;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid #e2e8f0;
 }
 
 .discovery-disclaimer i {
     color: #cbd5e1;
-    flex-shrink: 0;
 }
 
-/* ---- Responsive ---- */
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .welcome-content h1 {
+        font-size: 1.8rem;
+    }
+}
+
 @media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem;
+    }
+    
+    .welcome-section {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .welcome-content h1 {
+        font-size: 1.5rem;
+    }
+    
+    .welcome-date {
+        width: 100%;
+        text-align: center;
+        white-space: normal;
+    }
+    
+    .dashboard-search-section {
+        padding: 2rem 1rem;
+    }
+    
+    .search-title {
+        font-size: 1.5rem;
+    }
+    
     .discovery-grid {
         grid-template-columns: 1fr;
     }
-
+    
     .discovery-header {
         flex-direction: column;
         align-items: flex-start;
     }
-
-    .discovery-loading {
-        padding: 2rem 1rem;
+    
+    .discovery-section {
+        padding: 0.8rem 1rem;
     }
-
-    .disc-sources-row {
-        gap: 0.3rem;
+    
+    .disc-img {
+        height: 120px;
     }
+}
+
+@media (max-width: 480px) {
+    .welcome-content h1 {
+        font-size: 1.3rem;
+    }
+    
+    .ticket-item {
+        flex-wrap: wrap;
+    }
+    
+    .ticket-item-image {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .search-title {
+        font-size: 1.2rem;
+    }
+    
+    .search-input-wrapper input {
+        padding: 0.7rem 1rem 0.7rem 2.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .detected-location-badge {
+        display: none;
+    }
+    
+    .discovery-title {
+        font-size: 0.9rem;
+    }
+    
+    .disc-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.65rem;
+    }
+}
+
+/* ========== UTILITY CLASSES ========== */
+.text-center {
+    text-align: center;
+}
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+
+/* ========== DASHBOARD OVERRIDES ========== */
+.dashboard-container h1,
+.dashboard-container .welcome-content h1 {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    color: #1e293b !important;
+}
+
+.dashboard-container .welcome-content h1 span {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
 }

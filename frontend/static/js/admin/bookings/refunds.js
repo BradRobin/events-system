@@ -152,6 +152,8 @@ async function approveRefund() {
             response: response,
             refund_method: refundMethod
         });
+        if (typeof clearActiveNotification === 'function') clearActiveNotification();
+        if (typeof loadNotifications === 'function') loadNotifications();
         showToast('Refund approved and processed', 'success');
         closeProcessModal();
         loadRefunds();
@@ -172,6 +174,8 @@ async function rejectRefund() {
         await apiRequest(`/api/admin/refunds/${currentRefundId}/reject/`, 'POST', {
             response: response
         });
+        if (typeof clearActiveNotification === 'function') clearActiveNotification();
+        if (typeof loadNotifications === 'function') loadNotifications();
         showToast('Refund rejected', 'success');
         closeProcessModal();
         loadRefunds();
@@ -183,8 +187,8 @@ async function rejectRefund() {
     }
 }
 
-function viewRefundDetail(refundId) {
-    window.open(`/admin-portal/refunds/detail/?id=${refundId}`, '_blank');
+async function viewRefundDetail(refundId) {
+    await openProcessModal(refundId);
 }
 
 function closeProcessModal() {

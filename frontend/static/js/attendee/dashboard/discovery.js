@@ -52,14 +52,35 @@
         if (closeBtn) {
             closeBtn.addEventListener('click', closeResults);
         }
+        
+        updateDetectedLocationBadge();
+        initDynamicPlaceholder();
     });
 
     // -------------------------------------------------------------------------
     // Main Search Handler
     // -------------------------------------------------------------------------
+    const KENYAN_COUNTIES = [
+        'nairobi', 'mombasa', 'kisumu', 'nakuru', 'eldoret', 'uasin gishu',
+        'kiambu', 'thika', 'machakos', 'meru', 'kisii', 'nyeri', 'kakamega',
+        'malindi', 'kilifi', 'garissa', 'lamu', 'naivasha', 'nanyuki',
+        'laikipia', 'embu', 'kitui', 'bungoma', 'kericho', 'migori',
+        'siaya', 'homabay', 'homa bay'
+    ];
+
     async function handleSearchSubmit(e) {
-        e.preventDefault();
         const userQuery = searchInput ? searchInput.value.trim() : '';
+        const queryLower = userQuery.toLowerCase();
+
+        // If it's a general search (not empty and not containing a county name),
+        // let the form submit normally, redirecting to the search page (/events/search/?q=...)
+        const isCountyQuery = userQuery === '' || KENYAN_COUNTIES.some(c => queryLower.includes(c));
+        if (!isCountyQuery) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
 
         setSearchLoading(true);
         showLoadingState();
@@ -73,6 +94,11 @@
             showErrorState('Unable to find events right now. Please try again in a moment.');
         } finally {
             setSearchLoading(false);
+            if (window.PageLoader && typeof window.PageLoader.hide === 'function') {
+                window.PageLoader.hide();
+            } else if (typeof window.hideLoader === 'function') {
+                window.hideLoader();
+            }
         }
     }
 
@@ -403,6 +429,39 @@
         div.textContent = String(text);
         return div.innerHTML;
     }
+
+    function updateDetectedLocationBadge() {
+        const textSpan = document.getElementById('detectedLocationText');
+        if (!textSpan) return;
+        
+        const city = window.AppLocation ? window.AppLocation.getCity() : 'Nairobi';
+        const country = window.AppLocation ? window.AppLocation.getCountry() : 'Kenya';
+        textSpan.textContent = `${city}, ${country}`;
+    }
+
+    function initDynamicPlaceholder() {
+        const input = document.getElementById('dashboardSearchInput');
+        if (!input) return;
+        
+        const placeholders = ["Nairobi", "Solfest", "Mombasa", "Karaoke"];
+        let index = 0;
+        
+        const setPlaceholder = (text) => {
+            input.placeholder = `e.g. Search for "${text}"`;
+        };
+
+        // Cycle through placeholders every 3 seconds
+        setInterval(() => {
+            index = (index + 1) % placeholders.length;
+            setPlaceholder(placeholders[index]);
+        }, 3000);
+        
+        // Initial setup
+        setPlaceholder(placeholders[0]);
+    }
+
+    // Listen for GeoIP resolutions to update dynamically
+    window.addEventListener('app-location-resolved', updateDetectedLocationBadge);
 
     // ---- Public API (used by inline onclick handlers) ----
     window.closeDiscoveryResults = closeResults;

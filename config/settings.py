@@ -11,6 +11,16 @@ except ImportError:
     dj_database_url = None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env file manually if exists
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    with open(env_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, val = line.split('=', 1)
+                os.environ.setdefault(key.strip(), val.strip())
 # SECURITY: override with environment variable in production
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-j&#8z0n2)9txjmpi6=8i2h=d8ks8gt4gar#!kb0u0z6jd)im+#')
 # Allow controlling debug via env var; default True for local development
@@ -87,7 +97,7 @@ TEMPLATES = [
             os.path.join(BASE_DIR, 'frontend', 'templates', 'organizer', 'tickets'),
             os.path.join(BASE_DIR, 'frontend', 'templates', 'organizer', 'bookings'),
             os.path.join(BASE_DIR, 'frontend', 'templates', 'organizer', 'attendees'),
-            os.path.join(BASE_DIR, 'frontend', 'templates', 'organizer', 'payouts'),
+
             os.path.join(BASE_DIR, 'frontend', 'templates', 'organizer', 'promotions'),
             os.path.join(BASE_DIR, 'frontend', 'templates', 'organizer', 'profile'),
             os.path.join(BASE_DIR, 'frontend', 'templates', 'organizer', 'settings'),
@@ -114,6 +124,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'accounts.context_processors.google_oauth',
             ],
         },
     },
@@ -171,7 +182,24 @@ DATABASES = {
 
 # If a DATABASE_URL environment variable is provided (Render/Postgres), use it.
 if os.environ.get('DATABASE_URL'):
-    DATABASES['default'] = dj_database_url.parse(os.environ.get('DATABASE_URL'))
+    DATABASES['default'] = dj_database_url.parse(
+        os.environ.get('DATABASE_URL'),
+        conn_max_age=600,
+        ssl_require=True
+    )
+
+# Caching Configuration - Shared Database Cache Backend
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache_table',
+        'TIMEOUT': 300,  
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -206,6 +234,9 @@ LOGOUT_REDIRECT_URL = '/'
 # Session Settings
 SESSION_COOKIE_AGE = 86400
 SESSION_SAVE_EVERY_REQUEST = True
+if os.environ.get('VERCEL') or not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # Email Settings
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
@@ -225,6 +256,15 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
 ]
+_site_url = (os.environ.get('SITE_URL') or '').strip().rstrip('/')
+if _site_url:
+    CSRF_TRUSTED_ORIGINS.append(_site_url)
+_extra_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if _extra_csrf:
+    CSRF_TRUSTED_ORIGINS.extend(
+        origin.strip().rstrip('/') for origin in _extra_csrf.split(',') if origin.strip()
+    )
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS))
 
 # REST Framework Settings
 REST_FRAMEWORK = {
@@ -235,3 +275,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ],
 }
+
+# Google OAuth Config
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '229812600705-ih8rqfhe2jrv0lhb3vc4b7gt858p42fd.apps.googleusercontent.com')
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'

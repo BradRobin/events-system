@@ -22,49 +22,101 @@
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title" id="eventModalTitle">Create New Event</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <ul class="nav nav-tabs mb-3" id="eventTabs" role="tablist">
-                    <li class="nav-item"><button class="tab-button active" data-bs-toggle="tab" data-bs-target="#basicTab">Basic Info</button></li>
-                    <li class="nav-item"><button class="tab-button" data-bs-toggle="tab" data-bs-target="#ticketsTab">Tickets</button></li>
-                    <li class="nav-item"><button class="tab-button" data-bs-toggle="tab" data-bs-target="#scheduleTab">Schedule</button></li>
-                    <li class="nav-item"><button class="tab-button" data-bs-toggle="tab" data-bs-target="#mediaTab">Media</button></li>
-                    <li class="nav-item"><button class="tab-button" data-bs-toggle="tab" data-bs-target="#analyticsTab">Analytics</button></li>
-                </ul>
-                <div class="tab-content">
-                    <div class="tab-pane fade show active" id="basicTab">
-                        <form id="eventForm">
-                            <input type="hidden" id="eventId">
-                            <div class="row">
-                                <div class="col-md-6 mb-3"><label>Event Title *</label><input type="text" id="eventTitle" class="form-control" placeholder="e.g. Afrobeat Jam Session" required></div>
-                                <div class="col-md-6 mb-3"><label>Category</label><select id="eventCategory" class="form-select"><option>Music</option><option>Technology</option><option>Business</option><option>Sports</option><option>Arts</option><option>Food</option></select></div>
-                                <div class="col-12 mb-3"><label>Description</label><textarea id="eventDescription" rows="3" class="form-control" placeholder="Describe the key highlights and details of this event..."></textarea></div>
-                                <div class="col-md-6 mb-3"><label>Start Date & Time</label><input type="datetime-local" id="eventStartDate" class="form-control"></div>
-                                <div class="col-md-6 mb-3"><label>End Date & Time</label><input type="datetime-local" id="eventEndDate" class="form-control"></div>
-                                <div class="col-md-6 mb-3"><label>Venue</label><input type="text" id="eventVenue" class="form-control" placeholder="e.g. Alchemist Bar, Westlands"></div>
-                                <div class="col-md-6 mb-3"><label>Capacity</label><input type="number" id="eventCapacity" class="form-control" placeholder="e.g. 500"></div>
-                                <div class="col-md-6 mb-3"><label>Status</label><select id="eventStatus" class="form-select"><option value="draft">Draft</option><option value="published">Published</option><option value="cancelled">Cancelled</option></select></div>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="tab-pane fade" id="ticketsTab">
-                        <div class="d-flex justify-content-end mb-3"><button class="btn btn-sm btn-outline-primary" onclick="showTicketTypeModal()"><i class="fas fa-plus"></i> Add Ticket Type</button></div>
-                        <div id="ticketTypesList">Loading ticket types...</div>
-                    </div>
-                    <div class="tab-pane fade" id="scheduleTab">
-                        <div class="d-flex justify-content-end mb-3"><button class="btn btn-sm btn-outline-primary" onclick="showScheduleItemModal()"><i class="fas fa-plus"></i> Add Schedule Item</button></div>
-                        <div id="scheduleList">Loading schedule...</div>
-                    </div>
-                    <div class="tab-pane fade" id="mediaTab">
-                        <div class="mb-3"><label>Banner Image</label><input type="file" id="bannerImage" class="form-control" accept="image/*"><button class="btn btn-sm btn-primary mt-2" onclick="uploadBanner()">Upload Banner</button><div id="bannerPreview" class="mt-2"></div></div>
-                        <div><label>Gallery Images</label><input type="file" id="galleryImages" class="form-control" accept="image/*" multiple><button class="btn btn-sm btn-primary mt-2" onclick="uploadGallery()">Upload Gallery</button><div id="galleryPreview" class="mt-2 d-flex flex-wrap"></div></div>
-                    </div>
-                    <div class="tab-pane fade" id="analyticsTab">
-                        <div class="row">
-                            <div class="col-md-3"><div class="metric-card text-center"><h3 id="analyticsTotalTickets">--</h3><small>Total Tickets</small></div></div>
-                            <div class="col-md-3"><div class="metric-card text-center"><h3 id="analyticsSold">--</h3><small>Tickets Sold</small></div></div>
-                            <div class="col-md-3"><div class="metric-card text-center"><h3 id="analyticsRevenue">$--</h3><small>Revenue</small></div></div>
-                            <div class="col-md-3"><div class="metric-card text-center"><h3 id="analyticsAttendance">--</h3><small>Attendance</small></div></div>
+                <form id="eventForm">
+                    <input type="hidden" id="eventId">
+                    <input type="hidden" id="eventDescription" value="Event description">
+                    <input type="hidden" id="eventStatus" value="published">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Event Title *</label>
+                            <input type="text" id="eventTitle" class="form-control" placeholder="e.g. Afrobeat Jam Session" required>
                         </div>
-                        <canvas id="analyticsChart" height="250" class="mt-3"></canvas>
+                        <div class="col-md-6 mb-3">
+                            <label>Category</label>
+                            <select id="eventCategory" class="form-select">
+                                <option>Music</option>
+                                <option>Technology</option>
+                                <option>Business</option>
+                                <option>Sports</option>
+                                <option>Arts</option>
+                                <option>Food</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Start Date & Time</label>
+                            <input type="datetime-local" id="eventStartDate" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>End Date & Time</label>
+                            <input type="datetime-local" id="eventEndDate" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Venue</label>
+                            <input type="text" id="eventVenue" class="form-control" placeholder="e.g. Alchemist Bar, Westlands">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Capacity</label>
+                            <input type="number" id="eventCapacity" class="form-control" placeholder="e.g. 500">
+                        </div>
+                        
+                        <!-- Ticket prices section -->
+                        <div class="col-md-6 mb-3">
+                            <label>Amount (KES) *</label>
+                            <input type="number" id="eventPrice" class="form-control" placeholder="e.g. 1000" min="0" step="any" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Event Banner Image</label>
+                            <input type="file" id="eventBannerFile" class="form-control" accept="image/*">
+                            <div id="bannerPreview" class="mt-2"></div>
+                        </div>
+                        
+                        <!-- VIP Ticket -->
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="hasVipTicket" onchange="togglePriceInput('vip')">
+                                <label class="form-check-label" for="hasVipTicket">Include VIP Ticket</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3" id="vipPriceContainer" style="display: none;">
+                            <label>VIP Ticket Price (KES) *</label>
+                            <input type="number" id="eventVipPrice" class="form-control" placeholder="e.g. 3000" min="0" step="any">
+                        </div>
+                        
+                        <!-- VVIP Ticket -->
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="hasVvipTicket" onchange="togglePriceInput('vvip')">
+                                <label class="form-check-label" for="hasVvipTicket">Include VVIP Ticket</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3" id="vvipPriceContainer" style="display: none;">
+                            <label>VVIP Ticket Price (KES) *</label>
+                            <input type="number" id="eventVvipPrice" class="form-control" placeholder="e.g. 5000" min="0" step="any">
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Hidden legacy containers to prevent events.js references from throwing errors -->
+                <div style="display: none;">
+                    <ul class="nav nav-tabs" id="eventTabs">
+                        <li class="nav-item"><button class="tab-button" data-bs-target="#basicTab"></button></li>
+                        <li class="nav-item"><button class="tab-button" data-bs-target="#ticketsTab"></button></li>
+                        <li class="nav-item"><button class="tab-button" data-bs-target="#scheduleTab"></button></li>
+                        <li class="nav-item"><button class="tab-button" data-bs-target="#analyticsTab"></button></li>
+                    </ul>
+                    <div id="ticketsTab">
+                        <div id="ticketTypesList"></div>
+                    </div>
+                    <div id="scheduleTab">
+                        <div id="scheduleList"></div>
+                    </div>
+                    <div id="analyticsTab">
+                        <h3 id="analyticsTotalTickets"></h3>
+                        <h3 id="analyticsSold"></h3>
+                        <h3 id="analyticsRevenue"></h3>
+                        <h3 id="analyticsAttendance"></h3>
+                        <canvas id="analyticsChart"></canvas>
                     </div>
                 </div>
             </div>

@@ -1,7 +1,17 @@
 from django.urls import path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
 
 urlpatterns = [
+    # Portal root -> dashboard (avoids 404 on /organizer/)
+    path('',
+         RedirectView.as_view(url='/organizer/dashboard/', permanent=False),
+         name='organizer_home'),
+
+    # Login
+    path('login/',
+         TemplateView.as_view(template_name='shared/auth/login.html'),
+         name='organizer_login'),
+
     # Dashboard
     path('dashboard/',
          TemplateView.as_view(template_name='organizer/dashboard/dashboard.html'),
@@ -20,11 +30,6 @@ urlpatterns = [
     path('events/<int:event_id>/',
          TemplateView.as_view(template_name='organizer/dashboard/event_detail.html'),
          name='organizer_event_detail'),
-
-    # Analytics
-    path('analytics/',
-         TemplateView.as_view(template_name='organizer/dashboard/analytics.html'),
-         name='organizer_analytics'),
 
     # Tickets
     path('tickets/',
@@ -50,13 +55,7 @@ urlpatterns = [
          TemplateView.as_view(template_name='organizer/dashboard/booking_detail.html'),
          name='organizer_booking_detail'),
 
-    # Payouts
-    path('payouts/',
-         TemplateView.as_view(template_name='organizer/dashboard/payouts.html'),
-         name='organizer_payouts'),
-    path('payouts/settings/',
-         TemplateView.as_view(template_name='organizer/dashboard/payouts.html'),
-         name='organizer_payouts_settings'),
+
 
     # Promotions
     path('promotions/',
@@ -93,14 +92,17 @@ urlpatterns = [
          TemplateView.as_view(template_name='organizer/settings/settings.html'),
          name='organizer_profile'),
 
-    # Support
+    # FAQs (formerly Support)
+    path('faq/',
+         TemplateView.as_view(template_name='organizer/dashboard/faq.html'),
+         name='organizer_faq'),
     path('support/',
-         TemplateView.as_view(template_name='organizer/dashboard/support.html'),
+         RedirectView.as_view(url='/organizer/faq/', permanent=True),
          name='organizer_support'),
     path('support/tickets/',
-         TemplateView.as_view(template_name='organizer/dashboard/support.html'),
+         RedirectView.as_view(url='/organizer/faq/', permanent=True),
          name='organizer_support_tickets'),
     path('support/tickets/<int:ticket_id>/',
-         TemplateView.as_view(template_name='organizer/dashboard/support.html'),
+         RedirectView.as_view(url='/organizer/faq/', permanent=True),
          name='organizer_support_ticket_detail'),
 ]

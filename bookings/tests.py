@@ -1,3 +1,1 @@
-from django.test import TestCase
-
-# Create your tests here.
+# Booking integration tests live in payments/tests.py (fulfillment service).

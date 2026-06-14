@@ -15,7 +15,8 @@ const AuthGuard = {
         '/settings/',
         '/cart/',
         '/wishlist/',
-        '/checkout/'
+        '/checkout/',
+        '/notifications/'
     ],
     
     // Check if current path is protected
@@ -81,6 +82,9 @@ const AuthGuard = {
     
     // Logout
     logout: function(redirectTo = '/') {
+        if (window.EventhubEventsPrefetch) {
+            window.EventhubEventsPrefetch.invalidate();
+        }
         localStorage.removeItem('attendee_access_token');
         localStorage.removeItem('attendee_refresh_token');
         localStorage.removeItem('attendee_user');
@@ -174,6 +178,11 @@ const AuthGuard = {
         
         // Update UI based on auth state
         this.updateUI();
+
+        // Warm events catalog in the background for logged-in attendees
+        if (this.isAuthenticated() && window.EventhubEventsPrefetch) {
+            window.EventhubEventsPrefetch.start();
+        }
         
         // Listen for auth state changes
         window.addEventListener('auth-state-changed', () => {
@@ -197,12 +206,14 @@ const AuthGuard = {
         
         // Update user name displays
         if (isLoggedIn && user) {
+            const displayName = window.AccountProfile
+                ? AccountProfile.resolveDisplayName(user)
+                : (user.full_name || user.name || user.first_name || user.username || 'User');
             document.querySelectorAll('.user-name-display').forEach(el => {
-                el.textContent = user.name || user.first_name || user.username || 'User';
+                el.textContent = displayName;
             });
             document.querySelectorAll('.user-initial-display').forEach(el => {
-                const name = user.name || user.first_name || user.username || 'User';
-                el.textContent = name.charAt(0).toUpperCase();
+                el.textContent = displayName.charAt(0).toUpperCase();
             });
         }
     }

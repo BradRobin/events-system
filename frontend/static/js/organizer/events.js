@@ -24,7 +24,7 @@ async function loadEvents(page = 1) {
             const ticketsSold = event.tickets_sold ?? event.sold ?? 0;
             const capacity = event.capacity || 0;
             const status = event.status || 'draft';
-            const badgeClass = status === 'published' || status === 'active' ? 'bg-success' : status === 'draft' ? 'bg-secondary' : 'bg-danger';
+            const badgeClass = status === 'published' || status === 'active' ? 'bg-success' : status === 'draft' ? 'bg-secondary' : status === 'approved' ? 'bg-info' : 'bg-danger';
             return `
             <div class="col-md-4 col-lg-3">
                 <div class="event-card" onclick="editEvent(${event.id})">
@@ -55,7 +55,7 @@ async function editEvent(eventId = null) {
     currentEventId = eventId;
     resetEventForm();
     if (eventId) {
-        document.getElementById('eventModalTitle').innerText = 'Edit Event';
+        document.getElementById('eventModalTitle').innerText = 'Create New Event';
         document.getElementById('saveEventBtn').innerText = 'Update Event';
         try {
             const event = await OrganizerAPI.events.getDetail(eventId);
@@ -69,11 +69,36 @@ async function editEvent(eventId = null) {
             document.getElementById('eventEndDate').value = endDate ? endDate.slice(0,16) : '';
             document.getElementById('eventVenue').value = event.location || event.venue || '';
             document.getElementById('eventCapacity').value = event.capacity || '';
-            document.getElementById('eventStatus').value = event.status || 'draft';
+            document.getElementById('eventStatus').value = event.status || 'published';
+            document.getElementById('eventPrice').value = event.price || 0;
+            
+            if (event.vip_price !== null && event.vip_price !== undefined) {
+                document.getElementById('hasVipTicket').checked = true;
+                document.getElementById('eventVipPrice').value = event.vip_price;
+                document.getElementById('vipPriceContainer').style.display = 'block';
+            } else {
+                document.getElementById('hasVipTicket').checked = false;
+                document.getElementById('eventVipPrice').value = '';
+                document.getElementById('vipPriceContainer').style.display = 'none';
+            }
+            
+            if (event.vvip_price !== null && event.vvip_price !== undefined) {
+                document.getElementById('hasVvipTicket').checked = true;
+                document.getElementById('eventVvipPrice').value = event.vvip_price;
+                document.getElementById('vvipPriceContainer').style.display = 'block';
+            } else {
+                document.getElementById('hasVvipTicket').checked = false;
+                document.getElementById('eventVvipPrice').value = '';
+                document.getElementById('vvipPriceContainer').style.display = 'none';
+            }
+            
             await loadTicketTypes(eventId);
             await loadScheduleItems(eventId);
             await loadAnalytics(eventId);
-            if (event.image_url) document.getElementById('bannerPreview').innerHTML = `<img src="${event.image_url}" class="image-preview">`;
+            if (event.image_url) {
+                const bannerPreview = document.getElementById('bannerPreview');
+                if (bannerPreview) bannerPreview.innerHTML = `<img src="${event.image_url}" class="image-preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 8px;">`;
+            }
         } catch(e) {
             console.error(e);
             if(window.showToast) window.showToast('Error loading event', 'error');
@@ -95,24 +120,42 @@ async function saveEvent() {
     const data = {
         name: document.getElementById('eventTitle').value,
         category: document.getElementById('eventCategory').value,
-        description: document.getElementById('eventDescription').value,
+        description: document.getElementById('eventDescription')?.value || 'Event description',
         date: startDate || '',
         startTime: startTime || '00:00',
         endTime: endTime || '00:00',
         venue: document.getElementById('eventVenue').value,
         location: document.getElementById('eventVenue').value,
         capacity: parseInt(document.getElementById('eventCapacity').value) || 0,
-        status: document.getElementById('eventStatus').value
+        status: document.getElementById('eventStatus')?.value || 'published',
+        price: parseFloat(document.getElementById('eventPrice').value) || 0,
+        vip_price: document.getElementById('hasVipTicket').checked ? (parseFloat(document.getElementById('eventVipPrice').value) || null) : null,
+        vvip_price: document.getElementById('hasVvipTicket').checked ? (parseFloat(document.getElementById('eventVvipPrice').value) || null) : null
     };
     const eventId = document.getElementById('eventId').value;
     try {
+        let targetId = eventId;
         if (eventId) {
             await OrganizerAPI.events.update(eventId, data);
-            if(window.showToast) window.showToast('Event updated', 'success');
+            if(window.showToast) window.showToast('Event updated successfully', 'success');
         } else {
-            await OrganizerAPI.events.create(data);
-            if(window.showToast) window.showToast('Event created', 'success');
+            const result = await OrganizerAPI.events.create(data);
+            targetId = result.id;
+            if(window.showToast) window.showToast('Event created successfully', 'success');
         }
+
+        // Upload banner file if one was selected
+        const bannerFile = document.getElementById('eventBannerFile').files[0];
+        if (bannerFile && targetId) {
+            try {
+                await OrganizerAPI.events.uploadImage(targetId, bannerFile);
+                if(window.showToast) window.showToast('Banner uploaded successfully', 'success');
+            } catch(uploadErr) {
+                console.error('Banner upload failed:', uploadErr);
+                if(window.showToast) window.showToast('Event details saved, but banner image upload failed.', 'warning');
+            }
+        }
+
         bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
         loadEvents(currentPage);
     } catch(e) {
@@ -288,30 +331,7 @@ async function deleteScheduleItem(itemId) {
     } catch(e) { if(window.showToast) window.showToast(e.message, 'error'); }
 }
 
-// Media uploads
-async function uploadBanner() {
-    const eventId = ensureSavedEvent('uploading banner');
-    if (!eventId) return;
-    const file = document.getElementById('bannerImage').files[0];
-    if (!file) return;
-    try {
-        const result = await OrganizerAPI.events.uploadImage(eventId, file);
-        if(window.showToast) window.showToast('Banner uploaded', 'success');
-        document.getElementById('bannerPreview').innerHTML = `<img src="${result.image_url || result.image || ''}" class="image-preview">`;
-    } catch(e) { if(window.showToast) window.showToast(e.message, 'error'); }
-}
-
-async function uploadGallery() {
-    const eventId = ensureSavedEvent('uploading gallery images');
-    if (!eventId) return;
-    const files = document.getElementById('galleryImages').files;
-    if (!files.length) return;
-    try {
-        await OrganizerAPI.events.uploadGallery(eventId, Array.from(files));
-        if(window.showToast) window.showToast('Gallery uploaded', 'success');
-        document.getElementById('galleryPreview').innerHTML = '<p class="text-muted">Images uploaded successfully</p>';
-    } catch(e) { if(window.showToast) window.showToast(e.message, 'error'); }
-}
+// Media uploads helper placeholders removed (handled in saveEvent flow)
 
 // Analytics
 async function loadAnalytics(eventId) {
@@ -335,7 +355,28 @@ async function loadAnalytics(eventId) {
             type: 'line',
             data: {
                 labels: Array.isArray(stats.sales_data) ? stats.sales_data.map(d => d.date) : [],
-                datasets: [{ label: 'Tickets Sold', data: Array.isArray(stats.sales_data) ? stats.sales_data.map(d => d.sold) : [], borderColor: '#ff6b00' }]
+                datasets: [{
+                    label: 'Tickets Sold',
+                    data: Array.isArray(stats.sales_data) ? stats.sales_data.map(d => d.sold) : [],
+                    borderColor: '#ff6b00',
+                    backgroundColor: 'rgba(255,107,0,0.2)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ff6b00'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Date' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Tickets Sold' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                }
             }
         });
     } catch(e) {
@@ -356,8 +397,16 @@ function resetEventForm() {
     document.getElementById('eventModalTitle').innerText = 'Create New Event';
     document.getElementById('saveEventBtn').innerText = 'Create Event';
     document.getElementById('eventStatus').value = 'draft';
-    document.getElementById('bannerPreview').innerHTML = '';
-    document.getElementById('galleryPreview').innerHTML = '';
+    
+    const bannerPreview = document.getElementById('bannerPreview');
+    if (bannerPreview) bannerPreview.innerHTML = '';
+    
+    const bannerFile = document.getElementById('eventBannerFile');
+    if (bannerFile) bannerFile.value = '';
+    
+    const galleryPreview = document.getElementById('galleryPreview');
+    if (galleryPreview) galleryPreview.innerHTML = '';
+    
     document.getElementById('ticketTypesList').innerHTML = '<p class="text-muted">No ticket types</p>';
     document.getElementById('scheduleList').innerHTML = '<p class="text-muted">No schedule items</p>';
     document.getElementById('analyticsTotalTickets').innerText = '--';
@@ -368,11 +417,42 @@ function resetEventForm() {
         analyticsChart.destroy();
         analyticsChart = null;
     }
+    const vipContainer = document.getElementById('vipPriceContainer');
+    if (vipContainer) vipContainer.style.display = 'none';
+    const vvipContainer = document.getElementById('vvipPriceContainer');
+    if (vvipContainer) vvipContainer.style.display = 'none';
 }
+
+function togglePriceInput(type) {
+    const checkbox = document.getElementById(`has${type.charAt(0).toUpperCase() + type.slice(1)}Ticket`);
+    const container = document.getElementById(`${type}PriceContainer`);
+    if (checkbox && container) {
+        container.style.display = checkbox.checked ? 'block' : 'none';
+        const input = container.querySelector('input');
+        if (input && !checkbox.checked) {
+            input.value = '';
+        }
+    }
+}
+window.togglePriceInput = togglePriceInput;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadEvents();
     document.getElementById('saveEventBtn')?.addEventListener('click', saveEvent);
     document.getElementById('saveTicketTypeBtn')?.addEventListener('click', saveTicketType);
     document.getElementById('saveScheduleItemBtn')?.addEventListener('click', saveScheduleItem);
+    
+    // Live local preview for event banner selection
+    document.getElementById('eventBannerFile')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const previewContainer = document.getElementById('bannerPreview');
+            if (previewContainer) {
+                previewContainer.innerHTML = `<img src="${URL.createObjectURL(file)}" class="image-preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 8px;">`;
+            }
+        } else {
+            const previewContainer = document.getElementById('bannerPreview');
+            if (previewContainer) previewContainer.innerHTML = '';
+        }
+    });
 });

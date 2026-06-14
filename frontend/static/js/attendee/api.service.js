@@ -242,6 +242,10 @@ class AttendeeAPIService {
         
         try {
             const errorData = await response.json();
+            if (errorData.errors) {
+                const detail = Object.values(errorData.errors).flat().join(' ');
+                if (detail) errorMessage = detail;
+            }
             errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
         } catch (e) {
             errorMessage = response.statusText || errorMessage;
@@ -286,13 +290,13 @@ class AttendeeAPIService {
     delete(endpoint, options = {}) { return this.request('DELETE', endpoint, null, options); }
 }
 
-// Create global instance
-window.AttendeeAPI = null;
+// Create global instance (separate from AttendeeAPIEndpoints to avoid overwrite)
+window.AttendeeAPIService = null;
 
 // Initialize when config is loaded
 document.addEventListener('DOMContentLoaded', function() {
     if (window.ATTENDEE_API_CONFIG) {
-        window.AttendeeAPI = new AttendeeAPIService(window.ATTENDEE_API_CONFIG);
+        window.AttendeeAPIService = new AttendeeAPIService(window.ATTENDEE_API_CONFIG);
         console.log('✅ Attendee API Service initialized');
     }
 });

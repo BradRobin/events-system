@@ -1,27 +1,29 @@
 // ============================================
-// NOTIFICATIONS - Complete Functionality
+// NOTIFICATIONS - Attendee notification center
 // ============================================
 
 let currentPage = 1;
 let totalPages = 1;
 let currentTab = 'notifications';
 
-// API endpoints
 const API = {
     notifications: '/api/attendee/notifications/',
-    markRead: '/api/attendee/notifications/mark-read/',
+    markRead: (id) => `/api/attendee/notifications/${id}/read/`,
     markAllRead: '/api/attendee/notifications/mark-all-read/',
-    preferences: '/api/attendee/notifications/preferences/'
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) {
+        window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+        return;
+    }
     loadNotifications();
     loadPreferences();
     setupEventListeners();
 });
 
 function setupEventListeners() {
-    // Mark as read on click
     document.addEventListener('click', function(e) {
         const notificationItem = e.target.closest('.notification-item');
         if (notificationItem && !e.target.closest('.notification-actions')) {
@@ -30,45 +32,91 @@ function setupEventListeners() {
                 markAsRead(notifId);
             }
             const url = notificationItem.dataset.url;
-            if (url) {
+            if (url && url !== '#') {
                 window.location.href = url;
             }
         }
     });
 }
 
+function normalizeNotification(notif) {
+    const type = notif.notification_type || notif.type || 'info';
+    let actionUrl = notif.action_url || '#';
+    if (!notif.action_url && notif.payment_order_id) {
+        actionUrl = '/tickets/';
+    } else if (!notif.action_url && type === 'booking') {
+        actionUrl = '/tickets/';
+    }
+    return {
+        id: notif.id,
+        title: notif.title,
+        message: notif.message,
+        type,
+        read: notif.is_read != null ? notif.is_read : !!notif.read,
+        created_at: notif.created_at,
+        action_url: actionUrl,
+    };
+}
+
+function notificationActionUrl(notif) {
+    const type = notif.notification_type || notif.type || 'info';
+    if (notif.payment_order_id || type === 'payment' || type === 'booking') {
+        return '/tickets/';
+    }
+    return '#';
+}
+
 async function loadNotifications(page = 1) {
     const container = document.getElementById('notificationsList');
     if (!container) return;
-    
+
     showLoading(container);
-    
+
     try {
         const token = localStorage.getItem('attendee_access_token');
         const response = await fetch(`${API.notifications}?page=${page}&page_size=10`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'same-origin',
         });
-        
-        let data;
-        if (response.ok) {
-            data = await response.json();
-        } else {
-            data = getMockNotifications(page);
+
+        if (response.status === 401) {
+            window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+            return;
         }
-        
-        displayNotifications(data.results || data.notifications || []);
-        renderPagination(data);
-        
+
+        if (!response.ok) {
+            throw new Error('Failed to load notifications');
+        }
+
+        const data = await response.json();
+        const raw = data.results || data.notifications || [];
+        const notifications = raw.map((n) => normalizeNotification({
+            ...n,
+            action_url: n.action_url || notificationActionUrl(n),
+        }));
+
+        displayNotifications(notifications);
+        renderPagination({
+            count: data.count || notifications.length,
+            total_pages: data.total_pages || 1,
+            current_page: page,
+        });
     } catch (error) {
         console.error('Error loading notifications:', error);
-        displayNotifications(getMockNotifications(page).notifications);
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-circle"></i>
+                <h4>Could not load notifications</h4>
+                <p>Please refresh the page or try again later.</p>
+            </div>
+        `;
     }
 }
 
 function displayNotifications(notifications) {
     const container = document.getElementById('notificationsList');
     if (!container) return;
-    
+
     if (!notifications || notifications.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -77,11 +125,12 @@ function displayNotifications(notifications) {
                 <p>You're all caught up! No new notifications.</p>
             </div>
         `;
+        updateNotificationCount();
         return;
     }
-    
+
     container.innerHTML = notifications.map(notif => `
-        <div class="notification-item ${notif.read ? 'read' : 'unread'}" data-id="${notif.id}" data-url="${notif.action_url || '#'}">
+        <div class="notification-item ${notif.read ? 'read' : 'unread'}" data-id="${notif.id}" data-url="${escapeHtml(notif.action_url || '#')}">
             <div class="notification-icon">
                 <i class="fas ${getNotificationIcon(notif.type)}"></i>
             </div>
@@ -97,34 +146,20 @@ function displayNotifications(notifications) {
             </div>
         </div>
     `).join('');
-}
 
-function getMockNotifications(page) {
-    const allNotifications = [
-        { id: 1, type: 'booking', title: 'Booking Confirmed', message: 'Your ticket for Summer Music Festival has been confirmed.', created_at: new Date().toISOString(), read: false, action_url: '/attendee/tickets/' },
-        { id: 2, type: 'reminder', title: 'Event Reminder', message: 'Tech Innovation Summit starts in 2 days!', created_at: new Date(Date.now() - 86400000).toISOString(), read: false, action_url: '/events/detail/?id=2' },
-        { id: 3, type: 'promotion', title: 'Special Offer', message: 'Get 20% off on your next booking!', created_at: new Date(Date.now() - 172800000).toISOString(), read: true, action_url: '/events/' }
-    ];
-    
-    const start = (page - 1) * 10;
-    const end = start + 10;
-    return {
-        results: allNotifications.slice(start, end),
-        count: allNotifications.length,
-        total_pages: Math.ceil(allNotifications.length / 10),
-        current_page: page
-    };
+    updateNotificationCount();
 }
 
 function getNotificationIcon(type) {
     const icons = {
-        'booking': 'fa-ticket-alt',
-        'reminder': 'fa-bell',
-        'promotion': 'fa-tag',
-        'update': 'fa-sync-alt',
-        'payment': 'fa-credit-card',
-        'refund': 'fa-undo-alt',
-        'default': 'fa-bell'
+        booking: 'fa-ticket-alt',
+        reminder: 'fa-bell',
+        promotion: 'fa-tag',
+        update: 'fa-sync-alt',
+        payment: 'fa-credit-card',
+        refund: 'fa-undo-alt',
+        info: 'fa-bell',
+        default: 'fa-bell',
     };
     return icons[type] || icons.default;
 }
@@ -132,15 +167,17 @@ function getNotificationIcon(type) {
 async function markAsRead(notificationId) {
     try {
         const token = localStorage.getItem('attendee_access_token');
-        await fetch(`${API.markRead}${notificationId}/`, {
+        const response = await fetch(API.markRead(notificationId), {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
         });
-        
-        // Update UI
+
+        if (!response.ok) return;
+
         const notifElement = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
         if (notifElement) {
             notifElement.classList.remove('unread');
@@ -148,97 +185,59 @@ async function markAsRead(notificationId) {
             const badge = notifElement.querySelector('.notification-badge');
             if (badge) badge.remove();
         }
-        
+
         updateNotificationCount();
-        
     } catch (error) {
         console.error('Error marking as read:', error);
-        // Update UI anyway for demo
-        const notifElement = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
-        if (notifElement) {
-            notifElement.classList.remove('unread');
-            notifElement.classList.add('read');
-        }
     }
 }
 
 async function markAllAsRead() {
     try {
         const token = localStorage.getItem('attendee_access_token');
-        await fetch(API.markAllRead, {
+        const response = await fetch(API.markAllRead, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
         });
-        
-        // Update UI
+
+        if (!response.ok) {
+            throw new Error('Request failed');
+        }
+
         document.querySelectorAll('.notification-item.unread').forEach(item => {
             item.classList.remove('unread');
             item.classList.add('read');
             const badge = item.querySelector('.notification-badge');
             if (badge) badge.remove();
         });
-        
+
         updateNotificationCount();
         showToast('All notifications marked as read', 'success');
-        
     } catch (error) {
         console.error('Error marking all as read:', error);
-        // Update UI for demo
-        document.querySelectorAll('.notification-item.unread').forEach(item => {
-            item.classList.remove('unread');
-            item.classList.add('read');
-        });
-        showToast('All notifications marked as read', 'success');
+        showToast('Could not mark notifications as read', 'error');
     }
 }
 
 async function loadPreferences() {
+    const prefs = getStoredPreferences();
+    displayPreferences(prefs);
+}
+
+function getStoredPreferences() {
     try {
-        const token = localStorage.getItem('attendee_access_token');
-        const response = await fetch(API.preferences, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        let prefs;
-        if (response.ok) {
-            prefs = await response.json();
-        } else {
-            prefs = getMockPreferences();
-        }
-        
-        displayPreferences(prefs);
-        
-    } catch (error) {
-        console.error('Error loading preferences:', error);
-        displayPreferences(getMockPreferences());
+        return JSON.parse(localStorage.getItem('notification_settings') || '{}');
+    } catch (_) {
+        return {};
     }
 }
 
 function displayPreferences(prefs) {
-    const emailBooking = document.getElementById('emailBooking');
-    const emailReminder = document.getElementById('emailReminder');
-    const emailPromotion = document.getElementById('emailPromotion');
-    const emailEventUpdate = document.getElementById('emailEventUpdate');
-    const pushBooking = document.getElementById('pushBooking');
-    const pushReminder = document.getElementById('pushReminder');
-    const pushPromotion = document.getElementById('pushPromotion');
-    const smsReminder = document.getElementById('smsReminder');
-    
-    if (emailBooking) emailBooking.checked = prefs.email_booking !== false;
-    if (emailReminder) emailReminder.checked = prefs.email_reminder !== false;
-    if (emailPromotion) emailPromotion.checked = prefs.email_promotion || false;
-    if (emailEventUpdate) emailEventUpdate.checked = prefs.email_event_update !== false;
-    if (pushBooking) pushBooking.checked = prefs.push_booking !== false;
-    if (pushReminder) pushReminder.checked = prefs.push_reminder !== false;
-    if (pushPromotion) pushPromotion.checked = prefs.push_promotion || false;
-    if (smsReminder) smsReminder.checked = prefs.sms_reminder !== false;
-}
-
-function getMockPreferences() {
-    return {
+    const defaults = {
         email_booking: true,
         email_reminder: true,
         email_promotion: false,
@@ -246,40 +245,47 @@ function getMockPreferences() {
         push_booking: true,
         push_reminder: true,
         push_promotion: false,
-        sms_reminder: true
+        sms_reminder: true,
     };
+    const merged = { ...defaults, ...prefs };
+
+    const fields = [
+        ['emailBooking', 'email_booking'],
+        ['emailReminder', 'email_reminder'],
+        ['emailPromotion', 'email_promotion'],
+        ['emailEventUpdate', 'email_event_update'],
+        ['pushBooking', 'push_booking'],
+        ['pushReminder', 'push_reminder'],
+        ['pushPromotion', 'push_promotion'],
+        ['smsReminder', 'sms_reminder'],
+    ];
+
+    fields.forEach(([elementId, key]) => {
+        const el = document.getElementById(elementId);
+        if (el) el.checked = merged[key] !== false;
+    });
 }
 
 async function savePreferences() {
     const preferences = {
-        email_booking: document.getElementById('emailBooking')?.checked || false,
-        email_reminder: document.getElementById('emailReminder')?.checked || false,
-        email_promotion: document.getElementById('emailPromotion')?.checked || false,
-        email_event_update: document.getElementById('emailEventUpdate')?.checked || false,
-        push_booking: document.getElementById('pushBooking')?.checked || false,
-        push_reminder: document.getElementById('pushReminder')?.checked || false,
-        push_promotion: document.getElementById('pushPromotion')?.checked || false,
-        sms_reminder: document.getElementById('smsReminder')?.checked || false
+        email_booking: document.getElementById('emailBooking')?.checked ?? true,
+        email_reminder: document.getElementById('emailReminder')?.checked ?? true,
+        email_promotion: document.getElementById('emailPromotion')?.checked ?? false,
+        email_event_update: document.getElementById('emailEventUpdate')?.checked ?? true,
+        push_booking: document.getElementById('pushBooking')?.checked ?? true,
+        push_reminder: document.getElementById('pushReminder')?.checked ?? true,
+        push_promotion: document.getElementById('pushPromotion')?.checked ?? false,
+        sms_reminder: document.getElementById('smsReminder')?.checked ?? true,
     };
-    
+
     showLoader('Saving preferences...');
-    
+
     try {
-        const token = localStorage.getItem('attendee_access_token');
-        await fetch(API.preferences, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(preferences)
-        });
-        
-        showToast('Preferences saved successfully!', 'success');
-        
+        localStorage.setItem('notification_settings', JSON.stringify(preferences));
+        showToast('Preferences saved on this device', 'success');
     } catch (error) {
         console.error('Error saving preferences:', error);
-        showToast('Preferences saved!', 'success');
+        showToast('Could not save preferences', 'error');
     } finally {
         hideLoader();
     }
@@ -300,11 +306,11 @@ function updateNotificationCount() {
 
 function switchTab(tab) {
     currentTab = tab;
-    
+
     const notificationsTab = document.getElementById('notificationsTab');
     const preferencesTab = document.getElementById('preferencesTab');
     const tabs = document.querySelectorAll('.tab-btn');
-    
+
     if (tab === 'notifications') {
         notificationsTab.style.display = 'block';
         preferencesTab.style.display = 'none';
@@ -323,33 +329,33 @@ function switchTab(tab) {
 function renderPagination(data) {
     const paginationContainer = document.getElementById('pagination');
     if (!paginationContainer) return;
-    
+
     totalPages = data.total_pages || Math.ceil((data.count || 0) / 10);
     currentPage = data.current_page || data.page || 1;
-    
+
     if (totalPages <= 1) {
         paginationContainer.innerHTML = '';
         return;
     }
-    
+
     let html = '<div class="pagination-wrapper">';
-    
+
     if (currentPage > 1) {
         html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})">&laquo; Previous</button>`;
     }
-    
-    for (let i = 1; i <= totalPages; i++) {
+
+    for (let i = 1; i <= totalPages; i += 1) {
         if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
             html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
         } else if (i === currentPage - 3 || i === currentPage + 3) {
             html += '<span class="page-dots">...</span>';
         }
     }
-    
+
     if (currentPage < totalPages) {
         html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})">Next &raquo;</button>`;
     }
-    
+
     html += '</div>';
     paginationContainer.innerHTML = html;
 }
@@ -377,7 +383,7 @@ function formatRelativeTime(dateString) {
     const diffMinutes = Math.floor(diffSeconds / 60);
     const diffHours = Math.floor(diffMinutes / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
+
     if (diffSeconds < 60) return 'Just now';
     if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
@@ -416,7 +422,6 @@ function hideLoader() {
     if (loader) loader.style.display = 'none';
 }
 
-// Make functions global
 window.switchTab = switchTab;
 window.markAllAsRead = markAllAsRead;
 window.savePreferences = savePreferences;

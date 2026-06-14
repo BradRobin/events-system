@@ -29,7 +29,10 @@ def login_submit(request):
         
         login(request, user)
         
-        redirect_url = '/attendee/dashboard/' if role != 'organizer' else '/organizer/dashboard/'
+        if user.role == 'admin' or user.is_staff or user.is_superuser:
+            redirect_url = '/admin-portal/dashboard/'
+        else:
+            redirect_url = '/attendee/dashboard/' if role != 'organizer' else '/organizer/dashboard/'
         
         return JsonResponse({
             'success': True,
@@ -72,16 +75,12 @@ def register_submit(request):
             password=password,
             first_name=first_name,
             last_name=last_name,
-            role=role if role in ['attendee', 'organizer'] else 'attendee'
+            role='attendee'
         )
-        
-        if role == 'organizer' and organization_name:
-            user.organization_name = organization_name
-            user.save()
         
         login(request, user)
         
-        redirect_url = '/attendee/dashboard/' if role != 'organizer' else '/organizer/dashboard/'
+        redirect_url = '/attendee/dashboard/'
         
         return JsonResponse({
             'success': True,

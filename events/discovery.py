@@ -16,18 +16,114 @@ import logging
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import unquote
+import urllib.request
+import urllib.parse
+import json
 
-import requests
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+    HAS_BS4 = True
+except ImportError:
+    BeautifulSoup = None
+    HAS_BS4 = False
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Urllib requests Compatibility Wrapper
+# ---------------------------------------------------------------------------
+
+class UrllibResponse:
+    def __init__(self, content, status_code, headers=None):
+        self.content = content
+        self.text = content.decode('utf-8', errors='ignore') if isinstance(content, bytes) else content
+        self.status_code = status_code
+        self.headers = headers or {}
+
+    def json(self):
+        return json.loads(self.text)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise Exception(f"HTTP Error {self.status_code}")
+
+
+def urllib_request(method, url, params=None, data=None, headers=None, timeout=5):
+    if params:
+        url = f"{url}?{urllib.parse.urlencode(params)}"
+    
+    req_headers = {}
+    if headers:
+        for k, v in headers.items():
+            req_headers[k] = v
+
+    req_data = None
+    if data:
+        if isinstance(data, dict):
+            req_data = urllib.parse.urlencode(data).encode('utf-8')
+            if 'Content-Type' not in req_headers:
+                req_headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        elif isinstance(data, str):
+            req_data = data.encode('utf-8')
+        else:
+            req_data = data
+
+    req = urllib.request.Request(url, data=req_data, headers=req_headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            return UrllibResponse(response.read(), response.status, dict(response.info()))
+    except urllib.error.HTTPError as e:
+        return UrllibResponse(e.read(), e.code, dict(e.info()))
+    except Exception as e:
+        # Fallback wrapper for general connection or timeout errors
+        return UrllibResponse(str(e).encode('utf-8'), 500, {})
+
+
+def _regex_extract_events(html_content: str, county: str, base_url: str, source_name: str) -> list[dict]:
+    """
+    A robust, regex-based fallback event extractor to parse external sites
+    without requiring BeautifulSoup4.
+    """
+    events = []
+    hrefs = re.findall(r'href=["\']([^"\']+)["\']', html_content)
+    seen_links = set()
+    valid_links = []
+    for href in hrefs:
+        full_url = _resolve_url(href, base_url)
+        if full_url in seen_links:
+            continue
+        if any(kw in full_url.lower() for kw in ('/event', 'ticketsasa.com/', 'allevents.in/', 'eventbrite.com/e/')):
+            seen_links.add(full_url)
+            valid_links.append(full_url)
+            
+    for link in valid_links[:8]:
+        slug = link.rstrip('/').split('/')[-1]
+        title = slug.replace('-', ' ').replace('_', ' ').title()
+        title = re.sub(r'\d+$', '', title).strip()
+        if len(title) < 5:
+            continue
+            
+        events.append({
+            "type": "external",
+            "title": title[:120],
+            "date_text": "Check website",
+            "venue": county,
+            "price_text": "Check website",
+            "source": source_name,
+            "source_url": link,
+            "image_url": "",
+            "description": f"{title} — discover more on {source_name}",
+            "can_purchase": False,
+        })
+    return events
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-REQUEST_TIMEOUT = 8  # seconds per scraper HTTP call
-SCRAPER_TIMEOUT = 10  # seconds for the whole ThreadPoolExecutor round-trip
+REQUEST_TIMEOUT = 4  # seconds per scraper HTTP call
+SCRAPER_TIMEOUT = 5  # seconds for the whole ThreadPoolExecutor round-trip
 
 SCRAPER_HEADERS = {
     "User-Agent": (
@@ -96,7 +192,7 @@ def resolve_county_from_coords(lat: float, lng: float) -> str | None:
             "addressdetails": 1,
         }
         headers = {"User-Agent": "EventHub-Kenya/1.0 (contact@eventhub.ke)"}
-        resp = requests.get(url, params=params, headers=headers, timeout=5)
+        resp = urllib_request("GET", url, params=params, headers=headers, timeout=5)
         resp.raise_for_status()
         data = resp.json()
         addr = data.get("address", {})
@@ -124,7 +220,7 @@ def resolve_county_from_ip(ip_address: str) -> str:
     if ip_address in ("127.0.0.1", "::1", "localhost", ""):
         return "Nairobi"
     try:
-        resp = requests.get(f"http://ip-api.com/json/{ip_address}", timeout=4)
+        resp = urllib_request("GET", f"http://ip-api.com/json/{ip_address}", timeout=4)
         resp.raise_for_status()
         data = resp.json()
         if data.get("status") == "success":
@@ -193,8 +289,10 @@ def scrape_ticketsasa(county: str) -> list[dict]:
     base = "https://www.ticketsasa.com"
     try:
         url = f"{base}/events?q={county}"
-        resp = requests.get(url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp = urllib_request("GET", url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
+        if not HAS_BS4:
+            return _regex_extract_events(resp.text, county, base, "Ticketsasa")
         soup = BeautifulSoup(resp.text, "html.parser")
 
         # Ticketsasa uses various card structures depending on the version
@@ -248,8 +346,10 @@ def scrape_allevents(county: str) -> list[dict]:
     city_slug = county.lower().replace(" ", "-")
     try:
         url = f"{base}/{city_slug}/all"
-        resp = requests.get(url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp = urllib_request("GET", url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
+        if not HAS_BS4:
+            return _regex_extract_events(resp.text, county, base, "AllEvents.in")
         soup = BeautifulSoup(resp.text, "html.parser")
 
         cards = (
@@ -308,8 +408,10 @@ def scrape_eventbrite(county: str) -> list[dict]:
     city_slug = county.lower().replace(" ", "-")
     try:
         url = f"{base}/d/kenya--{city_slug}/events/"
-        resp = requests.get(url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
+        resp = urllib_request("GET", url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
+        if not HAS_BS4:
+            return _regex_extract_events(resp.text, county, base, "Eventbrite")
         soup = BeautifulSoup(resp.text, "html.parser")
 
         # Eventbrite renders multiple card shapes depending on A/B tests
@@ -373,13 +475,16 @@ def scrape_duckduckgo_events(county: str) -> list[dict]:
         from datetime import datetime
         year = datetime.now().year
         query = f'upcoming events in {county} Kenya {year} site:ticketsasa.com OR site:eventbrite.com OR site:allevents.in'
-        resp = requests.post(
+        resp = urllib_request(
+            "POST",
             "https://html.duckduckgo.com/html/",
             data={"q": query},
             headers=SCRAPER_HEADERS,
             timeout=REQUEST_TIMEOUT,
         )
         resp.raise_for_status()
+        if not HAS_BS4:
+            return _regex_extract_events(resp.text, county, "https://duckduckgo.com", "DuckDuckGo Web")
         soup = BeautifulSoup(resp.text, "html.parser")
 
         for el in soup.select(".result__body, .result")[:8]:
@@ -443,6 +548,26 @@ def discover_events_for_county(county: str) -> list[dict]:
         List of dicts; each has keys: type, title, date_text, venue, price_text,
         source, source_url, image_url, description, can_purchase.
     """
+    from django.core.cache import cache
+    from django.db import DatabaseError
+
+    # Normalize county to construct a safe cache key
+    county_clean = county.lower().strip().replace(' ', '_')
+    cache_key = f"discover_events_{county_clean}"
+
+    # Try cache lookup first, handling potential DatabaseErrors (e.g. before migrations or in tests)
+    cached_results = None
+    try:
+        cached_results = cache.get(cache_key)
+    except DatabaseError:
+        pass
+    except Exception as exc:
+        logger.warning("Failed to fetch discovery cache for %s: %s", county, exc)
+
+    if cached_results is not None:
+        logger.info("Returning cached discovery events for county: %s", county)
+        return cached_results
+
     all_results: list[dict] = []
 
     primary_scrapers = [
@@ -451,19 +576,22 @@ def discover_events_for_county(county: str) -> list[dict]:
         ("eventbrite", scrape_eventbrite),
     ]
 
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        future_map = {
-            executor.submit(fn, county): name
-            for name, fn in primary_scrapers
-        }
-        for future in as_completed(future_map, timeout=SCRAPER_TIMEOUT):
-            name = future_map[future]
-            try:
-                batch = future.result(timeout=2)
-                all_results.extend(batch)
-                logger.info("Scraper '%s' returned %d events for %s", name, len(batch), county)
-            except Exception as exc:
-                logger.warning("Scraper '%s' raised: %s", name, exc)
+    try:
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            future_map = {
+                executor.submit(fn, county): name
+                for name, fn in primary_scrapers
+            }
+            for future in as_completed(future_map, timeout=SCRAPER_TIMEOUT):
+                name = future_map[future]
+                try:
+                    batch = future.result()
+                    all_results.extend(batch)
+                    logger.info("Scraper '%s' returned %d events for %s", name, len(batch), county)
+                except Exception as exc:
+                    logger.warning("Scraper '%s' raised: %s", name, exc)
+    except Exception as exc:
+        logger.warning("Scraping execution or as_completed loop timed out/failed for %s: %s", county, exc)
 
     # Use DuckDuckGo as a wide-net fallback when primary scrapers find little
     if len(all_results) < 3:
@@ -478,5 +606,14 @@ def discover_events_for_county(county: str) -> list[dict]:
         if key and key not in seen:
             seen.add(key)
             unique.append(event)
+
+    # Cache the unique list (3600 seconds on success, 300 seconds if empty)
+    try:
+        timeout = 3600 if unique else 300
+        cache.set(cache_key, unique, timeout)
+    except DatabaseError:
+        pass
+    except Exception as exc:
+        logger.warning("Failed to write discovery cache for %s: %s", county, exc)
 
     return unique

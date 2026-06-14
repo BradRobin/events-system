@@ -84,9 +84,10 @@ async function loadTransactions() {
         if (!response.ok) throw new Error('Failed to load transactions');
         
         const data = await response.json();
-        currentTransactions = data.results || data;
+        currentTransactions = data.transactions || data.results || [];
+        const totalItems = data.pagination?.total_items || currentTransactions.length;
         renderTransactions();
-        renderPagination(data.count || data.length || 0);
+        renderPagination(totalItems);
     } catch (error) {
         console.error('Error loading transactions:', error);
         showError(elements.transactionsList, 'Failed to load transactions');
@@ -101,12 +102,13 @@ async function loadStats() {
         
         if (!response.ok) throw new Error('Failed to load stats');
         
-        const stats = await response.json();
+        const data = await response.json();
+        const stats = data.stats || data;
         
-        document.getElementById('totalTransactions').textContent = stats.total_count || 0;
-        document.getElementById('totalVolume').textContent = `Kes ${formatNumber(stats.total_volume || 0)}`;
-        document.getElementById('successCount').textContent = stats.success_count || 0;
-        document.getElementById('pendingCount').textContent = stats.pending_count || 0;
+        document.getElementById('totalTransactions').textContent = stats.total || stats.total_count || 0;
+        document.getElementById('totalVolume').textContent = `Kes ${formatNumber(stats.total_amount || stats.total_volume || 0)}`;
+        document.getElementById('successCount').textContent = stats.success || stats.success_count || 0;
+        document.getElementById('pendingCount').textContent = stats.failed || stats.pending_count || 0;
     } catch (error) {
         console.error('Error loading stats:', error);
     }
@@ -124,7 +126,7 @@ function renderTransactions() {
             <td><code>${escapeHtml(transaction.transaction_id || transaction.id)}</code></td>
             <td>${formatDateTime(transaction.created_at || transaction.date)}</td>
             <td>${escapeHtml(transaction.customer_name || transaction.customer?.name || 'N/A')}<br><small class="text-muted">${escapeHtml(transaction.customer_email || '')}</small></td>
-            <td>${escapeHtml(transaction.event_name || transaction.event?.name || '-')}</td>
+            <td>${escapeHtml(transaction.event_title || transaction.event_name || transaction.event?.name || '-')}</td>
             <td class="amount">Kes ${formatNumber(transaction.amount)}</td>
             <td>${getStatusBadge(transaction.status)}</td>
             <td class="action-buttons">

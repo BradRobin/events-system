@@ -193,6 +193,7 @@ async function approveEvent(id) {
     showConfirm('Approve this event? It will be published and visible to attendees.', async () => {
         try {
             await apiRequest(`/api/admin/events/${id}/approve/`, 'POST');
+            if (typeof loadNotifications === 'function') loadNotifications();
             showToast('Event approved successfully', 'success');
             loadPendingEvents();
             loadStats();
@@ -243,6 +244,7 @@ async function confirmReject() {
             reason: reason,
             suggestions: suggestions
         });
+        if (typeof loadNotifications === 'function') loadNotifications();
         showToast('Event rejected. Organizer notified.', 'success');
         closeRejectModal();
         loadPendingEvents();

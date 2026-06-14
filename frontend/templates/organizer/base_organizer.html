@@ -36,10 +36,6 @@
                 <i class="fa-solid fa-calendar-days"></i>
                 <span>My Events</span>
             </a>
-            <a href="/organizer/analytics/" class="menu-item {% block nav_reports %}{% endblock %}">
-                <i class="fa-solid fa-chart-line"></i>
-                <span>Analytics</span>
-            </a>
             <a href="/organizer/settings/" class="menu-item {% block nav_settings %}{% endblock %}">
                 <i class="fa-solid fa-gears"></i>
                 <span>Settings</span>
@@ -74,7 +70,7 @@
                     <span class="dot"></span>
                 </div>
                 <div class="user-profile">
-                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Organizer Profile">
+                    <img src="{% if user.get_avatar_url %}{{ user.get_avatar_url }}{% else %}https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80{% endif %}" alt="Organizer Profile">
                     <div class="profile-meta">
                         <span class="profile-name">{{ user.email }}</span>
                         <span class="profile-role">Event Organizer</span>
@@ -92,6 +88,7 @@
 
 <!-- API & MODULAR JAVASCRIPT FILES -->
 <script src="{% static 'js/shared/context-framework.js' %}"></script>
+<script src="{% static 'js/attendee/errors/error-handler.js' %}"></script>
 <script src="{% static 'js/organizer/api.config.js' %}"></script>
 <script src="{% static 'js/organizer/api.service.js' %}"></script>
 <script src="{% static 'js/organizer/api.endpoints.js' %}"></script>

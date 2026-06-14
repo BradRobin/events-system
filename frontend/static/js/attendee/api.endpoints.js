@@ -17,11 +17,11 @@ function buildParams(filters) {
 
 // Helper to get the API instance
 function getAPI() {
-    if (!window.AttendeeAPI) {
-        console.error('AttendeeAPI not initialized. Make sure api.service.js loads first.');
+    if (!window.AttendeeAPIService) {
+        console.error('AttendeeAPIService not initialized. Make sure api.service.js loads first.');
         return null;
     }
-    return window.AttendeeAPI;
+    return window.AttendeeAPIService;
 }
 
 // ============================================

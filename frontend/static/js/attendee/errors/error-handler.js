@@ -1,177 +1,211 @@
-// ============================================
-// ERROR HANDLER JAVASCRIPT
-// Handles client-side errors gracefully
-// ============================================
+// ============================================================
+// GLOBAL UNIFIED ERROR HANDLER
+// Gracefully intercepts and handles runtime errors, network
+// issues, and unhandled promise rejections.
+// ============================================================
 
-class ErrorHandler {
+class GlobalErrorHandler {
     constructor() {
-        this.setupGlobalErrorHandlers();
+        this.setupListeners();
     }
-    
-    setupGlobalErrorHandlers() {
-        // Handle uncaught JavaScript errors
+
+    setupListeners() {
+        // 1. Capture runtime errors (SyntaxErrors, ReferenceErrors, etc.)
         window.addEventListener('error', (event) => {
-            this.handleJavaScriptError(event);
+            // Ignore script-load issues that don't disrupt app execution
+            if (event.target && (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
+                return;
+            }
+            this.handleError(event.error || new Error(event.message));
         });
-        
-        // Handle unhandled promise rejections
+
+        // 2. Capture unhandled promise rejections (failed API requests without catch)
         window.addEventListener('unhandledrejection', (event) => {
-            this.handlePromiseRejection(event);
+            this.handlePromiseRejection(event.reason);
         });
-        
-        // Handle network errors
+
+        // 3. Capture network online/offline state changes
         window.addEventListener('online', () => {
-            this.handleConnectionRestored();
+            this.showToast('Your internet connection has been restored.', 'success');
         });
-        
+
         window.addEventListener('offline', () => {
-            this.handleConnectionLost();
+            this.showToast('You are currently offline. Please check your network connection.', 'error');
         });
     }
-    
-    handleJavaScriptError(event) {
-        console.error('JavaScript Error:', {
-            message: event.message,
-            filename: event.filename,
-            lineno: event.lineno,
-            colno: event.colno,
-            error: event.error
-        });
+
+    handleError(error) {
+        console.error('[GlobalErrorHandler Error]:', error);
         
-        // Show user-friendly error message
-        this.showUserFriendlyError('Something went wrong. Please refresh the page.');
-        
-        // Optional: Send error to server
-        this.reportError({
-            type: 'js_error',
-            message: event.message,
-            stack: event.error?.stack,
-            url: window.location.href
-        });
-    }
-    
-    handlePromiseRejection(event) {
-        console.error('Promise Rejection:', event.reason);
-        
-        if (event.reason?.status === 401) {
-            // Session expired
-            this.handleSessionExpired();
-        } else if (event.reason?.status === 403) {
-            // Permission denied
-            this.showUserFriendlyError('You don\'t have permission to perform this action.');
-        } else if (event.reason?.status === 404) {
-            this.showUserFriendlyError('The requested resource was not found.');
-        } else if (event.reason?.status === 429) {
-            this.showUserFriendlyError('Too many requests. Please try again later.');
-        } else if (event.reason?.status >= 500) {
-            this.showUserFriendlyError('Server error. Please try again later.');
-        } else if (event.reason?.message === 'Failed to fetch') {
-            this.handleNetworkError();
-        }
-    }
-    
-    handleSessionExpired() {
-        if (confirm('Your session has expired. Please login again to continue.')) {
-            window.location.href = '/attendee/login/';
-        }
-    }
-    
-    handleNetworkError() {
-        this.showUserFriendlyError('Network error. Please check your internet connection.');
-        
-        // Show retry button
-        const retryContainer = document.createElement('div');
-        retryContainer.className = 'network-error-toast';
-        retryContainer.innerHTML = `
-            <div class="toast-content">
-                <i class="fas fa-wifi"></i>
-                <span>Connection lost. Trying to reconnect...</span>
-                <button onclick="location.reload()">Retry</button>
-            </div>
-        `;
-        document.body.appendChild(retryContainer);
-        
-        setTimeout(() => {
-            if (retryContainer.parentNode) {
-                retryContainer.remove();
+        let userMessage = 'An unexpected error occurred. Please refresh or try again.';
+        if (error && error.message) {
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                userMessage = 'Network connection lost. Please check your internet connection.';
+            } else if (error instanceof TypeError) {
+                userMessage = 'A display error occurred. Please reload the page.';
+            } else {
+                userMessage = error.message;
             }
-        }, 10000);
-    }
-    
-    handleConnectionLost() {
-        this.showUserFriendlyError('You are offline. Please check your internet connection.');
-    }
-    
-    handleConnectionRestored() {
-        this.showUserFriendlyError('Connection restored!', 'success');
-        location.reload();
-    }
-    
-    showUserFriendlyError(message, type = 'error') {
-        // Use existing toast system
-        if (window.showToast) {
-            window.showToast(message, type);
-        } else {
-            alert(message);
         }
+        
+        this.showToast(userMessage, 'error');
     }
-    
-    async reportError(errorData) {
-        try {
-            await fetch('/api/attendee/error/report/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCSRFToken()
-                },
-                body: JSON.stringify(errorData)
-            });
-        } catch (e) {
-            console.error('Failed to report error:', e);
-        }
-    }
-    
-    getCSRFToken() {
-        const cookieValue = document.cookie.match('(^|; )csrftoken=([^;]*)');
-        return cookieValue ? cookieValue[2] : null;
-    }
-    
-    // API error handler for fetch requests
-    async handleAPIResponse(response, fallbackMessage = 'An error occurred') {
-        if (!response.ok) {
-            let errorMessage = fallbackMessage;
+
+    handlePromiseRejection(reason) {
+        console.error('[GlobalErrorHandler Promise Rejection]:', reason);
+        
+        let userMessage = 'Something went wrong. Please try again.';
+        let type = 'error';
+
+        if (reason) {
+            const message = reason.message || String(reason);
             
-            try {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorData.error || errorData.detail || fallbackMessage;
-            } catch (e) {
-                // If response is not JSON
-                if (response.status === 404) {
-                    errorMessage = 'Resource not found';
-                } else if (response.status === 403) {
-                    errorMessage = 'You do not have permission';
-                } else if (response.status === 401) {
-                    errorMessage = 'Please login to continue';
-                    window.location.href = '/attendee/login/';
-                } else if (response.status === 429) {
-                    errorMessage = 'Too many requests. Please try again later.';
-                } else if (response.status >= 500) {
-                    errorMessage = 'Server error. Please try again later.';
+            if (reason.status) {
+                switch (reason.status) {
+                    case 401:
+                        userMessage = 'Your session has expired. Please login again.';
+                        type = 'info';
+                        this.handleSessionExpired();
+                        return;
+                    case 403:
+                        userMessage = 'You do not have permission to perform this action.';
+                        break;
+                    case 404:
+                        userMessage = 'The requested resource was not found.';
+                        type = 'info';
+                        break;
+                    case 429:
+                        userMessage = 'Too many requests. Please slow down and try again.';
+                        break;
+                    case 500:
+                    case 502:
+                    case 503:
+                    case 504:
+                        userMessage = 'Server error. Please try again later.';
+                        break;
+                    default:
+                        userMessage = message;
                 }
+            } else if (message.includes('Failed to fetch') || message.includes('timeout') || message.includes('NetworkError')) {
+                userMessage = 'Network connection failed. Please check your internet connection.';
+            } else {
+                userMessage = message;
             }
-            
-            throw new Error(errorMessage);
         }
+
+        this.showToast(userMessage, type);
+    }
+
+    handleSessionExpired() {
+        this.showToast('Session expired. Redirecting to login...', 'info');
+        setTimeout(() => {
+            window.location.href = '/login/';
+        }, 1500);
+    }
+
+    showToast(message, type = 'error') {
+        // Suppress 404s from popping up as intrusive toasts
+        if (message && (message.includes('404') || message.includes('not found') || message.toLowerCase().includes('resource not found'))) {
+            return;
+        }
+
+        // Try using portal-specific toast system first
+        if (window.showToast) {
+            try {
+                window.showToast(message, type);
+                return;
+            } catch (e) {
+                // fall back
+            }
+        }
+
+        // Standard custom fallback toast
+        const toastId = 'global-error-toast';
+        let toast = document.getElementById(toastId);
+        if (toast) toast.remove();
+
+        toast = document.createElement('div');
+        toast.id = toastId;
         
-        return response;
+        let themeColor = '#10b981'; // success
+        let iconClass = 'fas fa-check-circle';
+        if (type === 'error') {
+            themeColor = '#ef4444';
+            iconClass = 'fas fa-exclamation-circle';
+        } else if (type === 'info' || type === 'primary') {
+            themeColor = '#3b82f6';
+            iconClass = 'fas fa-info-circle';
+        }
+
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 14px 22px;
+            border-radius: 12px;
+            border-left: 4px solid ${themeColor};
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 999999;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            max-width: 380px;
+            animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        `;
+
+        toast.innerHTML = `
+            <i class="${iconClass}" style="color: ${themeColor}; font-size: 18px;"></i>
+            <span style="flex: 1; line-height: 1.4;">${this.escapeHtml(message)}</span>
+            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; padding: 0 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">&times;</button>
+        `;
+
+        if (!document.getElementById('global-toast-styles')) {
+            const style = document.createElement('style');
+            style.id = 'global-toast-styles';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(120%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(120%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+                setTimeout(() => {
+                    if (toast.parentNode) toast.remove();
+                }, 300);
+            }
+        }, 5000);
+    }
+
+    escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 }
 
-// Initialize error handler
+// Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-    window.errorHandler = new ErrorHandler();
+    window.globalErrorHandler = new GlobalErrorHandler();
 });
 
-// Export for use
-window.ErrorHandler = ErrorHandler;
-console.log('✅ Error Handler loaded');
+// Export
+window.GlobalErrorHandler = GlobalErrorHandler;
+console.log('✅ Global Error Handler initialized');

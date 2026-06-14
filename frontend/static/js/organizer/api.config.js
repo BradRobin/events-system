@@ -166,9 +166,17 @@ const ORGANIZER_API_CONFIG = {
             stats: '/checkin/stats/',
             realtime: '/checkin/realtime/'
         },
+        PAYMENT_ORDERS: {
+            pending: '/payment-orders/pending/',
+            approve: (id) => `/payment-orders/${id}/approve/`,
+            reject: (id) => `/payment-orders/${id}/reject/`,
+            screenshot: (id) => `/payment-orders/${id}/screenshot/`,
+        },
         SETTINGS: {
             general: '/settings/general/',
             updateGeneral: '/settings/general/update/',
+            mpesa: '/settings/mpesa/',
+            updateMpesa: '/settings/mpesa/update/',
             payment: '/settings/payment/',
             updatePayment: '/settings/payment/update/',
             notification: '/settings/notification/',

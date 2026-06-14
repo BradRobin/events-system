@@ -14,7 +14,7 @@
     <!-- Page Header -->
     <div class="page-header">
         <div>
-            <h1><i class="fas fa-heart"></i> My Wishlist</h1>
+            <h1>My Wishlist</h1>
             <p class="text-muted">Events you've saved for later</p>
         </div>
         <button id="clearAllBtn" class="btn-clear-all">
@@ -93,8 +93,12 @@
         </div>
     </div>
 </div>
+
+{% include 'attendee/events/checkout_modal.html' %}
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/shared/cart-storage.js' %}"></script>
+<script src="{% static 'js/attendee/payments/checkout.js' %}"></script>
 <script src="{% static 'js/attendee/wishlist/wishlist.js' %}"></script>
 {% endblock %}

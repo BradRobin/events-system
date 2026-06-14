@@ -1,8 +1,6 @@
 from django.urls import path
-from . import views
 
-urlpatterns = [
-    path('pay/', views.initiate_payment, name='initiate_payment'),
-    path('callback/', views.mpesa_callback, name='mpesa_callback'),
-    path('status/<str:checkout_id>/', views.payment_status, name='payment_status'),
-]
+# STK Push routes removed — manual M-Pesa + screenshot verification is used instead.
+# Payment order APIs are registered in config/urls.py under /api/attendee/payment-orders/
+
+urlpatterns = []

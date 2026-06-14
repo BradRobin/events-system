@@ -1,6 +1,6 @@
 /* ============================================
    SPONSORS SECTION - Complete CSS
-   Auto-scroll Carousel with Play/Pause Button
+   Auto-scroll Carousel
    ============================================ */
 
 .sponsors-section {
@@ -74,7 +74,7 @@
     margin: 2rem 0;
 }
 
-/* Carousel Container - No user scrolling */
+/* Carousel Container */
 .sponsors-carousel {
     display: flex;
     gap: 1.5rem;
@@ -83,28 +83,33 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
     padding: 0.5rem 0;
-    pointer-events: none;
+    pointer-events: auto;
     scroll-snap-type: none;
+    cursor: grab;
+}
+
+.sponsors-carousel:active {
+    cursor: grabbing;
 }
 
 .sponsors-carousel::-webkit-scrollbar {
     display: none;
 }
 
-/* Sponsor Item Cards */
+/* Sponsor Item Cards - Slightly Larger */
 .sponsor-item {
     flex: 0 0 auto;
-    width: 160px;
+    width: 180px;
     background: #ffffff;
     border-radius: 1rem;
-    padding: 1rem;
+    padding: 1.2rem;
     border: 2px solid #e2e8f0;
     border-top: 4px solid #f59e0b;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    pointer-events: none;
+    pointer-events: auto;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -133,6 +138,10 @@
     opacity: 1;
 }
 
+.sponsor-item:hover {
+    transform: translateY(-3px);
+}
+
 /* Different top border colors for variety */
 .sponsor-item:nth-child(1) { border-top-color: #f59e0b; }
 .sponsor-item:nth-child(2) { border-top-color: #ec6408; }
@@ -153,95 +162,26 @@
 /* Sponsor Logo Images */
 .sponsor-logo {
     width: 100%;
-    height: 60px;
+    height: 70px;
     object-fit: contain;
     filter: none;
     opacity: 1;
     transition: transform 0.3s ease;
 }
 
-/* For screenshot images - make them fit better */
-.sponsor-item img[alt="Partner"] {
-    object-fit: cover;
-    border-radius: 0.5rem;
-}
-
 .sponsor-item:hover .sponsor-logo {
-    transform: scale(1.02);
-}
-
-/* Play/Pause Button Control */
-.sponsor-control {
-    text-align: center;
-    margin-top: 2rem;
-}
-
-.play-pause-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: #ffffff;
-    border: 2px solid #e2e8f0;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #1e293b;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    position: relative;
-    overflow: hidden;
-}
-
-/* Glowing effect for button */
-.play-pause-btn::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    background: linear-gradient(135deg, #f59e0b, #ec6408, #f97316, #f59e0b);
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    z-index: -1;
-}
-
-.play-pause-btn::after {
-    content: '';
-    position: absolute;
-    inset: 2px;
-    background: #ffffff;
-    border-radius: 50%;
-    z-index: -1;
-}
-
-.play-pause-btn:hover::before {
-    opacity: 1;
-}
-
-.play-pause-btn:hover {
-    border-color: transparent;
-    color: white;
     transform: scale(1.05);
-}
-
-.play-pause-btn i {
-    font-size: 1.1rem;
-    transition: transform 0.2s ease;
-}
-
-.play-pause-btn:hover i {
-    transform: scale(1.1);
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
     .sponsor-item {
-        width: 140px;
-        padding: 0.75rem;
+        width: 150px;
+        padding: 1rem;
     }
     
     .sponsor-logo {
-        height: 50px;
+        height: 55px;
     }
 }
 
@@ -255,8 +195,8 @@
     }
     
     .sponsor-item {
-        width: 120px;
-        padding: 0.75rem;
+        width: 130px;
+        padding: 0.8rem;
     }
     
     .sponsor-logo {
@@ -267,24 +207,19 @@
         font-size: 2rem;
     }
     
-    .play-pause-btn {
-        width: 42px;
-        height: 42px;
-    }
-    
-    .play-pause-btn i {
-        font-size: 0.9rem;
+    .sponsors-carousel {
+        gap: 1rem;
     }
 }
 
 @media (max-width: 480px) {
     .sponsor-item {
-        width: 100px;
-        padding: 0.5rem;
+        width: 110px;
+        padding: 0.6rem;
     }
     
     .sponsor-logo {
-        height: 40px;
+        height: 38px;
     }
     
     .section-header h2 {
@@ -295,28 +230,9 @@
         font-size: 0.85rem;
     }
     
-    .play-pause-btn {
-        width: 38px;
-        height: 38px;
+    .sponsors-carousel {
+        gap: 0.8rem;
     }
-    
-    .play-pause-btn i {
-        font-size: 0.8rem;
-    }
-}
-
-/* Animation for subtle pulse on the button when playing */
-@keyframes subtlePulse {
-    0%, 100% {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    50% {
-        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);
-    }
-}
-
-.play-pause-btn {
-    animation: subtlePulse 2s ease-in-out infinite;
 }
 
 /* Reduced motion preference */
@@ -324,8 +240,7 @@
     .sponsors-section::before,
     .sponsors-section::after,
     .sponsor-item,
-    .sponsor-logo,
-    .play-pause-btn {
+    .sponsor-logo {
         animation: none;
         transition: none;
     }

@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login as django_login
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
@@ -6,12 +6,16 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from django.db import DatabaseError
+
 from .auth import (
     authenticate_bearer,
+    database_unavailable_response,
     issue_token_pair,
     json_error,
     login_user,
     parse_json_body,
+    retry_after_migration_repair,
     revoke_user_tokens,
     token_hash,
 )
@@ -30,13 +34,15 @@ def resolve_authenticated_user(request):
 
 
 def user_payload(user):
+    full_name = f"{user.first_name} {user.last_name}".strip() or user.username
     return {
         'id': user.id,
         'username': user.username,
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
-        'full_name': f"{user.first_name} {user.last_name}".strip(),
+        'full_name': full_name,
+        'name': full_name,
         'phone': user.phone,
         'role': user.role,
         'organization_name': user.organization_name,
@@ -45,6 +51,7 @@ def user_payload(user):
         'is_staff': user.is_staff,
         'is_superuser': user.is_superuser,
         'date_joined': user.date_joined.isoformat() if getattr(user, 'date_joined', None) else None,
+        'avatar_url': user.get_avatar_url(),
     }
 
 
@@ -93,22 +100,27 @@ def register(request):
     if errors:
         return json_error('Registration failed.', status=400, errors=errors)
 
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password,
-        first_name=(data.get('first_name') or '').strip(),
-        last_name=(data.get('last_name') or '').strip(),
-        phone=(data.get('phone') or '').strip(),
-        role=role,
-        organization_name=organization_name if role == 'organizer' else '',
-    )
-
-    return JsonResponse({
-        'message': 'Registration successful.',
-        'user': user_payload(user),
-        **issue_token_pair(user),
-    }, status=201)
+    try:
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=(data.get('first_name') or '').strip(),
+            last_name=(data.get('last_name') or '').strip(),
+            phone=(data.get('phone') or '').strip(),
+            role=role,
+            organization_name=organization_name if role == 'organizer' else '',
+        )
+        return JsonResponse({
+            'message': 'Registration successful.',
+            'user': user_payload(user),
+            **issue_token_pair(user),
+        }, status=201)
+    except DatabaseError as exc:
+        repaired = retry_after_migration_repair(request, register)
+        if repaired is not None:
+            return repaired
+        return database_unavailable_response(exc)
 
 
 @csrf_exempt
@@ -120,20 +132,32 @@ def login(request):
 
     identifier = (data.get('username') or data.get('email') or '').strip()
     password = data.get('password') or ''
-    user = login_user(identifier, password)
 
-    if not user:
-        return json_error('Invalid username/email or password.', status=401)
-    if not user.is_active:
-        return json_error('This account is inactive.', status=403)
-    if request.path.startswith('/api/organizer/') and user.role != 'organizer' and not user.is_superuser:
-        return json_error('Only organizer accounts can access the organizer portal.', status=403)
+    try:
+        user = login_user(identifier, password)
 
-    return JsonResponse({
-        'message': 'Login successful.',
-        'user': user_payload(user),
-        **issue_token_pair(user),
-    })
+        if not user:
+            return json_error('Invalid username/email or password.', status=401)
+        if not user.is_active:
+            return json_error('This account is inactive.', status=403)
+        if request.path.startswith('/api/organizer/') and user.role != 'organizer' and not user.is_superuser:
+            return json_error('Only organizer accounts can access the organizer portal.', status=403)
+
+        django_login(request, user)
+
+        from events.prefetch import schedule_events_catalog_warm
+        schedule_events_catalog_warm()
+
+        return JsonResponse({
+            'message': 'Login successful.',
+            'user': user_payload(user),
+            **issue_token_pair(user),
+        })
+    except DatabaseError as exc:
+        repaired = retry_after_migration_repair(request, login)
+        if repaired is not None:
+            return repaired
+        return database_unavailable_response(exc)
 
 
 @csrf_exempt
@@ -218,8 +242,9 @@ def profile_update(request):
     if user.role == 'organizer' and 'organization_name' in data and not (data.get('organization_name') or '').strip():
         return json_error('Organization name is required for organizers.')
 
-    if 'name' in data:
-        name_parts = (data.get('name') or '').strip().split(' ', 1)
+    name_value = data.get('name') or data.get('full_name')
+    if name_value is not None:
+        name_parts = (name_value or '').strip().split(' ', 1)
         user.first_name = name_parts[0] if len(name_parts) > 0 else ''
         user.last_name = name_parts[1] if len(name_parts) > 1 else ''
 
@@ -321,4 +346,34 @@ def profile_stats(request):
         'total_events': total_events,
         'total_reviews': total_reviews,
         'favorite_category': favorite_category
+    })
+
+
+@csrf_exempt
+@require_http_methods(['DELETE'])
+def profile_delete_account(request):
+    user, error = resolve_authenticated_user(request)
+    if error:
+        return error
+
+    revoke_user_tokens(user)
+    user.delete()
+    return JsonResponse({'message': 'Account deleted successfully.'})
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def profile_upload_avatar(request):
+    user, error = resolve_authenticated_user(request)
+    if error:
+        return error
+    avatar_file = request.FILES.get('avatar')
+    if not avatar_file:
+        return json_error('No image file provided.', status=400)
+    user.avatar = avatar_file
+    user.avatar_url = ''  # clear url fallback
+    user.save()
+    return JsonResponse({
+        'message': 'Avatar uploaded successfully.',
+        'user': user_payload(user)
     })

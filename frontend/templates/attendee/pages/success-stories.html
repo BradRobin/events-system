@@ -16,18 +16,24 @@
             <p>Real stories from our amazing community</p>
         </div>
         
-        <!-- Stats Bar -->
-        <div class="stats-bar">
+        <!-- Stats Bar (values from platform stats pipeline) -->
+        <div class="stats-bar" id="platformStatsBar">
             <div class="stat-item">
-                <div class="stat-number">10,000+</div>
+                <div class="stat-number">
+                    <span class="counter" data-stat="happy_attendees" data-target="{{ happy_attendees|default:0 }}">0</span><span class="plus-sign">+</span>
+                </div>
                 <div class="stat-label">Happy Attendees</div>
             </div>
             <div class="stat-item">
-                <div class="stat-number">500+</div>
+                <div class="stat-number">
+                    <span class="counter" data-stat="events_hosted" data-target="{{ events_hosted|default:0 }}">0</span><span class="plus-sign">+</span>
+                </div>
                 <div class="stat-label">Events Hosted</div>
             </div>
             <div class="stat-item">
-                <div class="stat-number">98%</div>
+                <div class="stat-number">
+                    <span class="counter" data-stat="satisfaction_rate" data-target="{{ satisfaction_rate|default:0 }}">0</span><span class="percent-sign">%</span>
+                </div>
                 <div class="stat-label">Satisfaction Rate</div>
             </div>
         </div>
@@ -44,354 +50,55 @@
                 </p>
                 <div class="featured-author">
                     <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/men/54.jpg" alt="Robinson Brad">
+                        <img src="https://randomuser.me/api/portraits/men/54.jpg" alt="Edwin Nyambane">
                     </div>
                     <div class="author-info">
                         <h4>Edwin Nyambane</h4>
                         <p>Tech Enthusiast • 50+ Events Attended</p>
                         <div class="rating">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Testimonials Grid -->
-        <div class="testimonials-grid">
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    EventHub made it so easy to discover and book tickets for amazing events in Nairobi. The QR code check-in was seamless and hassle-free!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/women/16.jpg" alt="Yvonne Eshitemi">
-                    </div>
-                    <div class="author-info">
-                        <h4>Yvonne Eshitemi</h4>
-                        <p>Event Enthusiast</p>
-                        <p class="event-attended">Attended: Music Festival 2024</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    I've attended over 20 events through EventHub. The platform is reliable, and customer support is exceptional. Highly recommend!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/men/80.jpg" alt="Wilson Thoma">
-                    </div>
-                    <div class="author-info">
-                        <h4>Wilson Thoma</h4>
-                        <p>Regular Attendee</p>
-                        <p class="event-attended">Attended: 20+ Events</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    Best event discovery platform in Kenya! The variety of events and ease of booking is unmatched. I've found so many hidden gems through EventHub.
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/women/89.jpg" alt="Scholasticah Mutuku">
-                    </div>
-                    <div class="author-info">
-                        <h4>Scholasticah Mutuku</h4>
-                        <p>Adventure Seeker</p>
-                        <p class="event-attended">Attended: Cultural Fest 2024</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    As an event organizer, EventHub has been a game-changer. The platform helped us sell out our event in record time. The support team is amazing!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/men/70.jpg" alt="Brad Omwamba">
-                    </div>
-                    <div class="author-info">
-                        <h4>Brad Omwamba</h4>
-                        <p>Event Organizer</p>
-                        <p class="event-attended">Organized: Tech Summit 2024</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    The mobile app is fantastic! I can browse events, book tickets, and even check-in using my phone. No more carrying paper tickets!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/women/90.jpg" alt="Bullim Njeri">
-                    </div>
-                    <div class="author-info">
-                        <h4>Bullim Njeri</h4>
-                        <p>Mobile User</p>
-                        <p class="event-attended">Attended: Food Festival 2024</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    The customer service team went above and beyond to help me with a booking issue. Truly exceptional service from a local company!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/men/55.jpg" alt="Toji Mraster">
-                    </div>
-                    <div class="author-info">
-                        <h4>Toji Mraster</h4>
-                        <p>First-time User</p>
-                        <p class="event-attended">Attended: Business Forum</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Additional cards using remaining testimonials images -->
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    The networking opportunities through EventHub's business events have been invaluable for my startup. Highly recommend!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/women/69.jpg" alt="Stacy Naomi">
-                    </div>
-                    <div class="author-info">
-                        <h4>Stacy Naomi</h4>
-                        <p>Entrepreneur</p>
-                        <p class="event-attended">Attended: Business Summit</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    Getting tickets for major sports events has never been easier. EventHub is a game-changer for sports fans!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/men/16.jpg" alt="Frank Maina">
-                    </div>
-                    <div class="author-info">
-                        <h4>Frank Maina</h4>
-                        <p>Sports Fan</p>
-                        <p class="event-attended">Attended: Marathon 2024</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    The food festivals and culinary events I found on EventHub were incredible. Can't wait for more events!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/women/92.jpg" alt="Dev Ndung'u">
-                    </div>
-                    <div class="author-info">
-                        <h4>Dev Ndung'u</h4>
-                        <p>Foodie</p>
-                        <p class="event-attended">Attended: Food Festival 2024</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    Thanks to EventHub, I discovered amazing art exhibitions I would have otherwise missed. Great platform!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/women/62.jpg" alt="Catherine Cherop">
-                    </div>
-                    <div class="author-info">
-                        <h4>Catherine Cherop</h4>
-                        <p>Art Lover</p>
-                        <p class="event-attended">Attended: Art Exhibition</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="testimonial-card">
-                <div class="testimonial-header">
-                    <i class="fas fa-quote-left quote-icon"></i>
-                    <div class="rating">
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                        <i class="fas fa-star"></i>
-                    </div>
-                </div>
-                <p class="testimonial-text">
-                    EventHub has transformed how I discover local talent and music events. Absolutely love the platform!
-                </p>
-                <div class="testimonial-author">
-                    <div class="author-avatar">
-                        <img src="https://randomuser.me/api/portraits/men/25.jpg" alt="Brian Odhiambo">
-                    </div>
-                    <div class="author-info">
-                        <h4>Brian Odhiambo</h4>
-                        <p>Music Producer</p>
-                        <p class="event-attended">Attended: Music Concert</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Stories Grid -->
+        <div class="testimonials-grid" id="testimonialsGrid"></div>
         
-        <!-- Submit Your Story CTA -->
-        <div class="submit-story-section">
-            <div class="submit-story-card">
-                <h3>Have a success story to share?</h3>
-                <p>We'd love to hear about your experience with EventHub</p>
-                <div class="story-buttons">
-                    <button class="btn btn-primary" id="shareStoryBtn">
-                        <i class="fas fa-pen"></i>
-                        Share Your Story
-                    </button>
-                    <button class="btn btn-outline" id="leaveReviewBtn">
-                        <i class="fas fa-star"></i>
-                        Leave a Review
-                    </button>
-                </div>
-            </div>
+        <!-- Buttons -->
+        <div class="testimonials-buttons">
+            <button id="readMoreBtn" class="testimonial-btn testimonial-btn-primary">
+                <i class="fas fa-book-open"></i> Load More
+            </button>
+            <button id="shareStoryBtn" class="testimonial-btn testimonial-btn-secondary">
+                <i class="fas fa-pen-fancy"></i> Share Your Story
+            </button>
         </div>
     </div>
 </div>
 
-<!-- Share Story Modal -->
+<!-- Modal -->
 <div class="story-modal" id="storyModal">
     <div class="modal-content">
         <button class="modal-close" id="closeModalBtn">&times;</button>
         <h3>Share Your Success Story</h3>
         <form id="storyForm">
             <div class="form-group">
-                <label for="storyName">Your Name *</label>
-                <input type="text" id="storyName" required placeholder="Enter your full name">
+                <label>Your Name *</label>
+                <input type="text" id="storyName" placeholder="Enter your full name" required>
             </div>
             <div class="form-group">
-                <label for="storyEmail">Email Address *</label>
-                <input type="email" id="storyEmail" required placeholder="Enter your email">
+                <label>Email *</label>
+                <input type="email" id="storyEmail" placeholder="Enter your email" required>
             </div>
             <div class="form-group">
-                <label for="storyEvent">Event You Attended</label>
+                <label>Event Attended</label>
                 <input type="text" id="storyEvent" placeholder="Which event did you attend?">
             </div>
             <div class="form-group">
-                <label for="storyRating">Your Rating *</label>
-                <div class="rating-input">
+                <label>Your Rating *</label>
+                <div class="rating-input" id="ratingInput">
                     <i class="far fa-star" data-rating="1"></i>
                     <i class="far fa-star" data-rating="2"></i>
                     <i class="far fa-star" data-rating="3"></i>
@@ -401,8 +108,8 @@
                 <input type="hidden" id="storyRating" value="0">
             </div>
             <div class="form-group">
-                <label for="storyMessage">Your Story *</label>
-                <textarea id="storyMessage" rows="5" required placeholder="Tell us about your experience..."></textarea>
+                <label>Your Story *</label>
+                <textarea id="storyMessage" rows="4" placeholder="Tell us about your experience..." required></textarea>
             </div>
             <button type="submit" class="btn-submit">Submit Your Story</button>
         </form>

@@ -32,4 +32,4 @@ def admin_logout_view(request):
     """Admin logout"""
     logout(request)
     messages.success(request, 'You have been logged out.')
-    return redirect('/admin/login/')
+    return redirect('/login/')

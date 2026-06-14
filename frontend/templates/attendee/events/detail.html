@@ -4,17 +4,15 @@
 {% block title %}Event Details - EventHub{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/event-detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/event/event-detail.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/event/events.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="event-detail-page">
     <div class="container">
         <div class="event-detail-container" id="eventDetailContainer">
-            <div class="loading-state">
-                <div class="loading-spinner"></div>
-                <p>Loading event details...</p>
-            </div>
+            <!-- Content will be loaded here - no internal loader -->
         </div>
     </div>
 </div>
@@ -27,12 +25,12 @@
         <form id="reviewForm">
             <div class="form-group">
                 <label>Rating</label>
-                <div class="rating-select">
-                    <i class="far fa-star" data-rating="1"></i>
-                    <i class="far fa-star" data-rating="2"></i>
-                    <i class="far fa-star" data-rating="3"></i>
-                    <i class="far fa-star" data-rating="4"></i>
-                    <i class="far fa-star" data-rating="5"></i>
+                <div class="rating-select" style="display: flex; gap: 0.5rem; font-size: 1.5rem; color: #cbd5e1; cursor: pointer;">
+                    <i class="fas fa-star" data-rating="1"></i>
+                    <i class="fas fa-star" data-rating="2"></i>
+                    <i class="fas fa-star" data-rating="3"></i>
+                    <i class="fas fa-star" data-rating="4"></i>
+                    <i class="fas fa-star" data-rating="5"></i>
                 </div>
                 <input type="hidden" id="reviewRating" value="5">
             </div>
@@ -48,46 +46,11 @@
         </form>
     </div>
 </div>
+
+{% include 'attendee/events/checkout_modal.html' %}
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/attendee/payments/checkout.js' %}"></script>
 <script src="{% static 'js/attendee/events/event-detail.js' %}"></script>
-<!-- M-Pesa Payment Modal -->
-<div class="modal" id="mpesaModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-    <div class="modal-content" style="max-width:400px; width:90%; background:#fff; border-radius:16px; padding:2rem; position:relative;">
-        <span id="mpesaClose" style="position:absolute; top:1rem; right:1.25rem; font-size:1.5rem; cursor:pointer; color:#64748b;">&times;</span>
-        <input type="hidden" id="mpesaEventId">
-        <input type="hidden" id="mpesaQuantity">
-        <input type="hidden" id="mpesaTotal">
-        <h3 style="margin-bottom:1rem;">
-            <i class="fas fa-mobile-alt" style="color:#4CAF50;"></i> Pay with M-Pesa
-        </h3>
-        <div id="mpesaForm">
-            <p style="color:#64748b; margin-bottom:1rem;">Enter your M-Pesa number to receive a payment prompt.</p>
-            <div style="margin-bottom:1rem;">
-                <label style="font-weight:600;">Total Amount</label>
-                <div id="mpesaAmount" style="font-size:1.5rem; font-weight:700; color:#1e293b; margin-top:0.25rem;">KES 0</div>
-            </div>
-            <div style="margin-bottom:1rem;">
-                <label style="font-weight:600;">M-Pesa Phone Number</label>
-                <input type="tel" id="mpesaPhone" placeholder="e.g. 0712345678" maxlength="13"
-                    style="width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:8px; font-size:1rem; margin-top:0.5rem; box-sizing:border-box;">
-            </div>
-            <button id="mpesaPayBtn" onclick="initiateMpesaPayment()"
-                style="width:100%; padding:0.875rem; background:#4CAF50; color:#fff; border:none; border-radius:8px; font-size:1rem; font-weight:600; cursor:pointer;">
-                Pay Now
-            </button>
-            <p style="font-size:0.75rem; color:#94a3b8; text-align:center; margin-top:0.75rem;">
-                <i class="fas fa-lock"></i> Secured by Safaricom M-Pesa
-            </p>
-        </div>
-        <div id="mpesaWaiting" style="display:none; text-align:center; padding:2rem 0;">
-            <div class="loading-spinner" style="margin:0 auto 1rem;"></div>
-            <h4>Check your phone!</h4>
-            <p style="color:#64748b; margin-top:0.5rem;">An M-Pesa prompt has been sent.<br>Enter your PIN to complete payment.</p>
-            <p style="color:#94a3b8; font-size:0.8rem; margin-top:1rem;">Waiting for confirmation...</p>
-        </div>
-    </div>
-</div>
-
 {% endblock %}

@@ -1,0 +1,65 @@
+/* ============================================
+   SEARCH EVENTS PAGE CSS
+   ============================================ */
+
+@import url('events.css');
+@import url('filters.css');
+
+.search-page {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    min-height: 100vh;
+    padding: 2rem 0 4rem;
+}
+
+.search-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.search-header h1 {
+    font-family: 'Kaushan Script', cursive;
+    font-size: 2.5rem;
+    font-weight: 400;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+.search-header p {
+    font-size: 1rem;
+    color: #64748b;
+}
+
+.results-count {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    background: rgba(245, 158, 11, 0.05);
+    border-radius: 30px;
+    display: inline-block;
+    padding: 0.5rem 1.2rem;
+    margin-left: auto;
+    margin-right: auto;
+    width: auto;
+}
+
+.search-stats-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .search-header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .search-header p {
+        font-size: 0.85rem;
+    }
+}
