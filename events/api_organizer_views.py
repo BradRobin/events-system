@@ -609,14 +609,102 @@ def api_organizer_settings_apikeys_revoke(request, key_id):
 @organizer_required
 @require_http_methods(["GET"])
 def api_organizer_reviews_stats(request):
-    """
-    Organizer reviews stats endpoint.
-    Reviews app currently has no persisted model, so return safe defaults.
-    """
+    """Aggregate review statistics for the logged-in organizer."""
+    from reviews.models import EventReview
+    from django.db.models import Avg
+
+    reviews = EventReview.objects.filter(event__organizer=request.user)
+    total = reviews.count()
+    avg_rating = reviews.aggregate(avg=Avg('rating'))['avg']
+    responded = reviews.exclude(organizer_response='').count()
+    response_rate = round((responded / total) * 100, 1) if total else 0
+
     return JsonResponse({
-        'avg_rating': 0,
-        'total_reviews': 0,
-        'response_rate': 0
+        'avg_rating': round(float(avg_rating), 1) if avg_rating is not None else 0,
+        'total_reviews': total,
+        'response_rate': response_rate,
+    })
+
+
+@csrf_exempt
+@organizer_required
+@require_http_methods(["GET"])
+def api_organizer_reviews_list(request, event_id=None):
+    """List reviews for the organizer's events."""
+    from reviews.models import EventReview
+
+    reviews = EventReview.objects.filter(
+        event__organizer=request.user,
+    ).select_related('event', 'user').order_by('-created_at')
+
+    if event_id:
+        reviews = reviews.filter(event_id=event_id)
+
+    page = int(request.GET.get('page', 1))
+    limit = int(request.GET.get('limit', 20))
+    start = (page - 1) * limit
+    end = start + limit
+    page_items = list(reviews[start:end])
+    total = reviews.count()
+
+    results = [{
+        'id': r.id,
+        'event_id': r.event_id,
+        'event_title': r.event.title,
+        'attendee_name': r.user.get_full_name() or r.user.email,
+        'rating': r.rating,
+        'comment': r.comment,
+        'response': r.organizer_response or '',
+        'created_at': r.created_at.isoformat(),
+    } for r in page_items]
+
+    total_pages = max(1, (total + limit - 1) // limit) if total else 0
+    return JsonResponse({
+        'results': results,
+        'count': total,
+        'page': page,
+        'total_pages': total_pages,
+        'previous': page > 1,
+        'next': end < total,
+    })
+
+
+@csrf_exempt
+@organizer_required
+@require_http_methods(["POST"])
+def api_organizer_reviews_respond(request, review_id):
+    """Post an organizer response to a review."""
+    import json
+    from django.utils import timezone
+    from reviews.models import EventReview
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON'}, status=400)
+
+    response_text = (data.get('response') or '').strip()
+    if not response_text:
+        return JsonResponse({'success': False, 'message': 'Response is required.'}, status=400)
+
+    try:
+        review = EventReview.objects.select_related('event').get(
+            pk=review_id,
+            event__organizer=request.user,
+        )
+    except EventReview.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Review not found.'}, status=404)
+
+    review.organizer_response = response_text
+    review.organizer_responded_at = timezone.now()
+    review.save(update_fields=['organizer_response', 'organizer_responded_at', 'updated_at'])
+
+    return JsonResponse({
+        'success': True,
+        'review': {
+            'id': review.id,
+            'response': review.organizer_response,
+        },
     })
 
 

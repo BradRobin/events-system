@@ -3,6 +3,8 @@
 
 {% block title %}Reviews - EventHub{% endblock %}
 
+{% block meta_description %}Read verified attendee reviews for events booked on EventHub in Kenya. See ratings and feedback from real ticket buyers.{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/attendee/main.css' %}">
 <style>
@@ -71,6 +73,18 @@
 .reviewer-name {
     font-weight: 600;
     color: var(--np-dark);
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .review-date {
@@ -188,60 +202,38 @@
 
 {% block content %}
 <div class="page-container">
+    <h1 class="visually-hidden">Event Reviews</h1>
     <div class="reviews-summary">
-        <div class="rating-large">4.8</div>
-        <div class="stars-large">★★★★★</div>
-        <div>Based on 1,248 reviews</div>
+        <div class="rating-large" id="reviewsAverageRating">{{ average_rating|floatformat:1 }}</div>
+        <div class="stars-large" id="reviewsStarsSummary" aria-hidden="true">★★★★★</div>
+        <div id="reviewsCountSummary">Based on {{ review_count }} review{{ review_count|pluralize }}</div>
     </div>
     
     <div id="reviewsList">
-        <div class="review-card">
-            <div class="review-header">
-                <div class="reviewer-info">
-                    <div class="reviewer-avatar">JM</div>
-                    <div>
-                        <div class="reviewer-name">John Mwangi</div>
-                        <div class="review-date">December 15, 2024</div>
+        {% if reviews %}
+            {% for review in reviews %}
+            <div class="review-card">
+                <div class="review-header">
+                    <div class="reviewer-info">
+                        <div class="reviewer-avatar">{{ review.initials }}</div>
+                        <div>
+                            <div class="reviewer-name">{{ review.user_name }}</div>
+                            <div class="review-date">{{ review.created_at|date:"F j, Y" }}</div>
+                        </div>
                     </div>
+                    <div class="review-rating" aria-label="{{ review.rating }} out of 5 stars">{% for i in "12345" %}{% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}{% endfor %}</div>
                 </div>
-                <div class="review-rating">★★★★★</div>
+                {% if review.comment %}
+                <div class="review-content">{{ review.comment }}</div>
+                {% endif %}
+                <div class="review-event">{{ review.event_title }}</div>
             </div>
-            <div class="review-title">Amazing experience!</div>
-            <div class="review-content">The Summer Music Festival was incredible! Great organization, amazing artists, and seamless check-in with the QR code. Highly recommend EventHub!</div>
-            <div class="review-event">Summer Music Festival 2024</div>
-        </div>
-        
-        <div class="review-card">
-            <div class="review-header">
-                <div class="reviewer-info">
-                    <div class="reviewer-avatar">SW</div>
-                    <div>
-                        <div class="reviewer-name">Sarah Wanjiku</div>
-                        <div class="review-date">January 20, 2025</div>
-                    </div>
-                </div>
-                <div class="review-rating">★★★★★</div>
+            {% endfor %}
+        {% else %}
+            <div class="review-card">
+                <div class="review-content">No public reviews yet. Attend an event and share your experience after it ends.</div>
             </div>
-            <div class="review-title">Best platform for events</div>
-            <div class="review-content">I've attended over 20 events through EventHub. The platform is reliable, customer support is exceptional, and the ticket booking process is very smooth.</div>
-            <div class="review-event">Tech Innovation Summit 2025</div>
-        </div>
-        
-        <div class="review-card">
-            <div class="review-header">
-                <div class="reviewer-info">
-                    <div class="reviewer-avatar">MO</div>
-                    <div>
-                        <div class="reviewer-name">Michael Otieno</div>
-                        <div class="review-date">February 10, 2025</div>
-                    </div>
-                </div>
-                <div class="review-rating">★★★★★</div>
-            </div>
-            <div class="review-title">Highly recommended!</div>
-            <div class="review-content">The best event discovery platform in Kenya! Easy to use, great selection of events, and fantastic customer service.</div>
-            <div class="review-event">Food & Wine Expo 2025</div>
-        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -275,10 +267,8 @@
             </div>
             <div class="form-group">
                 <label>Event</label>
-                <select id="reviewEvent" class="form-control">
-                    <option value="Summer Music Festival">Summer Music Festival</option>
-                    <option value="Tech Innovation Summit">Tech Innovation Summit</option>
-                    <option value="Food & Wine Expo">Food & Wine Expo</option>
+                <select id="reviewEvent" class="form-control" disabled>
+                    <option value="">Sign in after attending an event to leave a review</option>
                 </select>
             </div>
             <button type="submit" class="btn-primary" style="width: 100%;">Submit Review</button>
@@ -349,10 +339,8 @@ modal.addEventListener('click', (e) => {
 // Form submission
 document.getElementById('reviewForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    showToast('Thank you for your review!', 'success');
+    showToast('Sign in from an event you attended to submit a verified review.', 'info');
     modal.classList.remove('active');
-    document.getElementById('reviewForm').reset();
-    ratingInput.value = 5;
 });
 
 function showToast(message, type) {

@@ -41,8 +41,8 @@
                 </div>
             </div>
 
-            <!-- Google Sign In -->
-            <div style="position: relative; width: 100%; margin-bottom: 0.875rem;">
+            <!-- Google Sign In (attendee only — organizers must register with email) -->
+            <div id="googleSignInSection" style="position: relative; width: 100%; margin-bottom: 0.875rem;">
                 <button class="social-login-btn" id="googleSignInBtn" style="margin-bottom: 0; pointer-events: none;">
                     <i class="fab fa-google social-login-icon"></i>
                     Continue with Google
@@ -128,14 +128,20 @@
     roleRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             roleInput.value = this.value;
+            const registerForm = document.getElementById('registerForm');
+            const googleSection = document.getElementById('googleSignInSection');
             if (this.value === 'organizer') {
                 organizerFields.classList.add('show');
                 authTitle.textContent = 'Register as Organizer';
                 authSubtitle.textContent = 'Start creating and managing events';
+                registerForm.setAttribute('action', '/api/organizer/auth/register/');
+                if (googleSection) googleSection.style.display = 'none';
             } else {
                 organizerFields.classList.remove('show');
                 authTitle.textContent = 'Create Account';
                 authSubtitle.textContent = 'Join our community of event lovers';
+                registerForm.setAttribute('action', '/api/auth/register/');
+                if (googleSection) googleSection.style.display = 'block';
             }
         });
     });
@@ -318,7 +324,10 @@
         const emailValidation = validateEmail(email);
         const passwordValidation = validatePassword(password1);
         
-        if (nameValidation || emailValidation || passwordValidation) {
+        const orgValidation = validateOrganization(org);
+        const phoneValidation = validatePhone(phoneInput ? phoneInput.value : '');
+
+        if (nameValidation || emailValidation || passwordValidation || orgValidation || phoneValidation) {
             if (nameValidation) {
                 nameError.textContent = nameValidation;
                 nameError.classList.remove('hidden');
@@ -330,6 +339,14 @@
             if (passwordValidation) {
                 password1Error.textContent = passwordValidation;
                 password1Error.classList.remove('hidden');
+            }
+            if (orgValidation) {
+                orgError.textContent = orgValidation;
+                orgError.classList.remove('hidden');
+            }
+            if (phoneValidation && phoneError) {
+                phoneError.textContent = phoneValidation;
+                phoneError.classList.remove('hidden');
             }
             return;
         }
@@ -356,6 +373,7 @@
         
         fetch(form.action, {
             method: 'POST',
+            credentials: 'same-origin',
             body: JSON.stringify(data),
             headers: {
                 'Content-Type': 'application/json',
@@ -379,6 +397,13 @@
                 localStorage.setItem(`${prefix}_access_token`, body.access);
                 localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
                 localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
+                if (body.expires_in) {
+                    localStorage.setItem(`${prefix}_token_expiry`, String(Date.now() + body.expires_in * 1000));
+                }
+
+                if (window.EventhubAuthLoginHooks) {
+                    EventhubAuthLoginHooks.onLoginSuccess(prefix, body.user);
+                }
                 
                 showToast('Registration successful! Redirecting...', 'success');
                 setTimeout(() => {
@@ -413,6 +438,11 @@
 
     // Google Sign In Callback
     function handleCredentialResponse(response) {
+        if (roleInput.value === 'organizer') {
+            showToast('Organizers must register with email and organization name.', 'error');
+            return;
+        }
+
         const selectedRole = roleInput.value;
         const googleBtn = document.getElementById('googleSignInBtn');
         if (googleBtn) {
@@ -430,8 +460,19 @@
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(res => res.json().then(data => ({status: res.status, body: data})))
+        .then(res => res.text().then(text => {
+            let body = null;
+            try { body = JSON.parse(text); } catch (e) { /* non-JSON */ }
+            return {status: res.status, body};
+        }))
         .then(({status, body}) => {
+            if (body === null) {
+                showToast('Unexpected server response during Google Sign-in.', 'error');
+                if (googleBtn) {
+                    googleBtn.innerHTML = '<i class="fab fa-google social-login-icon"></i> Continue with Google';
+                }
+                return;
+            }
             if (status === 200 || status === 201) {
                 const userRole = body.user.role;
                 const prefix = userRole === 'organizer' ? 'organizer' : 'attendee';
@@ -439,6 +480,13 @@
                 localStorage.setItem(`${prefix}_access_token`, body.access);
                 localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
                 localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
+                if (body.expires_in) {
+                    localStorage.setItem(`${prefix}_token_expiry`, String(Date.now() + body.expires_in * 1000));
+                }
+
+                if (window.EventhubAuthLoginHooks) {
+                    EventhubAuthLoginHooks.onLoginSuccess(prefix, body.user);
+                }
                 
                 showToast('Registration successful! Redirecting...', 'success');
                 setTimeout(() => {

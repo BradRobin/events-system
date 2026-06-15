@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth import get_user_model
 from events.models import Event
+from events.views import resolve_banner_image
 from .models import Ticket
 from .email_service import send_ticket_confirmation
 from accounts.auth import authenticate_bearer
@@ -57,25 +58,34 @@ def ticket_checkout_api(request):
                 'ticket_number': order.ticket.ticket_number,
             })
 
-        fulfillable_statuses = {
-            'pending_payment', 'failed', 'manual_review', 'verifying', 'completed',
-        }
-        if order.status not in fulfillable_statuses:
+        # Two-step manual flow: tickets are issued only by organizer approval or STK callback.
+        if order.status == 'manual_review':
             return JsonResponse({
                 'success': False,
-                'message': f'Order cannot be fulfilled in its current state ({order.status}).',
+                'message': 'Your payment is awaiting organizer approval.',
             }, status=400)
 
-        try:
-            ticket = fulfill_payment_order(order)
-        except FulfillmentError as exc:
-            return JsonResponse({'success': False, 'message': exc.message}, status=400)
+        if order.status in ('pending_payment', 'verifying', 'failed', 'rejected'):
+            return JsonResponse({
+                'success': False,
+                'message': 'Complete payment in checkout and upload your M-Pesa screenshot.',
+            }, status=400)
+
+        if order.status == 'completed' and not order.ticket_id:
+            try:
+                ticket = fulfill_payment_order(order)
+            except FulfillmentError as exc:
+                return JsonResponse({'success': False, 'message': exc.message}, status=400)
+            return JsonResponse({
+                'success': True,
+                'message': 'Checkout successful! Ticket registered.',
+                'ticket_number': ticket.ticket_number,
+            })
 
         return JsonResponse({
-            'success': True,
-            'message': 'Checkout successful! Ticket registered.',
-            'ticket_number': ticket.ticket_number,
-        })
+            'success': False,
+            'message': f'Order cannot be fulfilled in its current state ({order.status}).',
+        }, status=400)
 
     except Exception as e:
         import traceback
@@ -92,7 +102,11 @@ def api_tickets_upcoming(request):
         return JsonResponse({'success': False, 'message': 'Please login to view tickets.'}, status=401)
         
     # Get tickets for events starting now or in the future
-    tickets = Ticket.objects.filter(attendee=user, event__end_date__gte=timezone.now()).select_related('event').order_by('event__start_date')
+    tickets = Ticket.objects.filter(
+        attendee=user,
+        status__in=['valid', 'checked_in'],
+        event__end_date__gte=timezone.now(),
+    ).select_related('event').order_by('event__start_date')
     results = []
     for t in tickets:
         results.append({
@@ -109,7 +123,7 @@ def api_tickets_upcoming(request):
                 'end_date': t.event.end_date.isoformat(),
                 'venue_name': t.event.venue,
                 'location': t.event.venue,
-                'banner_image': t.event.banner_image,
+                'banner_image': resolve_banner_image(t.event.banner_image),
             }
         })
     return JsonResponse({'results': results})
@@ -123,7 +137,11 @@ def api_tickets_past(request):
         return JsonResponse({'success': False, 'message': 'Please login to view tickets.'}, status=401)
         
     # Get tickets for events that have ended
-    tickets = Ticket.objects.filter(attendee=user, event__end_date__lt=timezone.now()).select_related('event').order_by('-event__start_date')
+    tickets = Ticket.objects.filter(
+        attendee=user,
+        status__in=['valid', 'checked_in'],
+        event__end_date__lt=timezone.now(),
+    ).select_related('event').order_by('-event__start_date')
     results = []
     for t in tickets:
         results.append({
@@ -140,7 +158,7 @@ def api_tickets_past(request):
                 'end_date': t.event.end_date.isoformat(),
                 'venue_name': t.event.venue,
                 'location': t.event.venue,
-                'banner_image': t.event.banner_image,
+                'banner_image': resolve_banner_image(t.event.banner_image),
             }
         })
     return JsonResponse({'results': results})
@@ -171,7 +189,7 @@ def api_ticket_detail(request, ticket_number):
                 'end_date': t.event.end_date.isoformat(),
                 'venue_name': t.event.venue,
                 'location': t.event.venue,
-                'banner_image': t.event.banner_image,
+                'banner_image': resolve_banner_image(t.event.banner_image),
             }
         }
         return JsonResponse(data)
@@ -274,7 +292,10 @@ from events.api_organizer_views import organizer_required
 @require_http_methods(["GET"])
 def api_organizer_bookings_list(request):
     """List bookings (tickets bought) for events organized by the logged-in user."""
+    event_id = request.GET.get('event_id')
     tickets = Ticket.objects.filter(event__organizer=request.user).select_related('event').order_by('-purchase_date')
+    if event_id:
+        tickets = tickets.filter(event_id=event_id)
     results = []
     for t in tickets:
         results.append({
@@ -315,12 +336,16 @@ def api_organizer_tickets_stats(request, event_id=None):
     stats = tickets.aggregate(
         total=Sum('quantity'),
         checked_in=Sum('quantity', filter=Q(status='checked_in')),
-        recent=Sum('quantity', filter=Q(purchase_date__gte=yesterday))
     )
+    
+    recent_checkins = tickets.filter(
+        status='checked_in',
+        checked_in_at__gte=yesterday,
+    ).aggregate(recent=Sum('quantity'))['recent'] or 0
     
     total = stats['total'] or 0
     checked_in = stats['checked_in'] or 0
-    recent = stats['recent'] or 0
+    recent = recent_checkins
     
     return JsonResponse({
         'total': total,

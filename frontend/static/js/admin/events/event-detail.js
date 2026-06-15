@@ -57,8 +57,8 @@ async function loadEventDetail() {
             document.getElementById('eventBanner').style.backgroundImage = `url('${event.banner_image}')`;
         }
         
-        // Show approval banner if status is pending or approved
-        if (event.status === 'pending' || event.status === 'approved') {
+        // Show approval banner if status is pending, draft, or approved
+        if (['pending', 'draft', 'approved'].includes(event.status)) {
             const banner = document.getElementById('approvalBanner');
             const bannerTitle = banner.querySelector('h3');
             const bannerDesc = banner.querySelector('p');
@@ -67,7 +67,7 @@ async function loadEventDetail() {
             
             banner.style.display = 'block';
             
-            if (event.status === 'pending') {
+            if (event.status === 'pending' || event.status === 'draft') {
                 if (bannerTitle) bannerTitle.textContent = 'Event Awaiting Approval';
                 if (bannerDesc) bannerDesc.textContent = 'Review the event details below before making a decision.';
                 if (btnApprove) btnApprove.style.display = 'inline-flex';
@@ -75,7 +75,7 @@ async function loadEventDetail() {
                     btnReject.style.display = 'inline-flex';
                     btnReject.innerHTML = '<i class="fas fa-times-circle"></i> Reject';
                 }
-            } else if (event.status === 'approved') {
+            } else if (event.status === 'approved' || event.status === 'published') {
                 if (bannerTitle) bannerTitle.textContent = 'Event Approved';
                 if (bannerDesc) bannerDesc.textContent = 'This event has been approved. It is currently waiting to be published by the organizer.';
                 if (btnApprove) btnApprove.style.display = 'none';
@@ -122,19 +122,26 @@ async function loadApprovalHistory() {
         
         if (data.history && data.history.length > 0) {
             document.getElementById('historyCard').style.display = 'block';
-            container.innerHTML = data.history.map(item => `
-                <div class="timeline-item ${item.action}">
+            container.innerHTML = data.history.map(item => {
+                const action = item.action || '';
+                const isApproved = action === 'approved';
+                const isCreated = action === 'created';
+                const title = isCreated ? 'Submitted' : (isApproved ? 'Approved' : 'Rejected');
+                const icon = isCreated ? 'fa-plus' : (isApproved ? 'fa-check' : 'fa-times');
+                return `
+                <div class="timeline-item ${action}">
                     <div class="timeline-icon">
-                        <i class="fas ${item.action === 'approved' ? 'fa-check' : 'fa-times'}"></i>
+                        <i class="fas ${icon}"></i>
                     </div>
                     <div class="timeline-content">
-                        <h4>${item.action === 'approved' ? 'Approved' : 'Rejected'}</h4>
-                        <p>By: ${escapeHtml(item.admin_name)}</p>
+                        <h4>${title}</h4>
+                        <p>By: ${escapeHtml(item.admin_name || item.user)}</p>
                         ${item.reason ? `<p>Reason: ${escapeHtml(item.reason)}</p>` : ''}
-                        <small>${formatDateTime(item.created_at)}</small>
+                        ${item.details ? `<p>${escapeHtml(item.details)}</p>` : ''}
+                        <small>${formatDateTime(item.created_at || item.timestamp)}</small>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
     } catch (error) {
         console.error('Error loading history:', error);

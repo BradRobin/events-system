@@ -2,7 +2,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, login as django_login
 import json
 import random
 from django.db import DatabaseError
@@ -72,6 +72,8 @@ def google_oauth_callback(request):
 
 
 def _complete_google_login(request, User, google_id, email, first_name, last_name, picture, role):
+    is_new_user = False
+
     # 1. Try to find user by google_id or email
     user = User.objects.filter(google_id=google_id).first()
     if not user:
@@ -83,6 +85,16 @@ def _complete_google_login(request, User, google_id, email, first_name, last_nam
             
     # 2. If user doesn't exist, register them
     if not user:
+        if role == 'organizer':
+            return json_error(
+                'Google sign-up is not available for organizers. '
+                'Please register with email and provide your organization name.',
+                status=403,
+            )
+        if role == 'admin':
+            return json_error('Admin accounts cannot be created via Google sign-in.', status=403)
+
+        is_new_user = True
         # Auto-generate a unique username
         email_prefix = email.split('@')[0]
         cleaned_prefix = "".join(c for c in email_prefix if c.isalnum() or c in ['.', '-', '_'])
@@ -124,11 +136,17 @@ def _complete_google_login(request, User, google_id, email, first_name, last_nam
     # Check if active
     if not user.is_active:
         return json_error('This account is inactive.', status=403)
-        
-    # Standard role validation if logging in as organizer
+
+    # Role portal gates (existing users logging in with a selected portal)
     if role == 'organizer' and user.role != 'organizer' and not user.is_superuser:
         return json_error('Only organizer accounts can access the organizer portal.', status=403)
-        
+    if role == 'admin':
+        from accounts.admin_api import is_admin_or_staff
+        if not is_admin_or_staff(user):
+            return json_error('Only admin accounts can access the admin portal.', status=403)
+
+    django_login(request, user)
+
     # Generate token pair
     tokens = issue_token_pair(user)
 
@@ -136,7 +154,7 @@ def _complete_google_login(request, User, google_id, email, first_name, last_nam
     schedule_events_catalog_warm()
     
     return JsonResponse({
-        'message': 'Login successful.',
+        'message': 'Registration successful.' if is_new_user else 'Login successful.',
         'user': user_payload(user),
         **tokens
-    })
+    }, status=201 if is_new_user else 200)

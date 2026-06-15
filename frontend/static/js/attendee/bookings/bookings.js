@@ -535,58 +535,50 @@ function setupReviewModalHandlers() {
 
 function submitBookingReview() {
     const eventId = document.getElementById('reviewEventId')?.value;
-    const rating = parseInt(document.getElementById('reviewRating')?.value || 0);
+    const rating = parseInt(document.getElementById('reviewRating')?.value || 0, 10);
     const title = document.getElementById('reviewTitle')?.value.trim();
     const content = document.getElementById('reviewText')?.value.trim();
-    
+
     if (!eventId) {
         showToast('Invalid event ID', 'error');
         return;
     }
-    if (!title) {
-        showToast('Please enter a review title', 'error');
+    if (rating < 1 || rating > 5) {
+        showToast('Please select a rating between 1 and 5', 'error');
         return;
     }
-    if (!content) {
-        showToast('Please enter your review', 'error');
+
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) {
+        showToast('Please login to write a review', 'info');
         return;
     }
-    if (rating === 0) {
-        showToast('Please select a rating', 'error');
-        return;
-    }
-    
-    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
-    const userName = user.name || 'Guest User';
-    const userInitial = userName.charAt(0).toUpperCase();
-    
-    const newReview = {
-        id: Date.now(),
-        userName: userName,
-        userInitial: userInitial,
-        rating: rating,
-        title: title,
-        content: content,
-        created_at: new Date().toISOString()
-    };
-    
-    try {
-        let reviews = JSON.parse(localStorage.getItem(`reviews_${eventId}`) || '[]');
-        
-        reviews = reviews.filter(r => r.userName !== userName);
-        reviews.push(newReview);
-        
-        localStorage.setItem(`reviews_${eventId}`, JSON.stringify(reviews));
-        showToast('Thank you for your review!', 'success');
-        
-        const modal = document.getElementById('reviewModal');
-        if (modal) modal.style.display = 'none';
-        
-        initBookingRatingSystems();
-    } catch (e) {
-        console.error('Error saving review:', e);
-        showToast('Failed to save review. Please try again.', 'error');
-    }
+
+    const comment = [title, content].filter(Boolean).join('\n\n');
+
+    fetch(`/api/attendee/reviews/create/${eventId}/`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ rating, comment }),
+    })
+        .then((res) => res.json().then((data) => ({ res, data })))
+        .then(({ res, data }) => {
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Could not submit review');
+            }
+            showToast('Thank you for your review!', 'success');
+            const modal = document.getElementById('reviewModal');
+            if (modal) modal.style.display = 'none';
+            initBookingRatingSystems();
+        })
+        .catch((error) => {
+            console.error('Error saving review:', error);
+            showToast(error.message || 'Failed to save review. Please try again.', 'error');
+        });
 }
 
 function formatDate(dateString) {

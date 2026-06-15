@@ -3,6 +3,39 @@
    EventHub Admin Portal - Core Functionality
    ============================================ */
 
+function clearAdminAuthStorage() {
+    try {
+        localStorage.removeItem('admin_access_token');
+        localStorage.removeItem('admin_refresh_token');
+        localStorage.removeItem('admin_user');
+        localStorage.removeItem('admin_token_expiry');
+    } catch (e) {
+        // ignore storage errors
+    }
+}
+
+async function adminLogout(event) {
+    if (event) event.preventDefault();
+    const refresh = localStorage.getItem('admin_refresh_token');
+    const access = getAdminAccessToken();
+    try {
+        if (access) {
+            await fetch('/api/auth/logout/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: getAdminAuthHeaders(),
+                body: JSON.stringify(refresh ? { refresh } : {}),
+            });
+        }
+    } catch (e) {
+        // proceed with local cleanup even if API logout fails
+    }
+    clearAdminAuthStorage();
+    window.location.href = '/admin/login/';
+}
+
+window.adminLogout = adminLogout;
+
 function getAdminAccessToken() {
     try {
         return localStorage.getItem('admin_access_token') || '';
@@ -220,7 +253,25 @@ document.addEventListener('DOMContentLoaded', function() {
     initActivePageHighlighting();
     initNotifications();
     initPendingCount();
+    initAdminProfile();
 });
+
+async function initAdminProfile() {
+    try {
+        const data = await apiRequest('/api/admin/profile/');
+        const user = data.user || data;
+        if (!user) return;
+        const name = user.full_name || user.username || 'Admin';
+        const nameEl = document.getElementById('adminProfileName');
+        const roleEl = document.getElementById('adminProfileRole');
+        const initialEl = document.getElementById('adminProfileInitial');
+        if (nameEl) nameEl.textContent = name;
+        if (roleEl) roleEl.textContent = user.role === 'admin' ? 'Administrator' : (user.role || 'Administrator');
+        if (initialEl) initialEl.textContent = name.charAt(0).toUpperCase();
+    } catch (error) {
+        // Profile load is non-critical for layout
+    }
+}
 
 function initSidebar() {
     const sidebar = document.getElementById('adminSidebar');
@@ -370,7 +421,10 @@ async function loadNotifications() {
     }
     
     try {
-        const response = await fetch('/api/admin/notifications/recent/');
+        const response = await fetch('/api/admin/notifications/recent/', {
+            headers: getAdminAuthHeaders(),
+            credentials: 'same-origin'
+        });
         const contentType = response.headers.get('content-type');
         if (response.ok && contentType && contentType.includes('application/json')) {
             const data = await response.json();

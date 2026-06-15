@@ -1,6 +1,7 @@
 import json
 
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -168,3 +169,79 @@ def api_delete_review(request, review_id):
     if not deleted:
         return JsonResponse({'success': False, 'message': 'Review not found.'}, status=404)
     return JsonResponse({'success': True})
+
+
+@require_http_methods(['GET'])
+def api_public_reviews(request):
+    """Public aggregate and recent reviews for marketing pages."""
+    from django.db.models import Avg, Count
+
+    agg = EventReview.objects.aggregate(avg=Avg('rating'), count=Count('id'))
+    reviews = EventReview.objects.select_related('user', 'event').order_by('-created_at')[:24]
+
+    results = []
+    for review in reviews:
+        name = (
+            getattr(review.user, 'full_name', None)
+            or review.user.get_full_name()
+            or review.user.username
+        )
+        parts = [p for p in name.split() if p]
+        initials = ''.join(p[0].upper() for p in parts[:2]) or 'U'
+        results.append({
+            'id': review.id,
+            'rating': review.rating,
+            'comment': review.comment,
+            'event_title': review.event.title,
+            'user_name': name,
+            'initials': initials,
+            'created_at': review.created_at,
+        })
+
+    avg = agg['avg']
+    return JsonResponse({
+        'success': True,
+        'count': agg['count'] or 0,
+        'average_rating': round(float(avg), 1) if avg is not None else 0,
+        'results': [
+            {
+                **{k: v for k, v in item.items() if k != 'created_at'},
+                'created_at': item['created_at'].isoformat(),
+            }
+            for item in results
+        ],
+    })
+
+
+def reviews_page_view(request):
+    """Attendee reviews page with live database aggregates."""
+    from django.db.models import Avg, Count
+
+    agg = EventReview.objects.aggregate(avg=Avg('rating'), count=Count('id'))
+    reviews = EventReview.objects.select_related('user', 'event').order_by('-created_at')[:24]
+
+    review_items = []
+    for review in reviews:
+        name = (
+            getattr(review.user, 'full_name', None)
+            or review.user.get_full_name()
+            or review.user.username
+        )
+        parts = [p for p in name.split() if p]
+        initials = ''.join(p[0].upper() for p in parts[:2]) or 'U'
+        review_items.append({
+            'rating': review.rating,
+            'comment': review.comment,
+            'event_title': review.event.title,
+            'user_name': name,
+            'initials': initials,
+            'created_at': review.created_at,
+        })
+
+    avg = agg['avg']
+    context = {
+        'review_count': agg['count'] or 0,
+        'average_rating': round(float(avg), 1) if avg is not None else 0,
+        'reviews': review_items,
+    }
+    return render(request, 'attendee/pages/reviews.html', context)

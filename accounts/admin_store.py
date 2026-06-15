@@ -161,7 +161,7 @@ def build_dynamic_notifications():
     notifications = []
 
     pending_events = (
-        Event.objects.filter(status='pending')
+        Event.objects.filter(status__in=['pending', 'draft'])
         .select_related('organizer', 'category')
         .order_by('-updated_at', '-created_at')[:25]
     )

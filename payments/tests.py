@@ -105,6 +105,8 @@ class PaymentOrderTests(TestCase):
             total_amount=Decimal('2500'),
             status='manual_review',
             submitted_mpesa_name='JOHN DOE',
+            payment_rail='manual',
+            screenshot_data='data:image/jpeg;base64,abc',
         )
         seats_before = self.event.available_seats
         self.client.force_login(self.organizer)
@@ -203,7 +205,7 @@ class PaymentOrderTests(TestCase):
                 status='pending_payment',
             )
 
-    def test_checkout_api_fulfills_manual_review_order(self):
+    def test_checkout_api_rejects_manual_review_order(self):
         order = PaymentOrder.objects.create(
             attendee=self.attendee,
             event=self.event,
@@ -213,6 +215,8 @@ class PaymentOrderTests(TestCase):
             unit_price=Decimal('1000'),
             total_amount=Decimal('1000'),
             status='manual_review',
+            payment_rail='manual',
+            screenshot_data='data:image/jpeg;base64,abc',
         )
         self.client.force_login(self.attendee)
         response = self.client.post(
@@ -220,10 +224,27 @@ class PaymentOrderTests(TestCase):
             data=f'{{"payment_order_id": {order.id}}}',
             content_type='application/json',
         )
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.status_code, 400, response.content)
         data = response.json()
-        self.assertTrue(data['success'])
-        self.assertTrue(Ticket.objects.filter(attendee=self.attendee).exists())
+        self.assertFalse(data['success'])
+        self.assertFalse(Ticket.objects.filter(attendee=self.attendee).exists())
+
+    def test_organizer_approve_requires_payment_proof(self):
+        order = PaymentOrder.objects.create(
+            attendee=self.attendee,
+            event=self.event,
+            organizer=self.organizer,
+            ticket_type='Regular',
+            quantity=1,
+            unit_price=Decimal('1000'),
+            total_amount=Decimal('1000'),
+            status='manual_review',
+            payment_rail='manual',
+        )
+        self.client.force_login(self.organizer)
+        response = self.client.post(f'/api/organizer/payment-orders/{order.id}/approve/')
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn('proof', response.json()['message'].lower())
 
     def test_organizer_notifications_api(self):
         order = PaymentOrder.objects.create(
@@ -257,6 +278,7 @@ class PaymentOrderTests(TestCase):
         'MPESA_SHORTCODE': '174379',
         'MPESA_PASSKEY': 'test-passkey',
         'MPESA_CALLBACK_URL': 'https://example.com/api/payments/mpesa/stk-callback/',
+        'MPESA_STK_CHECKOUT_ENABLED': 'true',
     })
     @patch('payments.order_views.MpesaClient.stk_push')
     def test_stk_push_initiates_order(self, mock_stk_push):

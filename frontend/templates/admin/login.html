@@ -103,6 +103,9 @@
                     localStorage.setItem('admin_access_token', body.access);
                     localStorage.setItem('admin_refresh_token', body.refresh);
                     localStorage.setItem('admin_user', JSON.stringify(user));
+                    if (body.expires_in) {
+                        localStorage.setItem('admin_token_expiry', String(Date.now() + body.expires_in * 1000));
+                    }
                     window.location.href = '/admin-portal/dashboard/';
                     return;
                 }

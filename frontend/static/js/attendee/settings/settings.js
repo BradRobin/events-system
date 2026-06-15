@@ -25,12 +25,13 @@ async function loadUserProfile() {
     const phoneInput = document.getElementById('phone');
 
     try {
-        if (window.AttendeeAPIEndpoints?.profile?.get) {
-            const profile = await window.AttendeeAPIEndpoints.profile.get();
-            if (profile) {
-                if (fullNameInput) fullNameInput.value = profile.full_name || profile.name || '';
-                if (emailInput) emailInput.value = profile.email || '';
-                if (phoneInput) phoneInput.value = profile.phone || '';
+        if (window.AttendeeAPIEndpoints?.profile?.getProfile) {
+            const profile = await window.AttendeeAPIEndpoints.profile.getProfile();
+            const user = profile?.user || profile;
+            if (user) {
+                if (fullNameInput) fullNameInput.value = user.full_name || user.name || '';
+                if (emailInput) emailInput.value = user.email || '';
+                if (phoneInput) phoneInput.value = user.phone || '';
                 return;
             }
         }

@@ -1,7 +1,8 @@
 /**
- * M-Pesa checkout:
- * - STK Push (platform) when configured
- * - Manual screenshot + organizer approval as fallback
+ * Two-step M-Pesa checkout:
+ * 1) Pay organizer manually and upload screenshot
+ * 2) Organizer reviews and approves → ticket issued
+ * Optional STK Push when MPESA_STK_CHECKOUT_ENABLED=true
  */
 (function () {
     'use strict';
@@ -209,7 +210,7 @@
         }
         if (ticketEl) ticketEl.textContent = order.ticket_number || '—';
         showStep(6);
-        window.dispatchEvent(new CustomEvent('checkout-completed', { detail: order }));
+        window.dispatchEvent(new CustomEvent('checkout-completed', { detail: { ...order, event_id: order.event_id } }));
     }
 
     function startStkPolling(orderId) {
@@ -288,7 +289,9 @@
                 if (!line.startsWith('data:')) continue;
                 const payload = JSON.parse(line.slice(5));
                 if (payload.message) renderStreamStep(payload.message);
-                if (payload.step === 'pending_approval') return payload;
+                if (payload.step === 'pending_approval') {
+                    return { ...payload, event_id: payload.event_id || currentOrder?.event_id };
+                }
                 if (payload.step === 'failed') {
                     throw new Error(payload.message || 'Verification failed.');
                 }
@@ -315,15 +318,20 @@
         const msgEl = document.getElementById('checkoutPendingMessage');
         const hintEl = document.getElementById('checkoutPendingHint');
         if (msgEl) {
-            msgEl.textContent = result.message || 'Your payment has been sent to the organizer for approval.';
+            msgEl.textContent = result.message || 'Your payment proof has been sent to the organizer for approval.';
         }
         if (hintEl) {
             hintEl.textContent = result.ocr_passed
-                ? 'Step 1 complete: screenshot verified. Step 2: the organizer will approve and issue your ticket.'
-                : 'Step 1 could not auto-verify your screenshot. Step 2: the organizer will review and approve your payment.';
+                ? 'Your screenshot passed automatic checks. The organizer will verify payment and issue your ticket.'
+                : 'The organizer will review your screenshot and confirm payment before issuing your ticket.';
         }
         showStep(4);
-        window.dispatchEvent(new CustomEvent('checkout-submitted', { detail: result }));
+        const detail = {
+            ...result,
+            order_id: currentOrder?.id,
+            event_id: result.event_id || currentOrder?.event_id,
+        };
+        window.dispatchEvent(new CustomEvent('checkout-submitted', { detail }));
     }
 
     function configureCheckoutSections(order) {
@@ -338,19 +346,12 @@
         if (stkSection) stkSection.style.display = stkAvailable ? 'block' : 'none';
         if (sandboxHint) sandboxHint.style.display = stkAvailable ? 'block' : 'none';
 
-        if (manualSection) {
-            manualSection.style.display = (!stkAvailable || hasManualOptions) ? 'block' : 'none';
-        }
-        if (stkAvailable && !hasManualOptions) {
-            if (receiverRow) receiverRow.style.display = 'none';
-            if (manualHint) manualHint.textContent = 'If the M-Pesa prompt fails, contact the organizer for help.';
-        } else {
-            if (receiverRow) receiverRow.style.display = '';
-            if (manualHint) {
-                manualHint.textContent = stkAvailable
-                    ? 'Or send the exact amount to the organizer using any of the payment options below.'
-                    : 'Send the exact amount below to the organizer using any of the payment options.';
-            }
+        if (manualSection) manualSection.style.display = 'block';
+        if (receiverRow) receiverRow.style.display = hasManualOptions ? '' : 'none';
+        if (manualHint) {
+            manualHint.textContent = stkAvailable
+                ? 'Send the exact amount to the organizer below, upload your screenshot, then wait for approval. Instant M-Pesa prompt is also available above.'
+                : 'Send the exact amount below to the organizer, then tap “I have paid” to upload your M-Pesa confirmation screenshot.';
         }
     }
 

@@ -1,5 +1,6 @@
 from django.urls import path
 from django.views.generic import RedirectView, TemplateView
+from django.shortcuts import redirect
 
 urlpatterns = [
     # Portal root -> dashboard (avoids 404 on /organizer/)
@@ -25,10 +26,10 @@ urlpatterns = [
          TemplateView.as_view(template_name='organizer/dashboard/events.html'),
          name='organizer_events_create'),
     path('events/<int:event_id>/edit/',
-         TemplateView.as_view(template_name='organizer/dashboard/events.html'),
+         lambda request, event_id: redirect(f'/organizer/events/?edit={event_id}'),
          name='organizer_events_edit'),
     path('events/<int:event_id>/',
-         TemplateView.as_view(template_name='organizer/dashboard/event_detail.html'),
+         lambda request, event_id: redirect(f'/organizer/events/?edit={event_id}'),
          name='organizer_event_detail'),
 
     # Tickets
@@ -44,7 +45,7 @@ urlpatterns = [
          TemplateView.as_view(template_name='organizer/attendees/attendees.html'),
          name='organizer_attendees'),
     path('attendees/<int:attendee_id>/',
-         TemplateView.as_view(template_name='organizer/dashboard/attendee_detail.html'),
+         RedirectView.as_view(url='/organizer/attendees/', permanent=False),
          name='organizer_attendee_detail'),
 
     # Bookings
@@ -52,7 +53,7 @@ urlpatterns = [
          TemplateView.as_view(template_name='organizer/bookings/bookings.html'),
          name='organizer_bookings'),
     path('bookings/<int:booking_id>/',
-         TemplateView.as_view(template_name='organizer/dashboard/booking_detail.html'),
+         RedirectView.as_view(url='/organizer/bookings/', permanent=False),
          name='organizer_booking_detail'),
 
 

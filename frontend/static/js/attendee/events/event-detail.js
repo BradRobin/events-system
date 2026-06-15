@@ -95,13 +95,32 @@ function formatDate(dateString) {
 }
 
 // Reviews functions
-function getEventReviews(eventId) {
+let eventReviewsCache = [];
+
+async function loadEventReviewsFromApi(id) {
     try {
-        return JSON.parse(localStorage.getItem(`reviews_${eventId}`) || '[]');
-    } catch (e) {
-        console.error('Error reading reviews:', e);
-        return [];
+        const response = await fetch(`/api/attendee/events/${id}/reviews/`);
+        if (!response.ok) {
+            eventReviewsCache = [];
+            return;
+        }
+        const data = await response.json();
+        eventReviewsCache = (data.results || []).map((review) => ({
+            id: review.id,
+            userName: review.user_name || 'Attendee',
+            rating: review.rating,
+            title: '',
+            content: review.comment || '',
+            created_at: review.created_at,
+        }));
+    } catch (error) {
+        console.error('Error loading reviews:', error);
+        eventReviewsCache = [];
     }
+}
+
+function getEventReviews(eventId) {
+    return eventReviewsCache;
 }
 
 function getAverageRating(eventId) {
@@ -151,21 +170,11 @@ function updateReviewsUI(eventId) {
 
 // Wishlist functions - FIXED: Correct terminology
 async function isInWishlist(eventId) {
-    const token = getAuthToken();
-    if (!token) return false;
-    
-    try {
-        const response = await fetch(`${API.wishlist}check/?event_id=${eventId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-            const data = await response.json();
-            return data.in_wishlist;
-        }
-    } catch(e) {}
-    
+    if (window.EventhubWishlistStorage) {
+        return EventhubWishlistStorage.isInWishlist(eventId);
+    }
     const wishlist = JSON.parse(localStorage.getItem('event_wishlist') || '[]');
-    return wishlist.includes(eventId);
+    return wishlist.some((item) => (item?.id ?? item) == eventId);
 }
 
 async function toggleWishlist(eventId, btnElement, eventTitle) {
@@ -754,37 +763,35 @@ async function submitReview(eventId) {
         showToast('Please login to write a review', 'info');
         return;
     }
-    if (rating === 0) {
-        showToast('Please select a rating', 'error');
-        return;
-    }
-    
-    const user = getCurrentUser();
-    const userName = user?.name || user?.email?.split('@')[0] || 'Guest User';
-    
-    const newReview = {
-        id: Date.now(),
-        userName: userName,
-        rating: rating,
-        title: title,
-        content: content,
-        created_at: new Date().toISOString()
-    };
-    
+
+    const comment = [title, content].filter(Boolean).join('\n\n');
+
     try {
-        const localReviews = JSON.parse(localStorage.getItem(`reviews_${eventId}`) || '[]');
-        localReviews.push(newReview);
-        localStorage.setItem(`reviews_${eventId}`, JSON.stringify(localReviews));
-    } catch (e) {
-        console.error('Error writing review:', e);
+        const response = await fetch(`/api/attendee/reviews/create/${eventId}/`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ rating, comment }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Could not submit review');
+        }
+
+        await loadEventReviewsFromApi(eventId);
+        updateReviewsUI(eventId);
+
+        const modal = document.getElementById('reviewModal');
+        if (modal) modal.style.display = 'none';
+        resetReviewForm();
+        showToast('Thank you for your review!', 'success');
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        showToast(error.message || 'Could not submit review', 'error');
     }
-    
-    updateReviewsUI(eventId);
-    
-    const modal = document.getElementById('reviewModal');
-    if (modal) modal.style.display = 'none';
-    resetReviewForm();
-    showToast('Thank you for your review!', 'success');
 }
 
 function escapeHtml(text) {
@@ -824,6 +831,7 @@ function bookTicket(event, quantity = 1, tier = 'Regular') {
             id: event.id,
             title: event.title,
             tier: tier,
+            ticket_type: tier,
             price: price,
             quantity: quantity,
             image: event.image,
@@ -1191,6 +1199,7 @@ async function loadEventDetails() {
         const data = await response.json();
         
         if (data.success && data.event) {
+            await loadEventReviewsFromApi(eventId);
             await renderEventDetails(data.event);
         } else {
             container.innerHTML = `

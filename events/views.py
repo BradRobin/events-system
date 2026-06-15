@@ -272,6 +272,111 @@ def organizer_dashboard_revenue(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+def _organizer_user_from_request(request):
+    from accounts.auth import authenticate_bearer
+    user = request.user
+    if not user.is_authenticated:
+        bearer_user, _error = authenticate_bearer(request)
+        if bearer_user:
+            user = bearer_user
+    if not user.is_authenticated:
+        return None
+    if getattr(user, 'role', None) != 'organizer' and not user.is_superuser:
+        return None
+    return user
+
+
+def organizer_dashboard_recent_bookings(request):
+    """Recent ticket purchases for the organizer dashboard."""
+    from bookings.models import Ticket
+
+    user = _organizer_user_from_request(request)
+    if not user:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    limit = min(int(request.GET.get('limit', 5)), 20)
+    tickets = (
+        Ticket.objects.filter(event__organizer=user)
+        .select_related('event')
+        .order_by('-purchase_date')[:limit]
+    )
+    results = [{
+        'event_title': t.event.title,
+        'attendee_name': t.billing_name or 'Guest',
+        'amount': float(t.price * t.quantity),
+        'status': 'confirmed' if t.status == 'valid' else t.status,
+        'ticket_number': t.ticket_number,
+        'purchase_date': t.purchase_date.isoformat(),
+    } for t in tickets]
+    return JsonResponse(results, safe=False)
+
+
+def organizer_dashboard_upcoming_events(request):
+    """Upcoming events for the organizer dashboard."""
+    from bookings.models import Ticket
+    from django.utils import timezone
+    from .models import Event
+
+    user = _organizer_user_from_request(request)
+    if not user:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    limit = min(int(request.GET.get('limit', 5)), 20)
+    now = timezone.now()
+    events = Event.objects.filter(
+        organizer=user,
+        start_date__gte=now,
+    ).order_by('start_date')[:limit]
+
+    results = []
+    for event in events:
+        sold = sum(
+            t.quantity for t in Ticket.objects.filter(event=event).exclude(status__in=['cancelled', 'refunded'])
+        )
+        results.append({
+            'id': event.id,
+            'title': event.title,
+            'date': event.start_date.isoformat(),
+            'tickets_sold': sold,
+            'capacity': event.total_seats or 0,
+        })
+    return JsonResponse(results, safe=False)
+
+
+def organizer_dashboard_performance(request):
+    """Performance score for the organizer dashboard."""
+    from bookings.models import Ticket
+    from reviews.models import EventReview
+    from django.db.models import Avg
+
+    user = _organizer_user_from_request(request)
+    if not user:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    tickets = Ticket.objects.filter(event__organizer=user).exclude(status__in=['cancelled', 'refunded'])
+    total_qty = sum(t.quantity for t in tickets) or 0
+    checked_in_qty = sum(t.quantity for t in tickets.filter(status='checked_in')) or 0
+    fulfillment_rate = round((checked_in_qty / total_qty) * 100, 1) if total_qty else 0
+
+    reviews = EventReview.objects.filter(event__organizer=user)
+    avg_rating = reviews.aggregate(avg=Avg('rating'))['avg']
+    avg_rating = round(float(avg_rating), 1) if avg_rating is not None else 0
+
+    # Weighted score: fulfillment matters more when events have sales
+    if total_qty == 0:
+        score = 50
+    else:
+        rating_component = (avg_rating / 5) * 40 if avg_rating else 20
+        fulfillment_component = (fulfillment_rate / 100) * 60
+        score = min(100, round(rating_component + fulfillment_component))
+
+    return JsonResponse({
+        'score': score,
+        'avg_rating': avg_rating,
+        'fulfillment_rate': fulfillment_rate,
+    })
+
+
 # ============ ATTENDEE EVENTS API ENDPOINTS ============
 
 from django.db.models import Q, Case, When, Value, IntegerField
@@ -511,17 +616,19 @@ def api_dashboard_stats(request):
         )
         total_spent = float(revenue_data['total'] or 0.0)
         upcoming_events = general_upcoming_count
-        # Simulated/calculated reviews based on bookings
-        reviews_written = all_tickets.count() // 2 + 5
+        from reviews.models import EventReview
+        reviews_written = EventReview.objects.count()
     else:
         # Query the logged-in user's active tickets
         user_tickets = Ticket.objects.filter(attendee=user, status__in=['valid', 'checked_in'])
         total_tickets = sum(t.quantity for t in user_tickets)
         total_spent = float(sum(t.quantity * t.price for t in user_tickets))
-        
-        # Count upcoming events that this specific user has tickets for
-        user_upcoming_count = user_tickets.filter(event__end_date__gte=timezone.now()).values('event').distinct().count()
-        upcoming_events = user_upcoming_count if user_upcoming_count > 0 else general_upcoming_count
+
+        # Personal upcoming events only (events user holds tickets for that have not ended)
+        upcoming_events = user_tickets.filter(
+            event__end_date__gte=timezone.now()
+        ).values('event').distinct().count()
+
         from reviews.models import EventReview
         reviews_written = EventReview.objects.filter(user=user).count()
 
@@ -548,9 +655,14 @@ def api_dashboard_recommendations(request):
             'id': e.id,
             'title': e.title,
             'date': e.start_date.isoformat(),
+            'start_date': e.start_date.isoformat(),
             'location': e.venue,
+            'venue': e.venue,
             'price': float(e.price),
             'image': resolve_banner_image(e.banner_image),
+            'banner_image': resolve_banner_image(e.banner_image),
+            'category': e.category.name if e.category else 'General',
+            'category_name': e.category.name if e.category else 'General',
         })
     return JsonResponse(results, safe=False)
 
@@ -563,21 +675,21 @@ def api_dashboard_recent_activity(request):
     if not user or not user.is_authenticated:
         return JsonResponse([], safe=False)
         
-    tickets = Ticket.objects.filter(attendee=user).select_related('event').order_by('-purchase_date')[:5]
+    tickets = Ticket.objects.filter(
+        attendee=user,
+        status__in=['valid', 'checked_in'],
+    ).select_related('event').order_by('-purchase_date')[:5]
     results = []
     for t in tickets:
         results.append({
             'id': t.id,
             'type': 'booking',
             'title': f"Booked ticket for {t.event.title}",
+            'description': f"{t.quantity} × {t.ticket_type or 'Regular'} ticket — KES {float(t.price) * t.quantity:,.0f}",
             'created_at': t.purchase_date.isoformat(),
-            'action_url': f"/attendee/tickets/detail/?ticket={t.ticket_number}"
+            'action_url': f"/tickets/detail/?id={t.ticket_number}",
         })
     return JsonResponse(results, safe=False)
-
-def api_tickets_upcoming(request):
-    """API endpoint to get upcoming tickets"""
-    return JsonResponse({'results': []})
 
 @cache_page(3600)
 def api_featured_events(request):
@@ -882,6 +994,11 @@ def api_discover_local_events(request):
 def api_db_status(request):
     """Diagnostic view to inspect database engine, columns, and migrations status."""
     from django.conf import settings
+    from accounts.admin_api import resolve_admin_user
+
+    if not settings.DEBUG and resolve_admin_user(request) is None:
+        return JsonResponse({'success': False, 'message': 'Forbidden'}, status=403)
+
     from django.db import connection
     
     db_engine = settings.DATABASES['default']['ENGINE']

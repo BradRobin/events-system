@@ -105,6 +105,15 @@
         return defaultPath;
     }
 
+    function storeAuthTokens(prefix, body) {
+        localStorage.setItem(`${prefix}_access_token`, body.access);
+        localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
+        localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
+        if (body.expires_in) {
+            localStorage.setItem(`${prefix}_token_expiry`, String(Date.now() + body.expires_in * 1000));
+        }
+    }
+
     const roleRadios = document.querySelectorAll('input[name="role_select"]');
     const roleInput = document.getElementById('roleInput');
     const authTitle = document.querySelector('.auth-title');
@@ -165,9 +174,7 @@
                 const userRole = body.user.role;
                 const prefix = userRole === 'organizer' ? 'organizer' : (userRole === 'admin' ? 'admin' : 'attendee');
                 
-                localStorage.setItem(`${prefix}_access_token`, body.access);
-                localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
-                localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
+                storeAuthTokens(prefix, body);
 
                 if (window.EventhubAuthLoginHooks) {
                     EventhubAuthLoginHooks.onLoginSuccess(prefix, body.user);
@@ -320,6 +327,7 @@
         
         fetch(this.action, {
             method: 'POST',
+            credentials: 'same-origin',
             body: JSON.stringify(data),
             headers: {
                 'Content-Type': 'application/json',
@@ -346,9 +354,7 @@
                 const selectedRole = data.role;
                 const prefix = userRole === 'organizer' ? 'organizer' : (userRole === 'admin' ? 'admin' : 'attendee');
                 
-                localStorage.setItem(`${prefix}_access_token`, body.access);
-                localStorage.setItem(`${prefix}_refresh_token`, body.refresh);
-                localStorage.setItem(`${prefix}_user`, JSON.stringify(body.user));
+                storeAuthTokens(prefix, body);
 
                 if (window.EventhubAuthLoginHooks) {
                     EventhubAuthLoginHooks.onLoginSuccess(prefix, body.user);

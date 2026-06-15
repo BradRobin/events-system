@@ -96,7 +96,7 @@ async function loadUsers() {
     } catch (error) {
         console.error('Error loading users:', error);
         document.getElementById('usersList').innerHTML = 
-            '<td><td colspan="9" class="text-center">Failed to load users</td></tr>';
+            '<tr><td colspan="9" class="text-center">Failed to load users</td></tr>';
     } finally {
         Loader.hide();
     }

@@ -55,7 +55,7 @@ async function editEvent(eventId = null) {
     currentEventId = eventId;
     resetEventForm();
     if (eventId) {
-        document.getElementById('eventModalTitle').innerText = 'Create New Event';
+        document.getElementById('eventModalTitle').innerText = 'Edit Event';
         document.getElementById('saveEventBtn').innerText = 'Update Event';
         try {
             const event = await OrganizerAPI.events.getDetail(eventId);
@@ -438,6 +438,16 @@ window.togglePriceInput = togglePriceInput;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadEvents();
+    const params = new URLSearchParams(window.location.search);
+    const editId = params.get('edit');
+    if (editId) {
+        editEvent(parseInt(editId, 10));
+    } else if (window.location.pathname.includes('/create') || params.get('create') === '1') {
+        resetEventForm();
+        document.getElementById('eventModalTitle').innerText = 'Create New Event';
+        document.getElementById('saveEventBtn').innerText = 'Create Event';
+        new bootstrap.Modal(document.getElementById('eventModal')).show();
+    }
     document.getElementById('saveEventBtn')?.addEventListener('click', saveEvent);
     document.getElementById('saveTicketTypeBtn')?.addEventListener('click', saveTicketType);
     document.getElementById('saveScheduleItemBtn')?.addEventListener('click', saveScheduleItem);

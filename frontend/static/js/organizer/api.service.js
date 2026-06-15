@@ -201,6 +201,19 @@ class OrganizerAPIService {
         const events = JSON.parse(this.safeGetItem('eventhub_organizer_events_db')) || [];
         const stats = JSON.parse(this.safeGetItem('eventhub_organizer_stats_db')) || {};
 
+        if (endpoint.includes('/dashboard/recent-bookings/')) {
+            return [];
+        }
+        if (endpoint.includes('/dashboard/upcoming-events/')) {
+            return [];
+        }
+        if (endpoint.includes('/dashboard/performance/')) {
+            return { score: 50, avg_rating: 0, fulfillment_rate: 0 };
+        }
+        if (endpoint.includes('/notifications/') && method === 'GET' && !endpoint.includes('/unread')) {
+            return { notifications: [] };
+        }
+
         // 1. Dashboard Stats
         if (endpoint.includes('/dashboard/stats/')) {
             return stats;

@@ -108,7 +108,7 @@ async function loadStats() {
         document.getElementById('totalTransactions').textContent = stats.total || stats.total_count || 0;
         document.getElementById('totalVolume').textContent = `Kes ${formatNumber(stats.total_amount || stats.total_volume || 0)}`;
         document.getElementById('successCount').textContent = stats.success || stats.success_count || 0;
-        document.getElementById('pendingCount').textContent = stats.failed || stats.pending_count || 0;
+        document.getElementById('pendingCount').textContent = stats.pending_count || stats.pending || 0;
     } catch (error) {
         console.error('Error loading stats:', error);
     }

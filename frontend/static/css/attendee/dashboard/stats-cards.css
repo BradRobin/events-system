@@ -85,6 +85,26 @@
     letter-spacing: 0.5px;
 }
 
+.stat-trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+}
+
+.stat-trend-badge.trend-up {
+    color: #059669;
+    background: #ecfdf5;
+}
+
+.stat-trend-badge.trend-down {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .stats-grid {

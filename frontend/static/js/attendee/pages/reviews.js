@@ -15,7 +15,11 @@ async function loadReviews() {
     
     try {
         // Try to fetch reviews from API
-        const response = await fetch(`/api/attendee/reviews/?page=${currentPage}&limit=6`);
+        const token = localStorage.getItem('attendee_access_token');
+        const response = await fetch(`/api/attendee/reviews/?page=${currentPage}&limit=6`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: 'same-origin',
+        });
         
         if (response.ok) {
             const data = await response.json();

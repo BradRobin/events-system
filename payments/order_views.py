@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 from io import BytesIO
 
@@ -23,6 +24,14 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
 MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024
+
+
+def _stk_checkout_enabled():
+    """STK in checkout is opt-in; manual screenshot + organizer approval is the default."""
+    return (
+        MpesaClient.is_configured()
+        and os.environ.get('MPESA_STK_CHECKOUT_ENABLED', '').lower() in ('1', 'true', 'yes')
+    )
 
 
 def get_authenticated_user(request):
@@ -72,12 +81,19 @@ def _serialize_order(order, include_payment=False):
         organizer = order.organizer
         data['mpesa_display_name'] = organizer.mpesa_display_name
         data['payment_options'] = organizer.mpesa_payment_options()
-        data['stk_available'] = MpesaClient.is_configured()
+        data['stk_available'] = _stk_checkout_enabled()
+        data['requires_organizer_approval'] = True
     return data
 
 
 def _notify_organizer_payment_review(order, *, ocr_passed):
     """Step 2: always notify organizer to approve and issue the ticket."""
+    OrganizerNotification.objects.filter(
+        payment_order=order,
+        organizer=order.organizer,
+        requires_action=True,
+    ).update(is_read=True, requires_action=False)
+
     attendee = order.attendee
     attendee_name = attendee.get_full_name() or attendee.username
     if ocr_passed:
@@ -131,6 +147,7 @@ def _notify_attendee_payment_review(order, *, ocr_passed):
 def _escalate_to_organizer_review(order, *, ocr_passed, verification_message, mpesa_name=''):
     """Route order to organizer approval (step 2). Tickets are issued only on approve."""
     order.status = 'manual_review'
+    order.payment_rail = 'manual'
     order.screenshot_verified = ocr_passed
     order.verification_message = verification_message or (
         'Screenshot auto-verified. Awaiting organizer approval.'
@@ -142,6 +159,7 @@ def _escalate_to_organizer_review(order, *, ocr_passed, verification_message, mp
     order.save(
         update_fields=[
             'status',
+            'payment_rail',
             'screenshot_verified',
             'verification_message',
             'submitted_mpesa_name',
@@ -189,8 +207,7 @@ def create_payment_order(request):
         return JsonResponse({'success': False, 'message': 'Not enough tickets available.'}, status=400)
 
     organizer = event.organizer
-    stk_available = MpesaClient.is_configured()
-    if not organizer.has_mpesa_payment_config() and not stk_available:
+    if not organizer.has_mpesa_payment_config():
         return JsonResponse({
             'success': False,
             'message': 'Organizer has not configured M-Pesa payment details yet.',
@@ -210,6 +227,7 @@ def create_payment_order(request):
         'unit_price': unit_price,
         'total_amount': total_amount,
         'status': 'pending_payment',
+        'payment_rail': 'manual',
     }
     try:
         order = PaymentOrder.objects.create(**order_fields)
@@ -258,7 +276,13 @@ def verify_screenshot(request, order_id):
     except PaymentOrder.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Order not found.'}, status=404)
 
-    if order.status not in ('pending_payment', 'failed', 'rejected'):
+    if order.status == 'verifying' and order.payment_rail == 'stk_platform':
+        return JsonResponse({
+            'success': False,
+            'message': 'An M-Pesa prompt is in progress. Please wait or try again shortly.',
+        }, status=400)
+
+    if order.status not in ('pending_payment', 'failed', 'rejected', 'verifying'):
         return JsonResponse({'success': False, 'message': 'This order cannot accept a new screenshot.'}, status=400)
 
     screenshot = request.FILES.get('screenshot')
@@ -278,9 +302,10 @@ def verify_screenshot(request, order_id):
         return JsonResponse({'success': False, 'message': f'Could not read screenshot: {exc}'}, status=400)
 
     order.status = 'verifying'
+    order.payment_rail = 'manual'
     order.screenshot_data = data_uri
     order.verification_message = ''
-    order.save(update_fields=['status', 'screenshot_data', 'verification_message', 'updated_at'])
+    order.save(update_fields=['status', 'payment_rail', 'screenshot_data', 'verification_message', 'updated_at'])
 
     def event_stream():
         yield _sse_event('upload_received', 'Screenshot received')
@@ -313,6 +338,7 @@ def verify_screenshot(request, order_id):
                 'Your payment has been sent to the organizer for approval.',
                 ocr_passed=False,
                 order_id=order.id,
+                event_id=order.event_id,
             )
             return
 
@@ -347,6 +373,7 @@ def verify_screenshot(request, order_id):
             message,
             ocr_passed=ocr_passed,
             order_id=order.id,
+            event_id=order.event_id,
         )
 
     response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
@@ -500,6 +527,8 @@ def mpesa_stk_callback(request):
         try:
             ticket = fulfill_payment_order(order)
         except FulfillmentError as exc:
+            if exc.code == 'already_fulfilled':
+                return JsonResponse({'ResultCode': 0, 'ResultDesc': 'Accepted'})
             logger.error('STK fulfillment failed for order %s: %s', order.id, exc.message)
             order.status = 'failed'
             order.stk_status = 'failed'
@@ -620,6 +649,18 @@ def organizer_approve_order(request, order_id):
 
     if order.status != 'manual_review':
         return JsonResponse({'success': False, 'message': 'Order is not awaiting approval.'}, status=400)
+
+    if order.payment_rail == 'stk_platform':
+        return JsonResponse({
+            'success': False,
+            'message': 'This order used instant M-Pesa and cannot be approved manually.',
+        }, status=400)
+
+    if not order_has_screenshot(order) and not order.submitted_mpesa_name.strip():
+        return JsonResponse({
+            'success': False,
+            'message': 'No payment proof on file. Ask the attendee to upload an M-Pesa screenshot.',
+        }, status=400)
 
     try:
         ticket = fulfill_payment_order(order)

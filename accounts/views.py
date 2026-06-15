@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model, login as django_login
+from django.contrib.auth import get_user_model, login as django_login, logout as django_logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
@@ -111,6 +111,11 @@ def register(request):
             role=role,
             organization_name=organization_name if role == 'organizer' else '',
         )
+        django_login(request, user)
+
+        from events.prefetch import schedule_events_catalog_warm
+        schedule_events_catalog_warm()
+
         return JsonResponse({
             'message': 'Registration successful.',
             'user': user_payload(user),
@@ -169,6 +174,7 @@ def logout(request):
 
     data = parse_json_body(request) or {}
     revoke_user_tokens(user, refresh_token=data.get('refresh'))
+    django_logout(request)
     return JsonResponse({'message': 'Logout successful.'})
 
 
@@ -319,7 +325,8 @@ def profile_stats(request):
         )
         total_spent = float(revenue_data['total'] or 0.0)
         total_events = Event.objects.count()
-        total_reviews = all_tickets.count() // 2 + 5
+        from reviews.models import EventReview
+        total_reviews = EventReview.objects.count()
         
         # Calculate favorite category across the platform
         favorite_category = 'General'
@@ -331,8 +338,11 @@ def profile_stats(request):
         user_tickets = Ticket.objects.filter(attendee=user, status__in=['valid', 'checked_in'])
         total_tickets = sum(t.quantity for t in user_tickets)
         total_spent = float(sum(t.quantity * t.price for t in user_tickets))
-        total_events = user_tickets.values('event').distinct().count()
-        total_reviews = 0
+        total_events = user_tickets.filter(
+            event__end_date__lt=timezone.now()
+        ).values('event').distinct().count()
+        from reviews.models import EventReview
+        total_reviews = EventReview.objects.filter(user=user).count()
         
         # Calculate favorite category
         favorite_category = 'General'

@@ -13,7 +13,7 @@ let filteredEvents = [];
 let eventsCatalog = [];
 let debounceTimer = null;
 let isLoadingMore = false;
-let currentOffset = 0;
+let currentPage = 1;
 const PAGE_SIZE = 12;
 let hasMoreEvents = true;
 let observer = null;
@@ -185,17 +185,19 @@ function sortEventsByDateDescending(events) {
 // Load events from API (NO changes to API call)
 async function loadEventsFromAPI(reset = true) {
     if (reset) {
-        currentOffset = 0;
+        currentPage = 1;
         eventsCatalog = [];
         hasMoreEvents = true;
+    } else {
+        currentPage += 1;
     }
     
     if (!hasMoreEvents && !reset) return false;
     
     try {
         const params = new URLSearchParams();
-        params.set('offset', currentOffset);
-        params.set('limit', PAGE_SIZE);
+        params.set('page', String(currentPage));
+        params.set('limit', String(PAGE_SIZE));
 
         if (currentCategory !== 'all') {
             params.set('category', currentCategory);
@@ -217,8 +219,8 @@ async function loadEventsFromAPI(reset = true) {
             }
             // Sort events by date after loading (newest first)
             eventsCatalog = sortEventsByDateDescending(eventsCatalog);
-            currentOffset += data.events?.length || 0;
-            hasMoreEvents = (data.events?.length || 0) === PAGE_SIZE;
+            const totalPages = data.total_pages || 1;
+            hasMoreEvents = currentPage < totalPages;
             return true;
         } else {
             console.error('Failed to load events:', data.message);

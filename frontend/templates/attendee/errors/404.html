@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="{% static 'css/attendee/error-pages.css' %}">
 {% endblock %}
 
-{% block attendee_content %}
+{% block content %}
 <div class="error-container error-404">
     <div class="error-content">
         <div class="error-code">404</div>
@@ -15,24 +15,24 @@
         <p>Oops! The page you're looking for doesn't exist or has been moved.</p>
         
         <div class="error-actions">
-            <a href="/attendee/" class="btn-primary">
+            <a href="/" class="btn-primary">
                 <i class="fas fa-home"></i> Go Home
             </a>
-            <a href="/attendee/events/" class="btn-outline">
+            <a href="/events/" class="btn-outline">
                 <i class="fas fa-calendar"></i> Browse Events
             </a>
         </div>
         
         <div class="error-search">
-            <form class="search-form" action="/attendee/events/search/" method="GET">
+            <form class="search-form" action="/events/search/" method="GET">
                 <input type="text" name="q" placeholder="Search for events...">
                 <button type="submit">Search</button>
             </form>
         </div>
         
         <div class="error-help-links">
-            <a href="/attendee/support/">Help Center</a>
-            <a href="/attendee/support/faq/">FAQ</a>
+            <a href="/help-center/">Help Center</a>
+            <a href="/faq/">FAQ</a>
             <a href="/contact/">Contact Us</a>
         </div>
     </div>
@@ -41,15 +41,10 @@
 
 {% block extra_js %}
 <script>
-    // Track 404 error for analytics
     if (typeof gtag !== 'undefined') {
-        gtag('event', '404_error', {
-            'page_path': window.location.pathname,
-            'page_title': document.title
+        gtag('event', 'page_not_found', {
+            'page_path': window.location.pathname
         });
     }
-    
-    // Log to console for debugging
-    console.warn('404 Error:', window.location.pathname);
 </script>
 {% endblock %}

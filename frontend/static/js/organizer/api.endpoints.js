@@ -29,7 +29,7 @@ const OrganizerDashboardAPI = {
         return OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.DASHBOARD.upcomingEvents, { params });
     },
     getPerformance: () => OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.DASHBOARD.performance),
-    getNotifications: () => OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.DASHBOARD.notifications)
+    getNotifications: () => OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.NOTIFICATIONS.list)
 };
 
 // Events API
@@ -77,9 +77,15 @@ const OrganizerEventsAPI = {
 
 // Tickets API
 const OrganizerTicketsAPI = {
-    getAll: (page = 1, limit = 20, filters = {}) => {
+    getAll: async (page = 1, limit = 20, filters = {}) => {
         const params = buildParams({ page, limit, ...filters });
-        return OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.TICKETS.list, { params });
+        const res = await OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.TICKETS.list, { params });
+        const normalized = normalizeListResponse(res);
+        normalized.results = normalized.results.map(t => ({
+            ...t,
+            attendee_name: t.attendee_name || t.customer_name || 'Guest',
+        }));
+        return normalized;
     },
     getDetail: (ticketNumber) => OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.TICKETS.detail(ticketNumber)),
     scan: (ticketNumber, eventId) => OrganizerAPI.post(ORGANIZER_API_CONFIG.ENDPOINTS.TICKETS.scan, { ticket_number: ticketNumber, event_id: eventId }),
@@ -102,10 +108,18 @@ const OrganizerTicketsAPI = {
 };
 
 // Bookings API
+function normalizeListResponse(res) {
+    if (Array.isArray(res)) {
+        return { results: res, count: res.length, total_pages: 1, page: 1, previous: false, next: false };
+    }
+    return res;
+}
+
 const OrganizerBookingsAPI = {
-    getAll: (page = 1, limit = 20, filters = {}) => {
+    getAll: async (page = 1, limit = 20, filters = {}) => {
         const params = buildParams({ page, limit, ...filters });
-        return OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.BOOKINGS.list, { params });
+        const res = await OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.BOOKINGS.list, { params });
+        return normalizeListResponse(res);
     },
     getDetail: (id) => OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.BOOKINGS.detail(id)),
     getEventBookings: (eventId, page = 1, limit = 20) => {
@@ -123,9 +137,10 @@ const OrganizerBookingsAPI = {
 
 // Attendees API
 const OrganizerAttendeesAPI = {
-    getAll: (page = 1, limit = 20, filters = {}) => {
+    getAll: async (page = 1, limit = 20, filters = {}) => {
         const params = buildParams({ page, limit, ...filters });
-        return OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.ATTENDEES.list, { params });
+        const res = await OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.ATTENDEES.list, { params });
+        return normalizeListResponse(res);
     },
     getDetail: (id) => OrganizerAPI.get(ORGANIZER_API_CONFIG.ENDPOINTS.ATTENDEES.detail(id)),
     getEventAttendees: (eventId, page = 1, limit = 20) => {

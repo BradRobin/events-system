@@ -5,11 +5,15 @@
 
 let currentPage = 1;
 let totalPages = 1;
+let currentCheckinsPage = 1;
+let totalCheckinsPages = 1;
 let currentEventId = null;
 let timelineChart = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadEvents();
+    loadEventsTable();
+    loadRecentCheckins();
     loadCheckinStats();
     setupEventListeners();
 });

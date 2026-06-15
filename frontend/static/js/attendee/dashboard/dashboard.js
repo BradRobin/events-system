@@ -91,6 +91,23 @@ function loadDashboardData() {
     loadStatsOverview();
 }
 
+function renderStatTrend(elementId, trend) {
+    const el = document.getElementById(elementId);
+    if (!el || !trend) {
+        if (el) el.innerHTML = '';
+        return;
+    }
+    const pct = Number(trend.percentage) || 0;
+    const direction = trend.direction || 'flat';
+    if (direction === 'flat' || pct === 0) {
+        el.innerHTML = '';
+        return;
+    }
+    const icon = direction === 'up' ? 'fa-arrow-up' : 'fa-arrow-down';
+    const cls = direction === 'up' ? 'trend-up' : 'trend-down';
+    el.innerHTML = `<span class="stat-trend-badge ${cls}"><i class="fas ${icon}"></i> ${pct}%</span>`;
+}
+
 async function loadStats() {
     try {
         let stats;
@@ -108,6 +125,11 @@ async function loadStats() {
             if (totalSpentEl) totalSpentEl.textContent = formatCurrency(stats.total_spent || 0);
             if (upcomingEventsEl) upcomingEventsEl.textContent = formatNumber(stats.upcoming_events || 0);
             if (reviewsWrittenEl) reviewsWrittenEl.textContent = formatNumber(stats.reviews_written || 0);
+
+            renderStatTrend('ticketsTrend', stats.tickets_trend);
+            renderStatTrend('spentTrend', stats.spent_trend);
+            renderStatTrend('upcomingTrend', stats.upcoming_trend);
+            renderStatTrend('reviewsTrend', stats.reviews_trend);
         }
     } catch (error) {
         console.error('Error loading stats:', error);
@@ -226,7 +248,8 @@ async function loadStatsOverview() {
         const eventsAttended = document.getElementById('eventsAttended');
         
         if (memberSince) {
-            memberSince.textContent = user.date_joined ? formatDate(user.date_joined) : '2026';
+            const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+            memberSince.textContent = user.date_joined ? formatDate(user.date_joined) : '—';
         }
         
         // Fetch stats from backend profile stats endpoint

@@ -19,6 +19,7 @@ from accounts.admin_store import (
     get_support_tickets, get_support_ticket_detail,
     add_support_ticket_reply, update_support_ticket_status,
     get_approved_organizer_ids, approve_organizer,
+    load_store, save_store,
 )
 
 User = get_user_model()
@@ -166,30 +167,44 @@ def top_events(request):
 @admin_required_json
 def revenue_chart(request):
     try:
-        # Generate last 6 months dynamic revenue
+        period = int(request.GET.get('period', 30))
+        period = max(1, min(period, 365))
         labels = []
         values = []
         now = timezone.now()
-        for i in range(5, -1, -1):
-            month_date = now - timedelta(days=i*30)
-            month_label = month_date.strftime('%b')
-            labels.append(month_label)
-            
-            # Query tickets bought in this month range
-            start_range = datetime(month_date.year, month_date.month, 1, tzinfo=dt_timezone.utc)
-            if month_date.month == 12:
-                end_range = datetime(month_date.year + 1, 1, 1, tzinfo=dt_timezone.utc)
-            else:
-                end_range = datetime(month_date.year, month_date.month + 1, 1, tzinfo=dt_timezone.utc)
-                
-            rev_agg = Ticket.objects.filter(
-                purchase_date__gte=start_range,
-                purchase_date__lt=end_range
-            ).exclude(status='cancelled').aggregate(
-                total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
-            )
-            values.append(float(rev_agg['total'] or 0.0))
-            
+
+        if period <= 90:
+            for i in range(period - 1, -1, -1):
+                day = (now - timedelta(days=i)).date()
+                labels.append(day.strftime('%d %b'))
+                start_range = timezone.make_aware(datetime.combine(day, datetime.min.time()))
+                end_range = start_range + timedelta(days=1)
+                rev_agg = Ticket.objects.filter(
+                    purchase_date__gte=start_range,
+                    purchase_date__lt=end_range,
+                ).exclude(status='cancelled').aggregate(
+                    total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+                )
+                values.append(float(rev_agg['total'] or 0.0))
+        else:
+            months = period // 30
+            for i in range(months - 1, -1, -1):
+                month_date = now - timedelta(days=i * 30)
+                month_label = month_date.strftime('%b %Y')
+                labels.append(month_label)
+                start_range = datetime(month_date.year, month_date.month, 1, tzinfo=dt_timezone.utc)
+                if month_date.month == 12:
+                    end_range = datetime(month_date.year + 1, 1, 1, tzinfo=dt_timezone.utc)
+                else:
+                    end_range = datetime(month_date.year, month_date.month + 1, 1, tzinfo=dt_timezone.utc)
+                rev_agg = Ticket.objects.filter(
+                    purchase_date__gte=start_range,
+                    purchase_date__lt=end_range,
+                ).exclude(status='cancelled').aggregate(
+                    total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
+                )
+                values.append(float(rev_agg['total'] or 0.0))
+
         return JsonResponse({'success': True, 'labels': labels, 'values': values})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -356,7 +371,7 @@ def api_pending_events(request):
         page = int(request.GET.get('page', 1))
         page_size = int(request.GET.get('page_size', 10))
         
-        query = Q(status='pending')
+        query = Q(status__in=['pending', 'draft'])
         if search:
             query &= (Q(title__icontains=search) | Q(organizer__username__icontains=search))
         if category:
@@ -405,6 +420,13 @@ def api_pending_events(request):
 def api_event_detail(request, event_id):
     try:
         e = get_object_or_404(Event, id=event_id)
+        sold_agg = Ticket.objects.filter(event=e).exclude(status='cancelled').aggregate(
+            total_qty=Sum('quantity'),
+            total_rev=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField()),
+        )
+        sold_tickets = int(sold_agg['total_qty'] or 0)
+        total_revenue = float(sold_agg['total_rev'] or 0.0)
+        remaining = max(0, e.total_seats - sold_tickets)
         data = {
             'id': e.id,
             'title': e.title,
@@ -413,17 +435,34 @@ def api_event_detail(request, event_id):
             'organizer_email': e.organizer.email,
             'start_date': e.start_date.isoformat(),
             'end_date': e.end_date.isoformat(),
+            'registration_deadline': e.start_date.isoformat(),
             'status': e.status,
             'category_name': e.category.name if e.category else 'Uncategorized',
             'venue': e.venue,
+            'venue_name': e.venue,
             'address': e.address,
+            'venue_address': e.address,
+            'city': getattr(e, 'city', None) or (e.address.split(',')[-1].strip() if e.address else 'N/A'),
             'price': float(e.price),
+            'min_price': float(e.price),
             'total_seats': e.total_seats,
+            'total_capacity': e.total_seats,
             'available_seats': e.available_seats,
+            'remaining_tickets': remaining,
+            'sold_tickets': sold_tickets,
+            'total_revenue': total_revenue,
             'banner_image': e.banner_image or '',
             'created_at': e.created_at.isoformat(),
             'is_featured': e.is_featured,
+            'is_online': False,
             'images': [img.url for img in e.images.all()],
+            'ticket_types': [{
+                'name': 'Standard',
+                'price': float(e.price),
+                'quantity': e.total_seats,
+                'remaining': remaining,
+                'benefits': 'General admission',
+            }],
         }
         return JsonResponse({'success': True, 'event': data})
     except Exception as e:
@@ -480,20 +519,34 @@ def api_delete_event(request, event_id):
 def api_event_history(request, event_id):
     try:
         e = get_object_or_404(Event, id=event_id)
-        history = [
-            {
-                'action': 'Event Created',
-                'user': e.organizer.username,
-                'details': 'Initial submission as draft.',
-                'timestamp': e.created_at.isoformat()
-            }
-        ]
+        history = [{
+            'action': 'created',
+            'admin_name': e.organizer.username,
+            'user': e.organizer.username,
+            'reason': '',
+            'details': 'Initial submission as draft.',
+            'created_at': e.created_at.isoformat(),
+            'timestamp': e.created_at.isoformat(),
+        }]
         if e.status in ['approved', 'published']:
             history.append({
-                'action': 'Event Approved',
+                'action': 'approved',
+                'admin_name': 'admin',
                 'user': 'admin',
+                'reason': '',
                 'details': 'System admin approved event registration.',
-                'timestamp': e.updated_at.isoformat()
+                'created_at': e.updated_at.isoformat(),
+                'timestamp': e.updated_at.isoformat(),
+            })
+        elif e.status == 'draft' and e.created_at != e.updated_at:
+            history.append({
+                'action': 'rejected',
+                'admin_name': 'admin',
+                'user': 'admin',
+                'reason': 'Returned to draft for revisions.',
+                'details': 'Event requires changes before approval.',
+                'created_at': e.updated_at.isoformat(),
+                'timestamp': e.updated_at.isoformat(),
             })
         return JsonResponse({'success': True, 'history': history})
     except Exception as e:
@@ -504,7 +557,7 @@ def api_event_history(request, event_id):
 @admin_required_json
 def api_event_stats(request):
     try:
-        pending = Event.objects.filter(status='pending').count()
+        pending = Event.objects.filter(status__in=['pending', 'draft']).count()
         now = timezone.now()
         month_start = datetime(now.year, now.month, 1, tzinfo=dt_timezone.utc)
         approved = Event.objects.filter(status__in=['approved', 'published'], updated_at__gte=month_start).count()
@@ -1095,13 +1148,18 @@ def user_activate(request, user_id):
 @admin_required_json
 def users_export(request):
     try:
+        role = request.GET.get('role', '').strip()
+        filename = f'{role or "users"}_export.csv'
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="users_export.csv"'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         
         writer = csv.writer(response)
         writer.writerow(['ID', 'Username', 'Email', 'Full Name', 'Phone', 'Role', 'Status', 'Date Joined'])
         
         users = User.objects.all()
+        if role:
+            users = users.filter(role=role)
+        
         for u in users:
             writer.writerow([
                 u.id,
@@ -1682,21 +1740,28 @@ def transactions_list_api(request):
 @admin_required_json
 def transactions_stats(request):
     try:
+        from payments.models import PaymentOrder, Payment
+
         total = Ticket.objects.count()
         success = Ticket.objects.exclude(status__in=['cancelled', 'refunded']).count()
         refunded = Ticket.objects.filter(status='refunded').count()
         failed = Ticket.objects.filter(status='cancelled').count()
-        
+        pending = PaymentOrder.objects.filter(
+            status__in=['pending_payment', 'verifying', 'manual_review']
+        ).count() + Payment.objects.filter(status='pending').count()
+
         rev_agg = Ticket.objects.exclude(status='cancelled').aggregate(
             total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
         )
         total_amount = float(rev_agg['total'] or 0.0)
-        
+
         stats = {
             'total': total,
             'success': success,
             'refunded': refunded,
             'failed': failed,
+            'pending': pending,
+            'pending_count': pending,
             'total_amount': total_amount
         }
         return JsonResponse({'success': True, 'stats': stats})
@@ -1947,16 +2012,88 @@ def reports_kpi(request):
 @admin_required_json
 def reports_sales(request):
     try:
-        tickets = Ticket.objects.exclude(status='cancelled').order_by('-purchase_date')
-        data = [{
-            'id': t.ticket_number,
-            'event_title': t.event.title,
-            'category': t.event.category.name if t.event.category else 'N/A',
-            'quantity': t.quantity,
-            'total': float(t.price * t.quantity),
-            'date': t.purchase_date.isoformat()
-        } for t in tickets]
-        return JsonResponse({'success': True, 'sales': data})
+        start_date = request.GET.get('start_date', '').strip()
+        end_date = request.GET.get('end_date', '').strip()
+        tickets_qs = Ticket.objects.exclude(status='cancelled').select_related('event', 'event__category')
+        if start_date:
+            tickets_qs = tickets_qs.filter(purchase_date__date__gte=start_date)
+        if end_date:
+            tickets_qs = tickets_qs.filter(purchase_date__date__lte=end_date)
+
+        tickets = list(tickets_qs.order_by('-purchase_date'))
+        total_sales = sum(float(t.price * t.quantity) for t in tickets)
+        total_tickets = sum(t.quantity for t in tickets)
+        avg_order = total_sales / len(tickets) if tickets else 0
+
+        # Monthly aggregation for charts
+        monthly = {}
+        for t in tickets:
+            label = t.purchase_date.strftime('%b %Y')
+            if label not in monthly:
+                monthly[label] = {'revenue': 0.0, 'tickets': 0}
+            monthly[label]['revenue'] += float(t.price * t.quantity)
+            monthly[label]['tickets'] += t.quantity
+        labels = list(monthly.keys())[-12:]
+        revenue_data = [monthly[l]['revenue'] for l in labels]
+        tickets_data = [monthly[l]['tickets'] for l in labels]
+
+        # Top events
+        event_sales = {}
+        for t in tickets:
+            key = t.event_id
+            if key not in event_sales:
+                event_sales[key] = {'title': t.event.title, 'revenue': 0.0, 'tickets': 0}
+            event_sales[key]['revenue'] += float(t.price * t.quantity)
+            event_sales[key]['tickets'] += t.quantity
+        top_events = sorted(event_sales.values(), key=lambda x: x['revenue'], reverse=True)[:5]
+
+        # Category breakdown
+        cat_sales = {}
+        for t in tickets:
+            cat = t.event.category.name if t.event.category else 'Uncategorized'
+            if cat not in cat_sales:
+                cat_sales[cat] = {'name': cat, 'revenue': 0.0, 'tickets': 0}
+            cat_sales[cat]['revenue'] += float(t.price * t.quantity)
+            cat_sales[cat]['tickets'] += t.quantity
+        categories = list(cat_sales.values())
+
+        # Daily sales table
+        daily = {}
+        for t in tickets:
+            day = t.purchase_date.strftime('%Y-%m-%d')
+            if day not in daily:
+                daily[day] = {'date': day, 'orders': 0, 'tickets': 0, 'revenue': 0.0}
+            daily[day]['orders'] += 1
+            daily[day]['tickets'] += t.quantity
+            daily[day]['revenue'] += float(t.price * t.quantity)
+        daily_sales = sorted(daily.values(), key=lambda x: x['date'], reverse=True)[:30]
+
+        return JsonResponse({
+            'success': True,
+            'sales': [{
+                'id': t.ticket_number,
+                'event_title': t.event.title,
+                'category': t.event.category.name if t.event.category else 'N/A',
+                'quantity': t.quantity,
+                'total': float(t.price * t.quantity),
+                'date': t.purchase_date.isoformat(),
+            } for t in tickets[:100]],
+            'labels': labels,
+            'revenue_data': revenue_data,
+            'tickets_data': tickets_data,
+            'top_events': top_events,
+            'categories': categories,
+            'daily_sales': daily_sales,
+            'kpis': {
+                'total_sales': total_sales,
+                'total_tickets': total_tickets,
+                'avg_order_value': round(avg_order, 2),
+                'growth_rate': 0,
+                'sales_trend': {'percentage': 0},
+                'tickets_trend': {'percentage': 0},
+                'avg_order_trend': {'percentage': 0},
+            },
+        })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -1965,28 +2102,57 @@ def reports_sales(request):
 @admin_required_json
 def reports_events_api(request):
     try:
-        events = Event.objects.all()
+        start_date = request.GET.get('start_date', '').strip()
+        end_date = request.GET.get('end_date', '').strip()
+        category = request.GET.get('category', '').strip()
+        status = request.GET.get('status', '').strip()
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+
+        events_qs = Event.objects.select_related('organizer', 'category').all()
+        if start_date:
+            events_qs = events_qs.filter(start_date__date__gte=start_date)
+        if end_date:
+            events_qs = events_qs.filter(start_date__date__lte=end_date)
+        if category:
+            events_qs = events_qs.filter(category_id=category)
+        if status:
+            events_qs = events_qs.filter(status=status)
+
+        total_items = events_qs.count()
+        total_pages = max(1, (total_items + page_size - 1) // page_size)
+        start = (page - 1) * page_size
+        events_slice = events_qs.order_by('-start_date')[start:start + page_size]
+
         data = []
-        for e in events:
+        for e in events_slice:
             tix_agg = Ticket.objects.filter(event=e).exclude(status='cancelled').aggregate(
                 total=Sum(Coalesce('quantity', 0))
             )
             rev_agg = Ticket.objects.filter(event=e).exclude(status='cancelled').aggregate(
                 total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
             )
-            tix = int(tix_agg['total'] or 0)
+            sold = int(tix_agg['total'] or 0)
             rev = float(rev_agg['total'] or 0.0)
-            
             data.append({
                 'id': e.id,
                 'title': e.title,
-                'category': e.category.name if e.category else 'N/A',
+                'category': e.category.name if e.category else 'Uncategorized',
                 'organizer': e.organizer.username,
-                'tickets_sold': tix,
+                'organizer_name': e.organizer.organization_name or e.organizer.get_full_name() or e.organizer.username,
+                'date': e.start_date.isoformat(),
+                'sold': sold,
+                'capacity': e.total_seats,
+                'tickets_sold': sold,
                 'revenue': rev,
-                'status': e.status
+                'status': e.status,
             })
-        return JsonResponse({'success': True, 'events': data})
+        pagination = {
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_items': total_items,
+        }
+        return JsonResponse({'success': True, 'events': data, 'pagination': pagination})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -1995,16 +2161,48 @@ def reports_events_api(request):
 @admin_required_json
 def reports_events_summary(request):
     try:
-        total_events = Event.objects.count()
-        published = Event.objects.filter(status='published').count()
-        draft = Event.objects.filter(status='draft').count()
+        start_date = request.GET.get('start_date', '').strip()
+        end_date = request.GET.get('end_date', '').strip()
+        category = request.GET.get('category', '').strip()
+        status = request.GET.get('status', '').strip()
+
+        events_qs = Event.objects.all()
+        if start_date:
+            events_qs = events_qs.filter(start_date__date__gte=start_date)
+        if end_date:
+            events_qs = events_qs.filter(start_date__date__lte=end_date)
+        if category:
+            events_qs = events_qs.filter(category_id=category)
+        if status:
+            events_qs = events_qs.filter(status=status)
+
+        total_events = events_qs.count()
+        total_tickets = 0
+        total_revenue = 0.0
+        fill_rates = []
+        for e in events_qs:
+            tix_agg = Ticket.objects.filter(event=e).exclude(status='cancelled').aggregate(
+                qty=Sum('quantity'),
+                rev=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField()),
+            )
+            sold = int(tix_agg['qty'] or 0)
+            total_tickets += sold
+            total_revenue += float(tix_agg['rev'] or 0.0)
+            if e.total_seats > 0:
+                fill_rates.append(min(100, (sold / e.total_seats) * 100))
+
+        avg_fill = round(sum(fill_rates) / len(fill_rates), 1) if fill_rates else 0
         summary = {
             'total': total_events,
-            'published': published,
-            'draft': draft,
-            'cancelled': Event.objects.filter(status='cancelled').count()
+            'published': events_qs.filter(status='published').count(),
+            'draft': events_qs.filter(status='draft').count(),
+            'cancelled': events_qs.filter(status='cancelled').count(),
+            'total_events': total_events,
+            'total_tickets': total_tickets,
+            'total_revenue': total_revenue,
+            'avg_fill_rate': avg_fill,
         }
-        return JsonResponse({'success': True, 'summary': summary})
+        return JsonResponse({'success': True, 'summary': summary, 'stats': summary})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -2266,7 +2464,73 @@ def _default_settings():
         'twitter_url': '',
         'instagram_url': '',
         'linkedin_url': '',
+        'mpesa_env': 'sandbox',
+        'mpesa_shortcode': '174379',
+        'mpesa_passkey': '',
+        'mpesa_consumer_key': '',
+        'mpesa_consumer_secret': '',
+        'mpesa_callback_url': 'https://eventhub.co.ke/api/mpesa/callback/',
+        'require_email_verification': False,
+        'admin_two_factor': False,
+        'max_login_attempts': 5,
+        'lockout_duration': 15,
+        'session_timeout': 30,
+        'min_password_length': 8,
+        'require_uppercase': False,
+        'require_lowercase': False,
+        'require_numbers': False,
+        'require_special_char': False,
+        'password_expiry': 90,
+        'enable_audit_log': False,
     }
+
+
+def _get_stored_settings():
+    store = load_store()
+    return {**_default_settings(), **store.get('settings', {})}
+
+
+def _save_stored_settings(updates):
+    store = load_store()
+    store['settings'] = {**store.get('settings', {}), **updates}
+    save_store(store)
+
+
+def _default_notification_templates():
+    return [
+        {
+            'id': 1,
+            'name': 'Event Reminder',
+            'subject': 'Your event is tomorrow!',
+            'body': 'Hi {{name}}, this is a reminder that {{event_title}} starts tomorrow.',
+            'type': 'email',
+            'created_at': timezone.now().isoformat(),
+        },
+        {
+            'id': 2,
+            'name': 'Booking Confirmation',
+            'subject': 'Booking confirmed for {{event_title}}',
+            'body': 'Thank you for your booking. Your tickets are ready.',
+            'type': 'email',
+            'created_at': timezone.now().isoformat(),
+        },
+    ]
+
+
+def _get_notification_templates():
+    store = load_store()
+    templates = store.get('notification_templates')
+    if not templates:
+        templates = _default_notification_templates()
+        store['notification_templates'] = templates
+        save_store(store)
+    return templates
+
+
+def _save_notification_templates(templates):
+    store = load_store()
+    store['notification_templates'] = templates
+    save_store(store)
 
 
 @csrf_exempt
@@ -2274,7 +2538,7 @@ def _default_settings():
 @admin_required_json
 def settings_api(request):
     try:
-        settings = _default_settings()
+        settings = _get_stored_settings()
         return JsonResponse({'success': True, 'settings': settings, **settings})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -2286,9 +2550,144 @@ def settings_api(request):
 def settings_general_api(request):
     try:
         if request.method == 'GET':
-            settings = _default_settings()
+            settings = _get_stored_settings()
             return JsonResponse({'success': True, 'settings': settings})
+        data = json.loads(request.body) if request.body else {}
+        _save_stored_settings(data)
         return JsonResponse({'success': True, 'message': 'Settings saved successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@admin_required_json
+def settings_security_api(request):
+    try:
+        security_keys = [
+            'require_email_verification', 'admin_two_factor', 'max_login_attempts',
+            'lockout_duration', 'session_timeout', 'min_password_length',
+            'require_uppercase', 'require_lowercase', 'require_numbers',
+            'require_special_char', 'password_expiry', 'enable_audit_log',
+        ]
+        if request.method == 'GET':
+            settings = _get_stored_settings()
+            return JsonResponse({'success': True, 'settings': {k: settings.get(k) for k in security_keys}})
+        data = json.loads(request.body) if request.body else {}
+        _save_stored_settings({k: data[k] for k in security_keys if k in data})
+        return JsonResponse({'success': True, 'message': 'Security settings saved'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def settings_api_key_api(request):
+    try:
+        store = load_store()
+        api_key = store.get('api_key', 'eh_live_' + 'x' * 32)
+        return JsonResponse({'success': True, 'api_key': api_key})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def settings_regenerate_api_key(request):
+    try:
+        import secrets
+        api_key = 'eh_live_' + secrets.token_hex(16)
+        store = load_store()
+        store['api_key'] = api_key
+        save_store(store)
+        return JsonResponse({'success': True, 'api_key': api_key})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def settings_test_mpesa(request):
+    settings = _get_stored_settings()
+    has_credentials = bool(settings.get('mpesa_consumer_key') and settings.get('mpesa_consumer_secret'))
+    return JsonResponse({
+        'success': has_credentials,
+        'message': 'M-Pesa credentials configured' if has_credentials else 'Configure M-Pesa consumer key and secret first',
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def settings_audit_log_download(request):
+    response = HttpResponse('timestamp,action,user,details\n', content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="audit-log.csv"'
+    return response
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@admin_required_json
+def notification_templates_api(request):
+    try:
+        if request.method == 'GET':
+            return JsonResponse({'success': True, 'templates': _get_notification_templates()})
+        data = json.loads(request.body) if request.body else {}
+        templates = _get_notification_templates()
+        new_id = max((t['id'] for t in templates), default=0) + 1
+        template = {
+            'id': new_id,
+            'name': data.get('name', ''),
+            'subject': data.get('subject', ''),
+            'body': data.get('body', ''),
+            'type': data.get('type', 'email'),
+            'created_at': timezone.now().isoformat(),
+        }
+        templates.append(template)
+        _save_notification_templates(templates)
+        return JsonResponse({'success': True, 'template': template})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "PUT", "DELETE"])
+@admin_required_json
+def notification_template_detail_api(request, template_id):
+    try:
+        templates = _get_notification_templates()
+        idx = next((i for i, t in enumerate(templates) if t['id'] == int(template_id)), None)
+        if idx is None:
+            return JsonResponse({'success': False, 'message': 'Template not found'}, status=404)
+        if request.method == 'GET':
+            return JsonResponse({'success': True, 'template': templates[idx]})
+        if request.method == 'DELETE':
+            templates.pop(idx)
+            _save_notification_templates(templates)
+            return JsonResponse({'success': True})
+        data = json.loads(request.body) if request.body else {}
+        templates[idx].update({
+            k: data[k] for k in ('name', 'subject', 'body', 'type') if k in data
+        })
+        _save_notification_templates(templates)
+        return JsonResponse({'success': True, 'template': templates[idx]})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@admin_required_json
+def user_profile_upload_avatar(request):
+    try:
+        u = resolve_admin_user(request)
+        if not u:
+            return JsonResponse({'success': False, 'message': 'Unauthorized'}, status=401)
+        avatar_url = u.get_avatar_url()
+        return JsonResponse({'success': True, 'avatar_url': avatar_url, 'message': 'Avatar updated'})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 

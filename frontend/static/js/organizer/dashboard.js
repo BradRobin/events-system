@@ -103,7 +103,7 @@ window.loadDashboardStats = async function() {
         console.error(e);
         // If auth expired, send user to login instead of repeating toasts.
         if (e && (e.status === 401 || e.status === 403)) {
-            window.location.href = '/login/';
+            window.location.href = '/organizer/login/';
             return;
         }
         // Keep dashboard usable even when stats endpoint has transient issues.
@@ -282,24 +282,34 @@ window.loadRecentBookings = async function() {
             container.innerHTML = '<div class="text-muted text-center">No recent bookings</div>';
             return;
         }
-        container.innerHTML = bookings.map(b => `
+        container.innerHTML = bookings.map(b => {
+            const statusLabel = b.status === 'checked_in' ? 'checked in' : (b.status === 'valid' ? 'confirmed' : (b.status || 'pending'));
+            const statusClass = statusLabel === 'confirmed' ? 'active' : 'pending';
+            return `
             <div class="border-bottom py-2">
                 <strong>${escapeHtml(b.event_title)}</strong><br>
-                <small>${escapeHtml(b.attendee_name)} - Kes ${b.amount} <span class="status-badge ${b.status === 'confirmed' ? 'active' : 'pending'}">${b.status}</span></small>
+                <small>${escapeHtml(b.attendee_name)} - Kes ${Number(b.amount || 0).toLocaleString()} <span class="status-badge ${statusClass}">${statusLabel}</span></small>
             </div>
-        `).join('');
+        `;
+        }).join('');
     } catch(e) {
         console.error(e);
     }
 };
 
 window.loadPerformance = async function() {
+    const scoreEl = document.getElementById('performanceScore');
+    if (!scoreEl) return;
     try {
         const perf = await OrganizerAPI.dashboard.getPerformance();
-        document.getElementById('performanceScore').innerText = perf.score || 85;
-        document.getElementById('performanceProgress').style.width = (perf.score || 85) + '%';
-        document.getElementById('avgRating').innerText = perf.avg_rating || 4.5;
-        document.getElementById('fulfillmentRate').innerText = perf.fulfillment_rate || 92;
+        const score = perf.score ?? 0;
+        scoreEl.innerText = score;
+        const progressEl = document.getElementById('performanceProgress');
+        if (progressEl) progressEl.style.width = score + '%';
+        const avgEl = document.getElementById('avgRating');
+        if (avgEl) avgEl.innerText = perf.avg_rating ?? 0;
+        const fulfillmentEl = document.getElementById('fulfillmentRate');
+        if (fulfillmentEl) fulfillmentEl.innerText = perf.fulfillment_rate ?? 0;
     } catch(e) {
         console.error(e);
     }
@@ -387,10 +397,12 @@ window.loadPendingPayments = async function() {
 };
 
 window.loadNotifications = async function() {
+    const container = document.getElementById('notificationsList');
+    if (!container) return;
     try {
-        const notifs = await OrganizerAPI.dashboard.getNotifications();
-        const container = document.getElementById('notificationsList');
-        if (!notifs || notifs.length === 0) {
+        const data = await OrganizerAPI.dashboard.getNotifications();
+        const notifs = Array.isArray(data) ? data : (data.notifications || data.results || []);
+        if (!notifs.length) {
             container.innerHTML = '<div class="text-muted text-center">No notifications</div>';
             return;
         }

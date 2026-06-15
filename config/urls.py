@@ -16,11 +16,15 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from events.views import (
-    organizer_dashboard_stats, organizer_dashboard_revenue, api_event_list, api_category_list, api_event_detail,
+    organizer_dashboard_stats, organizer_dashboard_revenue,
+    organizer_dashboard_recent_bookings, organizer_dashboard_upcoming_events,
+    organizer_dashboard_performance,
+    api_event_list, api_category_list, api_event_detail,
     api_dashboard_stats, api_dashboard_recommendations, api_dashboard_recent_activity,
     api_featured_events, api_events_check_expired, homepage_view,
     api_discover_local_events, api_platform_stats, api_db_status, api_run_migrations,
 )
+from events.seo_views import robots_txt, sitemap_xml
 from accounts.auth_views import register_submit, login_submit
 from bookings.views import (
     ticket_checkout_api, api_tickets_upcoming, api_tickets_past,
@@ -56,6 +60,7 @@ from reviews.views import (
     api_create_review,
     api_update_review,
     api_delete_review,
+    api_public_reviews,
 )
 from events.api_organizer_views import (
     api_organizer_events_list,
@@ -76,6 +81,8 @@ from events.api_organizer_views import (
     api_organizer_settings_mpesa,
     api_organizer_settings_mpesa_update,
     api_organizer_reviews_stats,
+    api_organizer_reviews_list,
+    api_organizer_reviews_respond,
     api_organizer_event_analytics,
     api_organizer_upload_image,
     api_organizer_upload_gallery,
@@ -199,6 +206,8 @@ urlpatterns = [
     
     # Static Pages (Homepage)
     path('', homepage_view, name='home'),
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sitemap.xml', sitemap_xml, name='sitemap_xml'),
     
     # API Endpoints
     path('api/', include('accounts.urls')),
@@ -227,6 +236,9 @@ urlpatterns = [
     path('api/organizer/', include('accounts.urls')),
     path('api/organizer/dashboard/stats/', organizer_dashboard_stats, name='organizer_dashboard_stats'),
     path('api/organizer/dashboard/revenue/', organizer_dashboard_revenue, name='organizer_dashboard_revenue'),
+    path('api/organizer/dashboard/recent-bookings/', organizer_dashboard_recent_bookings, name='organizer_dashboard_recent_bookings'),
+    path('api/organizer/dashboard/upcoming-events/', organizer_dashboard_upcoming_events, name='organizer_dashboard_upcoming_events'),
+    path('api/organizer/dashboard/performance/', organizer_dashboard_performance, name='organizer_dashboard_performance'),
     path('api/organizer/events/', api_organizer_events_list, name='api_organizer_events_list'),
     path('api/organizer/events/create/', api_organizer_events_create, name='api_organizer_events_create'),
     path('api/organizer/events/<int:event_id>/', api_organizer_events_detail, name='api_organizer_events_detail'),
@@ -245,6 +257,9 @@ urlpatterns = [
     path('api/organizer/attendees/', api_organizer_attendees_list, name='api_organizer_attendees_list'),
     path('api/organizer/attendees/stats/', api_organizer_attendees_stats, name='api_organizer_attendees_stats'),
     path('api/organizer/reviews/stats/', api_organizer_reviews_stats, name='api_organizer_reviews_stats'),
+    path('api/organizer/reviews/', api_organizer_reviews_list, name='api_organizer_reviews_list'),
+    path('api/organizer/reviews/event/<int:event_id>/', api_organizer_reviews_list, name='api_organizer_reviews_event'),
+    path('api/organizer/reviews/<int:review_id>/respond/', api_organizer_reviews_respond, name='api_organizer_reviews_respond'),
     
     # Organizer Settings Endpoints
     path('api/organizer/settings/general/', api_organizer_settings_general, name='api_organizer_settings_general'),
@@ -286,6 +301,7 @@ urlpatterns = [
     path('api/events/check-expired/', api_events_check_expired, name='api_events_check_expired'),
     path('api/events/discover/', api_discover_local_events, name='api_events_discover'),
     path('api/platform/stats/', api_platform_stats, name='api_platform_stats'),
+    path('api/platform/reviews/', api_public_reviews, name='api_public_reviews'),
     # ============ ADMIN PORTAL API ENDPOINTS ============
     # Dashboard
     path('api/admin/dashboard/stats/', admin_api.dashboard_stats, name='admin_dashboard_stats'),
@@ -410,6 +426,8 @@ urlpatterns = [
     path('api/admin/notifications/<str:notification_id>/read/', admin_api.api_notification_mark_read, name='admin_notification_mark_read'),
     path('api/admin/notifications/<str:notification_id>/dismiss/', admin_api.api_notification_dismiss, name='admin_notification_dismiss'),
     path('api/admin/notifications/<str:notification_id>/', admin_api.api_notification_delete, name='admin_notification_delete'),
+    path('api/admin/notifications/templates/', admin_api.notification_templates_api, name='admin_notification_templates'),
+    path('api/admin/notifications/templates/<int:template_id>/', admin_api.notification_template_detail_api, name='admin_notification_template_detail'),
 
     # Settings & Profile
     path('api/admin/user/profile/', admin_api.user_profile, name='admin_user_profile'),
@@ -417,8 +435,14 @@ urlpatterns = [
     path('api/admin/profile/update/', admin_api.user_profile_update, name='admin_profile_update'),
     path('api/admin/profile/change-password/', admin_api.user_profile_change_password, name='admin_profile_change_password'),
     path('api/admin/profile/stats/', admin_api.user_profile_stats, name='admin_profile_stats'),
+    path('api/admin/profile/upload-avatar/', admin_api.user_profile_upload_avatar, name='admin_profile_upload_avatar'),
     path('api/admin/settings/', admin_api.settings_api, name='admin_settings_api'),
     path('api/admin/settings/general/', admin_api.settings_general_api, name='admin_settings_general'),
+    path('api/admin/settings/security/', admin_api.settings_security_api, name='admin_settings_security'),
+    path('api/admin/settings/api-key/', admin_api.settings_api_key_api, name='admin_settings_api_key'),
+    path('api/admin/settings/regenerate-api-key/', admin_api.settings_regenerate_api_key, name='admin_settings_regenerate_api_key'),
+    path('api/admin/settings/test-mpesa/', admin_api.settings_test_mpesa, name='admin_settings_test_mpesa'),
+    path('api/admin/settings/audit-log/download/', admin_api.settings_audit_log_download, name='admin_settings_audit_log'),
     path('api/admin/broadcast/', admin_api.api_admin_broadcast, name='admin_settings_broadcast'),
 
     # Payments - M-Pesa

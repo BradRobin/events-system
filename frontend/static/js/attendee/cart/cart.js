@@ -398,8 +398,44 @@ async function processCheckout(e) {
     }
 
     backToCart();
-    const ticketType = item.ticket_type || 'Regular';
+    const ticketType = item.ticket_type || item.tier || 'Regular';
     await window.CheckoutFlow.startCheckout(item.id, ticketType, item.quantity);
+}
+
+function removeEventFromCart(eventId) {
+    if (!eventId || !cartData?.items?.length) return;
+    const idx = cartData.items.findIndex(i => String(i.id) === String(eventId));
+    if (idx === -1) return;
+    cartData.items.splice(idx, 1);
+    recalculateCartTotals();
+    saveCartToLocalStorage();
+    displayCart();
+    updateCartCount(cartData.items.length);
+    if (cartData.items.length === 0) {
+        if (emptyCartEl) emptyCartEl.style.display = 'block';
+        if (cartContentEl) cartContentEl.style.display = 'none';
+    }
+    window.dispatchEvent(new Event('cart-updated'));
+}
+
+function onCartCheckoutSuccess(event) {
+    const eventId = event?.detail?.event_id;
+    removeEventFromCart(eventId);
+    showToast('Payment successful! Your ticket has been issued.', 'success');
+}
+
+function onCartCheckoutSubmitted(event) {
+    const eventId = event?.detail?.event_id;
+    removeEventFromCart(eventId);
+    showToast('Payment proof submitted. The organizer will review and approve your booking.', 'info');
+}
+
+window.addEventListener('checkout-completed', onCartCheckoutSuccess);
+window.addEventListener('checkout-success', onCartCheckoutSuccess);
+window.addEventListener('checkout-submitted', onCartCheckoutSubmitted);
+
+function onCartCheckoutSubmittedLegacy() {
+    showToast('Payment submitted for approval. Your cart will be updated once confirmed.', 'info');
 }
 
 async function initiateMpesaPayment(bookingId, billingInfo) {
@@ -499,13 +535,6 @@ async function initiateMpesaPayment(bookingId, billingInfo) {
     // Dispatch events for navbar update
     window.dispatchEvent(new Event('cart-updated'));
     window.dispatchEvent(new Event('storage'));
-}
-
-window.addEventListener('checkout-success', onCartCheckoutSuccess);
-window.addEventListener('checkout-submitted', onCartCheckoutSubmitted);
-
-function onCartCheckoutSubmitted() {
-    showToast('📱 Payment submitted for approval. Your cart will be updated once confirmed.', 'info');
 }
 
 function pollCartPaymentStatus(checkoutId, billingInfo) {

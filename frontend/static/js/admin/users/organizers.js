@@ -40,9 +40,9 @@ function switchTab(tab) {
     currentTab = tab;
     currentPage = 1;
     
-    const buttons = document.querySelectorAll('.tab-btn');
+    const buttons = document.querySelectorAll('.user-tab');
     buttons.forEach(btn => btn.classList.remove('active'));
-    if (event && event.target) {
+    if (typeof event !== 'undefined' && event && event.target) {
         event.target.classList.add('active');
     }
     
@@ -333,12 +333,17 @@ async function viewDocuments(organizerId) {
 }
 
 async function verifyOrganizer(organizerId) {
+    const id = organizerId || currentOrganizerId;
+    if (!id) {
+        showToast('No organizer selected', 'error');
+        return;
+    }
     const notes = document.getElementById('verificationNotes')?.value;
     
     if (typeof Loader !== 'undefined') Loader.show('Verifying organizer...');
     
     try {
-        await apiRequest(`/api/admin/organizers/${organizerId}/verify/`, 'POST', { notes: notes });
+        await apiRequest(`/api/admin/organizers/${id}/verify/`, 'POST', { notes: notes });
         showToast('Organizer verified successfully', 'success');
         closeVerifyModal();
         loadPendingOrganizers();
@@ -352,14 +357,20 @@ async function verifyOrganizer(organizerId) {
 }
 
 async function rejectOrganizer(organizerId) {
+    const id = organizerId || currentOrganizerId;
+    if (!id) {
+        showToast('No organizer selected', 'error');
+        return;
+    }
     const reason = prompt('Please provide a reason for rejection:');
     if (!reason) return;
     
     if (typeof Loader !== 'undefined') Loader.show('Rejecting application...');
     
     try {
-        await apiRequest(`/api/admin/organizers/${organizerId}/reject/`, 'POST', { reason: reason });
+        await apiRequest(`/api/admin/organizers/${id}/reject/`, 'POST', { reason: reason });
         showToast('Application rejected', 'success');
+        closeVerifyModal();
         loadPendingOrganizers();
         loadStats();
     } catch (error) {
@@ -472,7 +483,18 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 3000);
 }
 
+function exportOrganizers() {
+    window.open('/api/admin/users/export/?role=organizer', '_blank');
+    showToast('Export started', 'success');
+}
+
+async function approveOrganizer(organizerId) {
+    return verifyOrganizer(organizerId);
+}
+
 // Make functions global
+window.exportOrganizers = exportOrganizers;
+window.approveOrganizer = approveOrganizer;
 window.switchTab = switchTab;
 window.viewDocuments = viewDocuments;
 window.verifyOrganizer = verifyOrganizer;

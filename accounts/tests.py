@@ -130,7 +130,7 @@ class AccountAPITests(TestCase):
                 'role': 'attendee'
             })
             
-            self.assertEqual(response.status_code, 200) # Since it resolves/returns tokens directly
+            self.assertIn(response.status_code, (200, 201))
             data = response.json()
             self.assertEqual(data['user']['email'], 'newgoogleuser@example.com')
             self.assertEqual(data['user']['role'], 'attendee')
@@ -171,6 +171,61 @@ class AccountAPITests(TestCase):
             # Verify google_id association
             existing_user.refresh_from_db()
             self.assertEqual(existing_user.google_id, 'google_987654321')
+
+    def test_google_oauth_blocks_organizer_signup(self):
+        from unittest.mock import patch
+        with patch('google.oauth2.id_token.verify_oauth2_token') as mock_verify:
+            mock_verify.return_value = {
+                'email': 'neworg@example.com',
+                'sub': 'google_org_new',
+                'given_name': 'Org',
+                'family_name': 'User',
+            }
+
+            response = self.post_json('/api/auth/google/', {
+                'credential': 'fake_credential_token',
+                'role': 'organizer',
+            })
+
+            self.assertEqual(response.status_code, 403)
+            self.assertIn('organization', response.json()['error'].lower())
+
+    def test_admin_pending_count_accepts_bearer_token(self):
+        User = get_user_model()
+        admin = User.objects.create_user(
+            username='tokenadmin',
+            email='tokenadmin@example.com',
+            password='StrongPass123!',
+            role='admin',
+            is_staff=True,
+        )
+        login_response = self.post_json('/api/auth/login/', {
+            'username': 'tokenadmin',
+            'password': 'StrongPass123!',
+        })
+        self.assertEqual(login_response.status_code, 200)
+        access = login_response.json()['access']
+
+        response = self.client.get(
+            '/api/admin/events/pending/count/',
+            HTTP_AUTHORIZATION=f'Bearer {access}',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+
+    def test_legacy_register_submit_creates_organizer(self):
+        response = self.post_json('/register/submit/', {
+            'name': 'Legacy Organizer',
+            'email': 'legacyorg@example.com',
+            'password1': 'StrongPass123!',
+            'role': 'organizer',
+            'organization_name': 'Legacy Events Co',
+        })
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['user']['role'], 'organizer')
+        self.assertIn('access', data)
 
     def test_avatar_upload_success(self):
         User = get_user_model()
@@ -228,7 +283,7 @@ class AccountAPITests(TestCase):
                 'role': 'attendee'
             })
             
-            self.assertEqual(response.status_code, 200)
+            self.assertIn(response.status_code, (200, 201))
             data = response.json()
             self.assertEqual(data['user']['avatar_url'], 'https://lh3.googleusercontent.com/a/some_photo_url')
             

@@ -83,7 +83,7 @@ const ORGANIZER_API_CONFIG = {
             checkin: (ticketNumber) => `/tickets/${ticketNumber}/checkin/`,
             bulkCheckin: '/tickets/bulk-checkin/',
             export: '/tickets/export/',
-            stats: (eventId) => `/tickets/stats/${eventId}/`,
+            stats: (eventId) => eventId ? `/tickets/stats/${eventId}/` : '/tickets/stats/',
             recentCheckins: (eventId) => `/tickets/recent-checkins/${eventId}/`,
             search: '/tickets/search/'
         },

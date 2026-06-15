@@ -135,10 +135,15 @@ async function viewDocuments(organizerId) {
 }
 
 async function approveOrganizer(organizerId) {
+    const id = organizerId || currentOrganizerId;
+    if (!id) {
+        showToast('No organizer selected', 'error');
+        return;
+    }
     if (typeof Loader !== 'undefined') Loader.show('Approving organizer...');
     
     try {
-        await apiRequest(`/api/admin/organizers/${organizerId}/approve/`, 'POST');
+        await apiRequest(`/api/admin/organizers/${id}/approve/`, 'POST');
         showToast('Organizer approved successfully', 'success');
         closeReviewModal();
         loadPendingOrganizers();
@@ -151,13 +156,18 @@ async function approveOrganizer(organizerId) {
 }
 
 async function rejectOrganizer(organizerId) {
+    const id = organizerId || currentOrganizerId;
+    if (!id) {
+        showToast('No organizer selected', 'error');
+        return;
+    }
     const reason = prompt('Please provide a reason for rejection:');
     if (!reason) return;
     
     if (typeof Loader !== 'undefined') Loader.show('Rejecting application...');
     
     try {
-        await apiRequest(`/api/admin/organizers/${organizerId}/reject/`, 'POST', { reason: reason });
+        await apiRequest(`/api/admin/organizers/${id}/reject/`, 'POST', { reason: reason });
         showToast('Application rejected', 'success');
         closeReviewModal();
         loadPendingOrganizers();

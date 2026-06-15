@@ -26,6 +26,8 @@ class EventReview(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)],
     )
     comment = models.TextField(blank=True)
+    organizer_response = models.TextField(blank=True)
+    organizer_responded_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

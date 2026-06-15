@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Admin Panel - EventHub{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}EventHub platform administration — manage users, events, payments, and support.{% endblock %}">
+    <meta name="robots" content="noindex, nofollow">
     
     {% load static %}
     
@@ -74,6 +76,9 @@
                             </a>
                             <a href="/admin-portal/users/organizers/" class="dropdown-item">
                                 <i class="ri-building-line"></i> Organizers
+                            </a>
+                            <a href="/admin-portal/users/pending-organizers/" class="dropdown-item">
+                                <i class="ri-user-follow-line"></i> Pending Organizers
                             </a>
                         </div>
                     </div>
@@ -183,12 +188,12 @@
                     
                     <!-- Admin Profile -->
                     <div class="admin-profile">
-                        <div class="profile-avatar">
-                            <span>A</span>
+                        <div class="profile-avatar" id="adminProfileAvatar">
+                            <span id="adminProfileInitial">A</span>
                         </div>
                         <div class="profile-info">
-                            <span class="profile-name">Admin User</span>
-                            <span class="profile-role">Administrator</span>
+                            <span class="profile-name" id="adminProfileName">Admin User</span>
+                            <span class="profile-role" id="adminProfileRole">Administrator</span>
                         </div>
                         <i class="ri-arrow-down-s-line"></i>
                         <div class="profile-dropdown">
@@ -200,7 +205,7 @@
                                 <i class="ri-settings-3-line"></i> Settings
                             </a>
                             <hr>
-                            <a href="/admin/logout/">
+                            <a href="/admin/logout/" onclick="adminLogout(event); return false;">
                                 <i class="ri-logout-box-r-line"></i> Logout
                             </a>
                         </div>
