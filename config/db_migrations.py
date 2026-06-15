@@ -72,9 +72,15 @@ PAYMENT_ORDER_STK_COLUMN_HOTFIXES = (
 
 
 def _applied_migrations(app_label: str) -> set[str]:
-    return set(
-        MigrationRecorder.Migration.objects.filter(app=app_label).values_list('name', flat=True)
-    )
+    if not _table_exists('django_migrations'):
+        return set()
+    try:
+        return set(
+            MigrationRecorder.Migration.objects.filter(app=app_label).values_list('name', flat=True)
+        )
+    except Exception:
+        logger.warning('Could not read applied migrations for %s', app_label, exc_info=True)
+        return set()
 
 
 def _record_migration(app_label: str, name: str) -> bool:
