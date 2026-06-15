@@ -361,6 +361,7 @@
         const modal = getModal();
         if (!modal) return;
         modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
 
         const nameEl = document.getElementById('checkoutReceiverName');
         const amountEl = document.getElementById('checkoutTotalAmount');
@@ -397,6 +398,7 @@
         clearStkPoll();
         const modal = getModal();
         if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
         currentOrder = null;
     }
 

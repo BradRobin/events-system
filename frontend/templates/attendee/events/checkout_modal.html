@@ -1,9 +1,16 @@
 <!-- Two-step M-Pesa checkout: pay manually → upload screenshot → organizer approves -->
-<div class="modal checkout-modal" id="checkoutModal" style="display:none;">
+<div class="modal checkout-modal" id="checkoutModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="checkoutModalTitle">
     <div class="checkout-modal-content">
-        <span id="checkoutClose" class="checkout-close">&times;</span>
-        <h3><i class="fas fa-mobile-alt"></i> Pay with M-Pesa</h3>
-        <p class="checkout-hint checkout-flow-steps">Step 1: Pay the organizer &nbsp;→&nbsp; Step 2: Upload screenshot &nbsp;→&nbsp; Organizer approves your ticket</p>
+        <button type="button" id="checkoutClose" class="checkout-close" aria-label="Close checkout">&times;</button>
+
+        <header class="checkout-modal-header">
+            <h3 id="checkoutModalTitle"><i class="fas fa-mobile-alt" aria-hidden="true"></i> Pay with M-Pesa</h3>
+            <ol class="checkout-flow-steps" aria-label="Checkout steps">
+                <li>Pay the organizer</li>
+                <li>Upload screenshot</li>
+                <li>Organizer approves</li>
+            </ol>
+        </header>
 
         <div id="checkoutStep1">
             <div class="checkout-summary">
@@ -13,8 +20,9 @@
             </div>
 
             <div id="checkoutStkSection" style="display:none;" class="checkout-stk-section">
+                <span class="checkout-step-pill">Optional — instant pay</span>
                 <p class="checkout-hint">Pay instantly with an M-Pesa prompt on your phone.</p>
-                <label for="checkoutStkPhone">M-Pesa phone number</label>
+                <label class="checkout-label" for="checkoutStkPhone">M-Pesa phone number</label>
                 <input type="tel" id="checkoutStkPhone" class="checkout-text-input" placeholder="e.g. 0712345678" autocomplete="tel">
                 <p id="checkoutStkSandboxHint" class="checkout-hint checkout-stk-sandbox" style="display:none;">
                     Sandbox test number: <strong>254708374149</strong>
@@ -24,21 +32,22 @@
             </div>
 
             <div id="checkoutManualSection">
-                <p class="checkout-hint" id="checkoutManualHint">Send the exact amount below to the organizer, then tap &ldquo;I have paid&rdquo; to upload your M-Pesa confirmation screenshot.</p>
+                <span class="checkout-step-pill">Step 1 — pay organizer</span>
+                <p class="checkout-hint" id="checkoutManualHint">Send the exact amount below to the organizer, then tap <strong>I have paid</strong> to upload your M-Pesa confirmation screenshot.</p>
                 <div id="checkoutPaymentOptions" class="checkout-payment-options"></div>
                 <button type="button" id="checkoutPaidBtn" class="checkout-primary-btn">I have paid</button>
             </div>
         </div>
 
         <div id="checkoutStepStkWait" style="display:none;" class="checkout-result pending">
-            <i class="fas fa-mobile-alt fa-spin"></i>
+            <i class="fas fa-mobile-alt fa-spin" aria-hidden="true"></i>
             <h4>Check your phone</h4>
             <p id="checkoutStkWaitMessage">Enter your M-Pesa PIN on the prompt we sent to your phone.</p>
             <p class="checkout-hint">This usually takes a few seconds. Do not close this window.</p>
         </div>
 
         <div id="checkoutStep4Success" style="display:none;" class="checkout-result success">
-            <i class="fas fa-check-circle"></i>
+            <i class="fas fa-check-circle" aria-hidden="true"></i>
             <h4>Payment successful</h4>
             <p id="checkoutSuccessMessage">Your ticket has been issued.</p>
             <p class="checkout-hint">Ticket: <strong id="checkoutSuccessTicket"></strong></p>
@@ -46,7 +55,9 @@
         </div>
 
         <div id="checkoutStep2" style="display:none;">
-            <p class="checkout-hint"><strong>Step 2:</strong> Upload a screenshot of your M-Pesa confirmation message. We will check it automatically, then the organizer will approve your booking.</p>
+            <span class="checkout-step-pill">Step 2 — upload proof</span>
+            <p class="checkout-hint"><strong>Upload your M-Pesa confirmation screenshot.</strong> We will check it automatically, then the organizer will approve your booking.</p>
+            <label class="checkout-label" for="checkoutScreenshot">Screenshot (JPEG, PNG, or WebP)</label>
             <input type="file" id="checkoutScreenshot" accept="image/jpeg,image/png,image/webp" class="checkout-file-input">
             <div id="checkoutScreenshotPreview" class="checkout-preview"></div>
             <button type="button" id="checkoutVerifyBtn" class="checkout-primary-btn">Verify payment</button>
@@ -54,35 +65,37 @@
 
         <div id="checkoutStep3" style="display:none;">
             <div class="stream-loader">
-                <div class="stream-loader-spinner"></div>
+                <div class="stream-loader-spinner" role="status" aria-label="Verifying payment"></div>
                 <h3 class="stream-loader-title">Verifying your payment</h3>
                 <div id="checkoutStreamSteps" class="stream-loader-steps"></div>
             </div>
         </div>
 
         <div id="checkoutStep4Pending" style="display:none;" class="checkout-result pending">
-            <i class="fas fa-clock"></i>
+            <i class="fas fa-clock" aria-hidden="true"></i>
             <h4>Awaiting organizer approval</h4>
             <p id="checkoutPendingMessage"></p>
             <p id="checkoutPendingHint" class="checkout-hint"></p>
             <div id="checkoutPendingNameBox" class="checkout-manual-box">
-                <label>Optional: your M-Pesa name (helps the organizer confirm payment)</label>
-                <input type="text" id="checkoutPendingMpesaName" class="checkout-text-input" placeholder="e.g. JOHN DOE">
+                <label class="checkout-label" for="checkoutPendingMpesaName">Optional: your M-Pesa name (helps the organizer confirm payment)</label>
+                <input type="text" id="checkoutPendingMpesaName" class="checkout-text-input" placeholder="e.g. JOHN DOE" autocomplete="name">
                 <button type="button" id="checkoutPendingNameBtn" class="checkout-secondary-btn">Save name</button>
             </div>
-            <button type="button" id="checkoutPendingCloseBtn" class="checkout-primary-btn">Done</button>
+            <div class="checkout-pending-actions">
+                <button type="button" id="checkoutPendingCloseBtn" class="checkout-primary-btn">Done</button>
+            </div>
         </div>
 
         <div id="checkoutStep4Fail" style="display:none;" class="checkout-result fail">
-            <i class="fas fa-exclamation-circle"></i>
+            <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
             <p id="checkoutFailMessage">Something went wrong. Please try again.</p>
             <div class="checkout-fail-actions">
                 <button type="button" id="checkoutRetryBtn" class="checkout-secondary-btn">Try again</button>
                 <button type="button" id="checkoutManualBtn" class="checkout-secondary-btn">Skip screenshot — submit M-Pesa name only</button>
             </div>
             <div id="checkoutManualNameBox" style="display:none;" class="checkout-manual-box">
-                <label>Your M-Pesa name (as shown on the transaction)</label>
-                <input type="text" id="checkoutMpesaName" class="checkout-text-input" placeholder="e.g. JOHN DOE">
+                <label class="checkout-label" for="checkoutMpesaName">Your M-Pesa name (as shown on the transaction)</label>
+                <input type="text" id="checkoutMpesaName" class="checkout-text-input" placeholder="e.g. JOHN DOE" autocomplete="name">
                 <button type="button" id="checkoutSubmitNameBtn" class="checkout-primary-btn">Send for approval</button>
             </div>
         </div>
