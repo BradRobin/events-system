@@ -38,6 +38,9 @@ class Ticket(models.Model):
         indexes = [
             models.Index(fields=['status']),
             models.Index(fields=['purchase_date']),
+            models.Index(fields=['event', 'status']),
+            models.Index(fields=['attendee', 'status']),
+            models.Index(fields=['event', 'billing_email']),
         ]
 
     def save(self, *args, **kwargs):

@@ -105,6 +105,8 @@ class PaymentOrder(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['attendee', 'status']),
             models.Index(fields=['organizer', 'status']),
+            models.Index(fields=['organizer', 'status', 'updated_at']),
+            models.Index(fields=['event', 'status']),
         ]
 
     def clean(self):

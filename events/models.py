@@ -40,7 +40,9 @@ class Event(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True)
     description = models.TextField()
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, blank=True, related_name='events',
+    )
     organizer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='events')
     
     start_date = models.DateTimeField()
@@ -69,6 +71,7 @@ class Event(models.Model):
             models.Index(fields=['status', 'start_date']),
             models.Index(fields=['is_featured', 'status']),
             models.Index(fields=['price']),
+            models.Index(fields=['organizer', 'status']),
         ]
 
     def __str__(self):

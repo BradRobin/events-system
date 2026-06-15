@@ -419,10 +419,10 @@ def api_category_list(request):
     from django.db.models import Count, Q
     categories = Category.objects.annotate(
         active_event_count=Count(
-            'event',
-            filter=Q(event__status='published', event__end_date__gte=timezone.now())
-        )
-    )
+            'events',
+            filter=Q(events__status='published', events__end_date__gte=timezone.now()),
+        ),
+    ).order_by('name')
     results = []
     for c in categories:
         results.append({

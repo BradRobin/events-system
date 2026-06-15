@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from django.db.models import Sum, Q, Count, DecimalField
+from django.db.models import Sum, Q, Count, DecimalField, F
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 
@@ -132,15 +132,24 @@ def top_events(request):
     try:
         # Group confirmed tickets by event
         events = Event.objects.annotate(
-            sold_count=Coalesce(Sum('tickets__quantity'), 0)
+            sold_count=Coalesce(
+                Sum('tickets__quantity', filter=~Q(tickets__status='cancelled')),
+                0,
+            ),
+            revenue=Coalesce(
+                Sum(
+                    F('tickets__price') * F('tickets__quantity'),
+                    filter=~Q(tickets__status='cancelled'),
+                    output_field=DecimalField(),
+                ),
+                0,
+                output_field=DecimalField(),
+            ),
         ).order_by('-sold_count')[:5]
-        
+
         data = []
         for e in events:
-            rev_agg = Ticket.objects.filter(event=e).exclude(status='cancelled').aggregate(
-                total=Sum(Coalesce('price', 0) * Coalesce('quantity', 1), output_field=DecimalField())
-            )
-            revenue = float(rev_agg['total'] or 0.0)
+            revenue = float(e.revenue or 0.0)
             fill_rate = int(min(e.sold_count / max(1, e.total_seats) * 100, 100))
             data.append({
                 'title': e.title,
@@ -190,13 +199,14 @@ def revenue_chart(request):
 @admin_required_json
 def categories_chart(request):
     try:
-        categories = Category.objects.all()
-        labels = []
-        values = []
-        for cat in categories:
-            labels.append(cat.name)
-            count = Ticket.objects.filter(event__category=cat).exclude(status='cancelled').count()
-            values.append(count)
+        categories = Category.objects.annotate(
+            ticket_count=Count(
+                'events__tickets',
+                filter=~Q(events__tickets__status='cancelled'),
+            ),
+        ).order_by('name')
+        labels = [cat.name for cat in categories]
+        values = [cat.ticket_count for cat in categories]
         return JsonResponse({'success': True, 'labels': labels, 'values': values})
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)

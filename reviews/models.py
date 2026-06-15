@@ -31,6 +31,10 @@ class EventReview(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['event', 'created_at']),
+            models.Index(fields=['user', 'created_at']),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'event'],
