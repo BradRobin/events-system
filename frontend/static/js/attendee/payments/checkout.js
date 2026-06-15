@@ -1,15 +1,15 @@
 /**
- * Two-step M-Pesa checkout:
- * 1) Pay organizer manually and upload screenshot
- * 2) Organizer reviews and approves → ticket issued
- * Optional STK Push when MPESA_STK_CHECKOUT_ENABLED=true
+ * M-Pesa Checkout - Works with both MOCK and REAL API
+ * Handles: Order creation, screenshot upload, verification polling, ticket saving
+ * Each event appears ONCE with quantity badge, max 8 tickets
  */
-(function () {
+
+(function() {
     'use strict';
 
     let currentOrder = null;
-    let currentStep = 1;
-    let stkPollTimer = null;
+    let statusPollInterval = null;
+    let isMockMode = window.ATTENDEE_API_CONFIG?.USE_MOCK === true;
 
     function getAuthHeaders(json = true) {
         const headers = {};
@@ -27,54 +27,20 @@
         return div.innerHTML;
     }
 
-    function showToast(message, type = 'info') {
+    function showToast(msg, type) {
         if (typeof window.showToast === 'function') {
-            window.showToast(message, type);
-            return;
-        }
-        alert(message);
-    }
-
-    function tierBadgeClass(tier) {
-        if (tier === 'VIP') return 'ticket-tier-vip';
-        if (tier === 'VVIP') return 'ticket-tier-vvip';
-        return 'ticket-tier-regular';
-    }
-
-    function getModal() {
-        return document.getElementById('checkoutModal');
-    }
-
-    function clearStkPoll() {
-        if (stkPollTimer) {
-            clearInterval(stkPollTimer);
-            stkPollTimer = null;
+            window.showToast(msg, type);
+        } else {
+            alert(msg);
         }
     }
+
+    function getModal() { return document.getElementById('checkoutModal'); }
 
     function showStep(step) {
-        currentStep = step;
-        [
-            'checkoutStep1',
-            'checkoutStep2',
-            'checkoutStep3',
-            'checkoutStepStkWait',
-            'checkoutStep4Pending',
-            'checkoutStep4Success',
-            'checkoutStep4Fail',
-        ].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        });
-        const map = {
-            1: 'checkoutStep1',
-            2: 'checkoutStep2',
-            3: 'checkoutStep3',
-            'stk': 'checkoutStepStkWait',
-            4: 'checkoutStep4Pending',
-            6: 'checkoutStep4Success',
-            5: 'checkoutStep4Fail',
-        };
+        const steps = ['checkoutStep1', 'checkoutStep2', 'checkoutStep3', 'checkoutStep4Pending', 'checkoutStep4Success', 'checkoutStep4Fail'];
+        steps.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+        const map = { 1: 'checkoutStep1', 2: 'checkoutStep2', 3: 'checkoutStep3', 4: 'checkoutStep4Pending', 5: 'checkoutStep4Fail', 6: 'checkoutStep4Success' };
         const target = document.getElementById(map[step]);
         if (target) target.style.display = 'block';
     }
@@ -83,174 +49,83 @@
         const container = document.getElementById('checkoutPaymentOptions');
         if (!container) return;
         const options = order.payment_options || [];
-        container.innerHTML = options.map(opt => `
-            <div class="checkout-payment-option">
-                <div>
-                    <strong>${escapeHtml(opt.label)}</strong>
-                    <div class="checkout-payment-value">${escapeHtml(opt.value)}</div>
+        if (options.length === 0) {
+            container.innerHTML = '<p class="no-payment-options">No payment options available. Contact organizer.</p>';
+            return;
+        }
+        
+        container.innerHTML = options.map(opt => {
+            const icons = { paybill: 'fa-building', till: 'fa-store', pochi: 'fa-wallet', sendmoney: 'fa-phone-alt', mpesa: 'fa-mobile-alt' };
+            return `
+                <div class="checkout-payment-option" data-type="${opt.type}">
+                    <div class="payment-option-icon"><i class="fas ${icons[opt.type] || 'fa-credit-card'}"></i></div>
+                    <div class="payment-option-details">
+                        <strong>${escapeHtml(opt.label)}</strong>
+                        <div class="checkout-payment-value">${escapeHtml(opt.value)}</div>
+                        ${opt.instruction ? `<div class="payment-option-instruction">${escapeHtml(opt.instruction)}</div>` : ''}
+                    </div>
+                    <button type="button" class="checkout-copy-btn" data-copy="${escapeHtml(opt.value)}">
+                        <span class="checkout-copy-btn-inner"><i class="fas fa-copy"></i> Copy</span>
+                    </button>
                 </div>
-                <button type="button" class="checkout-copy-btn" data-copy="${escapeHtml(opt.value)}" aria-label="Copy ${escapeHtml(opt.value)}">
-                    <span class="checkout-copy-btn-inner">
-                        <i class="fas fa-copy checkout-copy-icon" aria-hidden="true"></i>
-                        <span class="checkout-copy-label">Copy</span>
-                    </span>
-                </button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
-        container.querySelectorAll('.checkout-copy-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
+        document.querySelectorAll('.checkout-copy-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const value = btn.getAttribute('data-copy');
                 if (!value || btn.classList.contains('is-copied')) return;
-                try {
-                    await navigator.clipboard.writeText(value);
-                    container.querySelectorAll('.checkout-copy-btn').forEach(other => {
-                        if (other !== btn) resetCopyButton(other);
-                    });
-                    setCopyButtonCopied(btn);
-                    showToast('Copied to clipboard!', 'success');
-                } catch (e) {
-                    showToast('Could not copy. Please copy manually.', 'error');
-                }
+                await navigator.clipboard.writeText(value);
+                btn.classList.add('is-copied');
+                btn.innerHTML = '<span class="checkout-copy-btn-inner"><i class="fas fa-check"></i> Copied!</span>';
+                setTimeout(() => {
+                    btn.classList.remove('is-copied');
+                    btn.innerHTML = '<span class="checkout-copy-btn-inner"><i class="fas fa-copy"></i> Copy</span>';
+                }, 2000);
+                showToast('Copied!', 'success');
             });
         });
     }
 
-    function setCopyButtonCopied(btn) {
-        btn.classList.add('is-copied');
-        const icon = btn.querySelector('.checkout-copy-icon');
-        const label = btn.querySelector('.checkout-copy-label');
-        if (icon) {
-            icon.classList.remove('fa-copy');
-            icon.classList.add('fa-check');
-        }
-        if (label) label.textContent = 'Copied';
-        clearTimeout(btn._copyResetTimer);
-        btn._copyResetTimer = setTimeout(() => resetCopyButton(btn), 2200);
-    }
-
-    function resetCopyButton(btn) {
-        btn.classList.remove('is-copied');
-        const icon = btn.querySelector('.checkout-copy-icon');
-        const label = btn.querySelector('.checkout-copy-label');
-        if (icon) {
-            icon.classList.remove('fa-check');
-            icon.classList.add('fa-copy');
-        }
-        if (label) label.textContent = 'Copy';
-        clearTimeout(btn._copyResetTimer);
-    }
-
-    function renderStreamStep(message) {
+    function renderStreamStep(message, isComplete = false) {
         const el = document.getElementById('checkoutStreamSteps');
         if (!el) return;
         const item = document.createElement('div');
         item.className = 'stream-step active';
-        item.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${escapeHtml(message)}`;
+        item.innerHTML = `<i class="fas ${isComplete ? 'fa-check-circle' : 'fa-circle-notch fa-spin'}"></i> ${escapeHtml(message)}`;
         el.appendChild(item);
         const prev = el.querySelectorAll('.stream-step.active');
         if (prev.length > 1) {
             prev[prev.length - 2].classList.remove('active');
             prev[prev.length - 2].classList.add('done');
-            prev[prev.length - 2].querySelector('i').className = 'fas fa-check-circle';
         }
     }
 
     async function createOrder(eventId, ticketType, quantity) {
+        // Enforce max 8 tickets per booking
+        const maxQuantity = Math.min(quantity, 8);
+        if (quantity > 8) {
+            showToast('Maximum 8 tickets per booking. Reducing to 8.', 'warning');
+        }
+        
         const response = await fetch('/api/attendee/payment-orders/create/', {
             method: 'POST',
             headers: getAuthHeaders(),
-            credentials: 'same-origin',
-            body: JSON.stringify({ event_id: eventId, ticket_type: ticketType, quantity }),
+            body: JSON.stringify({ event_id: eventId, ticket_type: ticketType, quantity: maxQuantity }),
         });
-        let data = {};
-        try {
-            data = await response.json();
-        } catch (_) {
-            data = {};
-        }
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || data.error || 'Could not start checkout.');
-        }
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Checkout failed');
         return data.order;
     }
 
-    async function fetchOrderStatus(orderId) {
+    async function checkOrderStatus(orderId) {
         const response = await fetch(`/api/attendee/payment-orders/${orderId}/status/`, {
             headers: getAuthHeaders(),
-            credentials: 'same-origin',
         });
         const data = await response.json();
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || 'Could not check payment status.');
-        }
+        if (!response.ok) throw new Error('Failed to check status');
         return data.order;
-    }
-
-    async function initiateStkPush(orderId, phone) {
-        const response = await fetch(`/api/attendee/payment-orders/${orderId}/stk-push/`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            credentials: 'same-origin',
-            body: JSON.stringify({ phone }),
-        });
-        const data = await response.json();
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || data.error || 'Could not send M-Pesa prompt.');
-        }
-        return data;
-    }
-
-    function showStkSuccess(order) {
-        clearStkPoll();
-        const msgEl = document.getElementById('checkoutSuccessMessage');
-        const ticketEl = document.getElementById('checkoutSuccessTicket');
-        if (msgEl) {
-            msgEl.textContent = `Your payment for ${order.event_title || 'this event'} was successful.`;
-        }
-        if (ticketEl) ticketEl.textContent = order.ticket_number || '—';
-        showStep(6);
-        window.dispatchEvent(new CustomEvent('checkout-completed', { detail: { ...order, event_id: order.event_id } }));
-    }
-
-    function startStkPolling(orderId) {
-        clearStkPoll();
-        let attempts = 0;
-        const maxAttempts = 45;
-
-        stkPollTimer = setInterval(async () => {
-            attempts += 1;
-            try {
-                const order = await fetchOrderStatus(orderId);
-                currentOrder = order;
-                if (order.status === 'completed' && order.ticket_number) {
-                    showStkSuccess(order);
-                    return;
-                }
-                if (order.status === 'failed' || order.stk_status === 'failed') {
-                    clearStkPoll();
-                    const failMsg = document.getElementById('checkoutFailMessage');
-                    if (failMsg) {
-                        failMsg.textContent = order.verification_message || 'M-Pesa payment was not completed.';
-                    }
-                    showStep(5);
-                    return;
-                }
-            } catch (e) {
-                if (attempts >= maxAttempts) {
-                    clearStkPoll();
-                    showToast(e.message, 'error');
-                }
-            }
-            if (attempts >= maxAttempts) {
-                clearStkPoll();
-                const failMsg = document.getElementById('checkoutFailMessage');
-                if (failMsg) {
-                    failMsg.textContent = 'Payment is taking longer than expected. Check your phone or try again.';
-                }
-                showStep(5);
-            }
-        }, 2000);
     }
 
     async function verifyScreenshot(orderId, file) {
@@ -265,19 +140,15 @@
         const response = await fetch(`/api/attendee/payment-orders/${orderId}/verify-screenshot/`, {
             method: 'POST',
             headers,
-            credentials: 'same-origin',
             body: formData,
         });
-
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.message || err.error || 'Verification request failed.');
-        }
-
+        
+        if (!response.ok) throw new Error('Verification request failed');
+        
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-
+        
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -288,114 +159,196 @@
                 const line = part.trim();
                 if (!line.startsWith('data:')) continue;
                 const payload = JSON.parse(line.slice(5));
-                if (payload.message) renderStreamStep(payload.message);
-                if (payload.step === 'pending_approval') {
-                    return { ...payload, event_id: payload.event_id || currentOrder?.event_id };
+                if (payload.message) renderStreamStep(payload.message, payload.step === 'completed');
+                if (payload.step === 'completed') {
+                    return { step: 'completed', ticket: payload.ticket };
                 }
                 if (payload.step === 'failed') {
-                    throw new Error(payload.message || 'Verification failed.');
+                    throw new Error(payload.message);
                 }
             }
         }
-        throw new Error('Verification ended unexpectedly.');
+        return { step: 'pending' };
     }
 
-    async function submitMpesaName(orderId, mpesaName) {
-        const response = await fetch(`/api/attendee/payment-orders/${orderId}/submit-mpesa-name/`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            credentials: 'same-origin',
-            body: JSON.stringify({ mpesa_name: mpesaName }),
-        });
-        const data = await response.json();
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || data.error || 'Could not submit M-Pesa name.');
+    // Save ticket to localStorage - ONE card per event with quantity
+    function saveTicketToLocalStorage(order, ticketData) {
+        try {
+            let bookings = JSON.parse(localStorage.getItem('eventhub_bookings') || '[]');
+            let selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
+            let billingInfo = JSON.parse(sessionStorage.getItem('checkout_billing_info') || '{}');
+            let selectedOrganizer = sessionStorage.getItem('selected_organizer') || order.organizer_name;
+            
+            if (selectedItems.length === 0) {
+                const cartData = JSON.parse(localStorage.getItem('eventhub_cart') || '{}');
+                selectedItems = cartData.items || [];
+            }
+            
+            // Group items by event ID to combine quantities
+            const groupedItems = {};
+            for (const item of selectedItems) {
+                if (groupedItems[item.id]) {
+                    groupedItems[item.id].quantity += item.quantity;
+                    // Ensure max 8
+                    if (groupedItems[item.id].quantity > 8) groupedItems[item.id].quantity = 8;
+                } else {
+                    groupedItems[item.id] = { ...item, quantity: Math.min(item.quantity, 8) };
+                }
+            }
+            
+            const finalItems = Object.values(groupedItems);
+            let subtotal = finalItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            let total = order.total_amount || subtotal;
+            const receiptNumber = order.receipt_number || ('MPESA' + Date.now().toString().slice(-8));
+            const bookingId = order.booking_id || ('BK' + Date.now());
+            
+            const formattedItems = finalItems.map(item => {
+                // Generate single ticket code for the booking
+                const ticketCode = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+                return {
+                    id: item.id,
+                    title: item.title,
+                    category: item.category || 'Event',
+                    date: item.date,
+                    location: item.location,
+                    price: item.price,
+                    quantity: Math.min(item.quantity, 8), // Max 8 per booking
+                    image: item.image,
+                    ticket_code: ticketCode,
+                    ticket_codes: [ticketCode],
+                    ticket_type: item.ticket_type || 'regular',
+                    organizer: item.organizer || selectedOrganizer
+                };
+            });
+            
+            const booking = {
+                id: bookingId,
+                booking_date: new Date().toISOString(),
+                status: 'confirmed',
+                payment_method: 'M-Pesa',
+                receipt_number: receiptNumber,
+                total_amount: total,
+                subtotal: subtotal,
+                discount: 0,
+                organizer: selectedOrganizer,
+                billing_info: billingInfo,
+                items: formattedItems,
+                payment_status: 'completed',
+                payment_date: new Date().toISOString()
+            };
+            
+            // Remove any existing booking with same ID to avoid duplicates
+            bookings = bookings.filter(b => b.id !== bookingId);
+            bookings.unshift(booking);
+            localStorage.setItem('eventhub_bookings', JSON.stringify(bookings));
+            
+            console.log('Ticket saved to localStorage:', booking);
+            return booking;
+        } catch (error) {
+            console.error('Error saving ticket:', error);
+            return null;
         }
-        return data;
     }
 
-    function showPendingApproval(result) {
-        const msgEl = document.getElementById('checkoutPendingMessage');
-        const hintEl = document.getElementById('checkoutPendingHint');
-        if (msgEl) {
-            msgEl.textContent = result.message || 'Your payment proof has been sent to the organizer for approval.';
+    function handlePaymentComplete(order) {
+        console.log('Payment completed, saving tickets...');
+        const booking = saveTicketToLocalStorage(order, null);
+        
+        if (booking) {
+            showToast('Payment successful! Your tickets have been issued.', 'success');
         }
-        if (hintEl) {
-            hintEl.textContent = result.ocr_passed
-                ? 'Your screenshot passed automatic checks. The organizer will verify payment and issue your ticket.'
-                : 'The organizer will review your screenshot and confirm payment before issuing your ticket.';
+        
+        sessionStorage.removeItem('selected_organizer');
+        sessionStorage.removeItem('selected_items');
+        sessionStorage.removeItem('selected_total');
+        sessionStorage.removeItem('checkout_billing_info');
+        
+        const selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
+        if (selectedItems.length > 0 && window.cartData) {
+            const purchasedIds = selectedItems.map(item => item.id);
+            window.cartData.items = window.cartData.items.filter(item => !purchasedIds.includes(item.id));
+            
+            if (window.cartData.items.length === 0) {
+                localStorage.removeItem('eventhub_cart');
+                localStorage.removeItem('eventhub_cart_mock');
+            } else {
+                window.cartData.subtotal = window.cartData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                window.cartData.total = window.cartData.subtotal - (window.cartData.discount_amount || 0);
+                localStorage.setItem('eventhub_cart', JSON.stringify(window.cartData));
+                localStorage.setItem('eventhub_cart_mock', JSON.stringify(window.cartData));
+            }
+            
+            if (typeof window.displayCart === 'function') {
+                window.displayCart();
+            }
         }
-        showStep(4);
-        const detail = {
-            ...result,
-            order_id: currentOrder?.id,
-            event_id: result.event_id || currentOrder?.event_id,
-        };
-        window.dispatchEvent(new CustomEvent('checkout-submitted', { detail }));
+        
+        window.dispatchEvent(new CustomEvent('cart-updated'));
+        window.dispatchEvent(new CustomEvent('storage'));
+        window.dispatchEvent(new CustomEvent('checkout-completed', { 
+            detail: { order_id: order.id, event_id: order.event_id, booking: booking } 
+        }));
     }
 
-    function configureCheckoutSections(order) {
-        const stkSection = document.getElementById('checkoutStkSection');
-        const manualSection = document.getElementById('checkoutManualSection');
-        const sandboxHint = document.getElementById('checkoutStkSandboxHint');
-        const receiverRow = document.getElementById('checkoutReceiverRow');
-        const manualHint = document.getElementById('checkoutManualHint');
-        const stkAvailable = Boolean(order.stk_available);
-        const hasManualOptions = (order.payment_options || []).length > 0;
-
-        if (stkSection) stkSection.style.display = stkAvailable ? 'block' : 'none';
-        if (sandboxHint) sandboxHint.style.display = stkAvailable ? 'block' : 'none';
-
-        if (manualSection) manualSection.style.display = 'block';
-        if (receiverRow) receiverRow.style.display = hasManualOptions ? '' : 'none';
-        if (manualHint) {
-            manualHint.textContent = stkAvailable
-                ? 'Send the exact amount to the organizer below, upload your screenshot, then wait for approval. Instant M-Pesa prompt is also available above.'
-                : 'Send the exact amount below to the organizer, then tap “I have paid” to upload your M-Pesa confirmation screenshot.';
-        }
+    function startStatusPolling(orderId, onComplete, onFail) {
+        if (statusPollInterval) clearInterval(statusPollInterval);
+        let attempts = 0;
+        const maxAttempts = 60;
+        
+        statusPollInterval = setInterval(async () => {
+            attempts++;
+            try {
+                const order = await checkOrderStatus(orderId);
+                console.log('[Checkout] Status check:', order.payment_status, order.status);
+                
+                if (order.payment_status === 'approved' || order.status === 'completed') {
+                    clearInterval(statusPollInterval);
+                    statusPollInterval = null;
+                    const ticket = order.tickets?.[0] || null;
+                    saveTicketToLocalStorage(order, ticket);
+                    onComplete(order);
+                } else if (order.payment_status === 'rejected' || order.status === 'failed') {
+                    clearInterval(statusPollInterval);
+                    statusPollInterval = null;
+                    onFail(order);
+                }
+                if (attempts >= maxAttempts) {
+                    clearInterval(statusPollInterval);
+                    statusPollInterval = null;
+                    onFail({ message: 'Verification timeout. Please contact organizer.' });
+                }
+            } catch (e) {
+                console.error('Polling error:', e);
+            }
+        }, 5000);
     }
 
     function openCheckoutModal(order) {
         currentOrder = order;
-        clearStkPoll();
         const modal = getModal();
         if (!modal) return;
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
-        const nameEl = document.getElementById('checkoutReceiverName');
-        const amountEl = document.getElementById('checkoutTotalAmount');
+        document.getElementById('checkoutReceiverName').textContent = order.organizer_name || 'Event Organizer';
+        document.getElementById('checkoutTotalAmount').textContent = `KES ${Number(order.total_amount).toLocaleString()}`;
         const tierEl = document.getElementById('checkoutTierBadge');
-        if (nameEl) nameEl.textContent = order.mpesa_display_name || 'EventHub';
-        if (amountEl) amountEl.textContent = `KES ${Number(order.total_amount).toLocaleString()}`;
         if (tierEl) {
-            tierEl.textContent = order.ticket_type;
-            tierEl.className = `checkout-tier-badge ${tierBadgeClass(order.ticket_type)}`;
+            tierEl.textContent = order.ticket_type || 'Regular';
+            tierEl.className = `checkout-tier-badge ticket-tier-${(order.ticket_type || 'regular').toLowerCase()}`;
         }
 
-        configureCheckoutSections(order);
         renderPaymentOptions(order);
         showStep(1);
-
-        const streamSteps = document.getElementById('checkoutStreamSteps');
-        if (streamSteps) streamSteps.innerHTML = '';
-        const screenshotInput = document.getElementById('checkoutScreenshot');
-        if (screenshotInput) screenshotInput.value = '';
-        const preview = document.getElementById('checkoutScreenshotPreview');
-        if (preview) preview.innerHTML = '';
-        const manualBox = document.getElementById('checkoutManualNameBox');
-        if (manualBox) manualBox.style.display = 'none';
-        const pendingName = document.getElementById('checkoutPendingMpesaName');
-        if (pendingName) pendingName.value = '';
-        const stkPhone = document.getElementById('checkoutStkPhone');
-        if (stkPhone && !stkPhone.value) {
-            const profilePhone = localStorage.getItem('attendee_phone') || '';
-            if (profilePhone) stkPhone.value = profilePhone;
-        }
+        
+        document.getElementById('checkoutStreamSteps').innerHTML = '';
+        const fileInput = document.getElementById('checkoutScreenshot');
+        if (fileInput) fileInput.value = '';
+        document.getElementById('checkoutScreenshotPreview').innerHTML = '';
     }
 
     function closeCheckoutModal() {
-        clearStkPoll();
+        if (statusPollInterval) clearInterval(statusPollInterval);
         const modal = getModal();
         if (modal) modal.style.display = 'none';
         document.body.style.overflow = '';
@@ -406,10 +359,15 @@
         const token = localStorage.getItem('attendee_access_token');
         if (!token) {
             showToast('Please login to book tickets', 'info');
-            setTimeout(() => { window.location.href = '/login/'; }, 1500);
+            setTimeout(() => window.location.href = '/login/', 1500);
             return;
         }
         try {
+            const selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
+            const billingInfo = JSON.parse(sessionStorage.getItem('checkout_billing_info') || '{}');
+            localStorage.setItem('temp_checkout_items', JSON.stringify(selectedItems));
+            localStorage.setItem('temp_checkout_billing', JSON.stringify(billingInfo));
+            
             const order = await createOrder(eventId, ticketType, quantity);
             openCheckoutModal(order);
         } catch (e) {
@@ -417,61 +375,22 @@
         }
     }
 
-    function bindCheckoutEvents() {
+    document.addEventListener('DOMContentLoaded', () => {
         const closeBtn = document.getElementById('checkoutClose');
         if (closeBtn) closeBtn.addEventListener('click', closeCheckoutModal);
-
-        const manualInsteadBtn = document.getElementById('checkoutManualInsteadBtn');
-        if (manualInsteadBtn) {
-            manualInsteadBtn.addEventListener('click', () => {
-                const manualSection = document.getElementById('checkoutManualSection');
-                if (manualSection) manualSection.style.display = 'block';
-                manualInsteadBtn.style.display = 'none';
-            });
-        }
-
-        const stkBtn = document.getElementById('checkoutStkBtn');
-        if (stkBtn) {
-            stkBtn.addEventListener('click', async () => {
-                if (!currentOrder) return;
-                const phoneInput = document.getElementById('checkoutStkPhone');
-                const phone = phoneInput?.value.trim();
-                if (!phone) {
-                    showToast('Please enter your M-Pesa phone number.', 'error');
-                    return;
-                }
-                stkBtn.disabled = true;
-                try {
-                    const result = await initiateStkPush(currentOrder.id, phone);
-                    currentOrder = result.order || currentOrder;
-                    const waitMsg = document.getElementById('checkoutStkWaitMessage');
-                    if (waitMsg) {
-                        waitMsg.textContent = result.message || 'Enter your M-Pesa PIN on the prompt we sent to your phone.';
-                    }
-                    showStep('stk');
-                    startStkPolling(currentOrder.id);
-                } catch (e) {
-                    showToast(e.message, 'error');
-                } finally {
-                    stkBtn.disabled = false;
-                }
-            });
-        }
 
         const paidBtn = document.getElementById('checkoutPaidBtn');
         if (paidBtn) paidBtn.addEventListener('click', () => showStep(2));
 
-        const screenshotInput = document.getElementById('checkoutScreenshot');
-        if (screenshotInput) {
-            screenshotInput.addEventListener('change', (e) => {
+        const fileInput = document.getElementById('checkoutScreenshot');
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 const preview = document.getElementById('checkoutScreenshotPreview');
                 if (!preview) return;
                 if (!file) { preview.innerHTML = ''; return; }
                 const reader = new FileReader();
-                reader.onload = () => {
-                    preview.innerHTML = `<img src="${reader.result}" alt="Screenshot preview" style="max-width:100%;border-radius:8px;">`;
-                };
+                reader.onload = () => { preview.innerHTML = `<img src="${reader.result}" alt="Preview">`; };
                 reader.readAsDataURL(file);
             });
         }
@@ -480,21 +399,36 @@
         if (verifyBtn) {
             verifyBtn.addEventListener('click', async () => {
                 if (!currentOrder) return;
-                const file = screenshotInput?.files[0];
-                if (!file) {
-                    showToast('Please upload your M-Pesa screenshot.', 'error');
-                    return;
-                }
+                const file = document.getElementById('checkoutScreenshot')?.files[0];
+                if (!file) { showToast('Upload screenshot first', 'error'); return; }
                 showStep(3);
-                const streamSteps = document.getElementById('checkoutStreamSteps');
-                if (streamSteps) streamSteps.innerHTML = '';
+                document.getElementById('checkoutStreamSteps').innerHTML = '';
                 verifyBtn.disabled = true;
                 try {
                     const result = await verifyScreenshot(currentOrder.id, file);
-                    showPendingApproval(result);
+                    if (result.step === 'completed') {
+                        showStep(6);
+                        handlePaymentComplete(currentOrder);
+                        window.dispatchEvent(new CustomEvent('checkout-completed', { 
+                            detail: { order_id: currentOrder.id, event_id: currentOrder.event_id } 
+                        }));
+                    } else {
+                        startStatusPolling(currentOrder.id, 
+                            (order) => {
+                                showStep(6);
+                                handlePaymentComplete(order);
+                                window.dispatchEvent(new CustomEvent('checkout-completed', { 
+                                    detail: { order_id: order.id, event_id: order.event_id } 
+                                }));
+                            },
+                            (order) => {
+                                showStep(5);
+                            }
+                        );
+                        showStep(4);
+                    }
                 } catch (e) {
-                    const failMsg = document.getElementById('checkoutFailMessage');
-                    if (failMsg) failMsg.textContent = e.message || 'Something went wrong. Please try again.';
+                    document.getElementById('checkoutFailMessage').textContent = e.message;
                     showStep(5);
                 } finally {
                     verifyBtn.disabled = false;
@@ -504,89 +438,23 @@
 
         const retryBtn = document.getElementById('checkoutRetryBtn');
         if (retryBtn) retryBtn.addEventListener('click', () => {
-            clearStkPoll();
-            if (screenshotInput) screenshotInput.value = '';
-            const preview = document.getElementById('checkoutScreenshotPreview');
-            if (preview) preview.innerHTML = '';
-            const manualBox = document.getElementById('checkoutManualNameBox');
-            if (manualBox) manualBox.style.display = 'none';
-            if (currentOrder?.stk_available) {
-                showStep(1);
-            } else {
-                showStep(2);
-            }
+            document.getElementById('checkoutScreenshot').value = '';
+            document.getElementById('checkoutScreenshotPreview').innerHTML = '';
+            showStep(2);
         });
 
-        const manualBtn = document.getElementById('checkoutManualBtn');
-        if (manualBtn) manualBtn.addEventListener('click', () => {
-            const manualBox = document.getElementById('checkoutManualNameBox');
-            if (manualBox) manualBox.style.display = 'block';
+        const successClose = document.getElementById('checkoutSuccessCloseBtn');
+        if (successClose) successClose.addEventListener('click', () => {
+            closeCheckoutModal();
+            window.location.href = '/tickets/';
         });
 
-        const submitNameBtn = document.getElementById('checkoutSubmitNameBtn');
-        if (submitNameBtn) {
-            submitNameBtn.addEventListener('click', async () => {
-                if (!currentOrder) return;
-                const nameInput = document.getElementById('checkoutMpesaName');
-                const name = nameInput?.value.trim();
-                if (!name) {
-                    showToast('Please enter your M-Pesa name.', 'error');
-                    return;
-                }
-                submitNameBtn.disabled = true;
-                try {
-                    await submitMpesaName(currentOrder.id, name);
-                    showPendingApproval({
-                        message: 'Submitted for organizer approval.',
-                        ocr_passed: false,
-                    });
-                } catch (e) {
-                    showToast(e.message, 'error');
-                } finally {
-                    submitNameBtn.disabled = false;
-                }
-            });
-        }
+        const pendingClose = document.getElementById('checkoutPendingCloseBtn');
+        if (pendingClose) pendingClose.addEventListener('click', closeCheckoutModal);
+        
+        const cancelBtn = document.getElementById('checkoutCancelBtn');
+        if (cancelBtn) cancelBtn.addEventListener('click', closeCheckoutModal);
+    });
 
-        const pendingCloseBtn = document.getElementById('checkoutPendingCloseBtn');
-        if (pendingCloseBtn) pendingCloseBtn.addEventListener('click', closeCheckoutModal);
-
-        const successCloseBtn = document.getElementById('checkoutSuccessCloseBtn');
-        if (successCloseBtn) {
-            successCloseBtn.addEventListener('click', () => {
-                closeCheckoutModal();
-                window.location.href = '/tickets/';
-            });
-        }
-
-        const pendingNameBtn = document.getElementById('checkoutPendingNameBtn');
-        if (pendingNameBtn) {
-            pendingNameBtn.addEventListener('click', async () => {
-                if (!currentOrder) return;
-                const name = document.getElementById('checkoutPendingMpesaName')?.value.trim();
-                if (!name) {
-                    showToast('Please enter your M-Pesa name.', 'error');
-                    return;
-                }
-                pendingNameBtn.disabled = true;
-                try {
-                    await submitMpesaName(currentOrder.id, name);
-                    showToast('M-Pesa name saved for the organizer.', 'success');
-                } catch (e) {
-                    showToast(e.message, 'error');
-                } finally {
-                    pendingNameBtn.disabled = false;
-                }
-            });
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', bindCheckoutEvents);
-
-    window.CheckoutFlow = {
-        startCheckout,
-        openCheckoutModal,
-        closeCheckoutModal,
-        createOrder,
-    };
+    window.CheckoutFlow = { startCheckout, closeCheckoutModal, createOrder };
 })();

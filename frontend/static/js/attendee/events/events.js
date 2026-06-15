@@ -5,6 +5,7 @@
 // FIXED: Only buttons are clickable, not the card area
 // FIXED: Cross-tab synchronization via storage events
 // FIXED: Newest events appear first (client-side sorting - no API changes)
+// FIXED: Details button does NOT require login (only Book and Wishlist buttons)
 console.log('Events.js loaded');
 
 let currentCategory = "all";
@@ -18,7 +19,7 @@ const PAGE_SIZE = 12;
 let hasMoreEvents = true;
 let observer = null;
 
-// API endpoints (UNCHANGED)
+// API endpoints
 const API = {
     events: '/api/attendee/events/',
     categories: '/api/attendee/categories/',
@@ -43,7 +44,7 @@ const domCache = {
     }
 };
 
-// Helper: Safe storage operations (prevents quota exceeded errors)
+// Helper: Safe storage operations
 const safeStorage = {
     setItem: function(key, value) {
         try {
@@ -169,20 +170,19 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// NEW: Sort events by date descending (newest first) - client-side only
+// Sort events by date descending (newest first)
 function sortEventsByDateDescending(events) {
     return [...events].sort((a, b) => {
         const dateA = new Date(a.date);
         const dateB = new Date(b.date);
-        // Handle invalid dates
         if (isNaN(dateA) && isNaN(dateB)) return 0;
         if (isNaN(dateA)) return 1;
         if (isNaN(dateB)) return -1;
-        return dateB - dateA; // Descending order (newest first)
+        return dateB - dateA;
     });
 }
 
-// Load events from API (NO changes to API call)
+// Load events from API
 async function loadEventsFromAPI(reset = true) {
     if (reset) {
         currentPage = 1;
@@ -217,7 +217,6 @@ async function loadEventsFromAPI(reset = true) {
             } else {
                 eventsCatalog.push(...(data.events || []));
             }
-            // Sort events by date after loading (newest first)
             eventsCatalog = sortEventsByDateDescending(eventsCatalog);
             const totalPages = data.total_pages || 1;
             hasMoreEvents = currentPage < totalPages;
@@ -488,6 +487,7 @@ async function filterAndDisplay(updateStats = true) {
 }
 
 // FIXED: Only buttons are clickable, not the card area
+// FIXED: Details button - NO login required
 function renderEvents() {
     const grid = domCache.gridElement;
     if (!grid) return;
@@ -553,22 +553,26 @@ function renderEvents() {
     grid.innerHTML = '';
     grid.appendChild(fragment);
     
+    // Details button - NO authentication check, anyone can view details
     document.querySelectorAll('.view-details-btn').forEach(btn => {
         btn.removeEventListener('click', handleViewDetailsClick);
         btn.addEventListener('click', handleViewDetailsClick);
     });
     
+    // Book button - REQUIRES authentication
     document.querySelectorAll('.book-ticket-btn').forEach(btn => {
         btn.removeEventListener('click', handleBookClick);
         btn.addEventListener('click', handleBookClick);
     });
     
+    // Wishlist button - REQUIRES authentication
     document.querySelectorAll('.wishlist-btn').forEach(btn => {
         btn.removeEventListener('click', handleWishlistClick);
         btn.addEventListener('click', handleWishlistClick);
     });
 }
 
+// FIXED: Details button - NO login required - simply redirect to event detail page
 function handleViewDetailsClick(e) {
     e.stopPropagation();
     const btn = this;

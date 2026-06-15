@@ -1,5 +1,6 @@
 // ============================================
-// TICKETS MODULE - Loads from eventhub_tickets
+// TICKETS MODULE - Loads from API and localStorage
+// Displays one card per event with quantity badge
 // ============================================
 
 let allTickets = [];
@@ -38,21 +39,44 @@ function setupEventListeners() {
 }
 
 function mapApiTicket(t) {
+    let eventTitle = '';
+    let eventDate = '';
+    let eventLocation = '';
+    let eventImage = '';
+    let ticketQuantity = 1;
+    let ticketPrice = 0;
+    
+    if (t.event) {
+        eventTitle = t.event.title || 'Event';
+        eventDate = t.event.start_date;
+        eventLocation = t.event.venue_name || t.event.location || '';
+        eventImage = t.event.banner_image;
+        ticketPrice = t.price || 0;
+        ticketQuantity = t.quantity || 1;
+    } else {
+        eventTitle = t.title || 'Event';
+        eventDate = t.date;
+        eventLocation = t.location || '';
+        eventImage = t.image;
+        ticketPrice = t.price || 0;
+        ticketQuantity = t.quantity || 1;
+    }
+    
     return {
-        id: t.ticket_number,
-        booking_id: t.ticket_number,
-        event_id: t.event?.id,
-        title: t.event?.title || 'Event',
-        category: 'Event',
-        date: t.event?.start_date,
-        location: t.event?.venue_name || t.event?.location || '',
-        price: t.price,
-        image: t.event?.banner_image,
+        id: t.ticket_number || t.id,
+        booking_id: t.booking_id || t.ticket_number,
+        event_id: t.event?.id || t.event_id,
+        title: eventTitle,
+        category: t.category || 'Event',
+        date: eventDate,
+        location: eventLocation,
+        price: ticketPrice,
+        image: eventImage,
         ticket_code: t.ticket_number,
         ticket_type: t.ticket_type || 'Regular',
-        status: t.status,
+        status: t.status || 'active',
         purchased_date: t.purchase_date,
-        quantity: t.quantity,
+        quantity: ticketQuantity
     };
 }
 
@@ -140,19 +164,20 @@ function statusLabel(status) {
         checked_in: 'Used',
         cancelled: 'Cancelled',
         active: 'Active',
+        used: 'Used',
+        past: 'Past'
     };
     return map[status] || 'Active';
 }
 
 function statusClass(status) {
-    if (status === 'checked_in' || status === 'used') return 'status-used';
+    if (status === 'checked_in' || status === 'used' || status === 'past') return 'status-used';
     if (status === 'cancelled' || status === 'expired') return 'status-cancelled';
     return 'status-active';
 }
 
 function buildQrUrl(ticketCode) {
-    const payload = encodeURIComponent(ticketCode);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${payload}&bgcolor=ffffff&color=1a1a2e&margin=8`;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(ticketCode)}&bgcolor=ffffff&color=1a1a2e&margin=8`;
 }
 
 function getTicketImageUrl(image) {
@@ -167,15 +192,19 @@ function renderFlipTicketCard(ticket, index) {
     const venue = escapeHtml((ticket.location || 'Venue TBA').split(',')[0]);
     const status = statusLabel(ticket.status);
     const statusCls = statusClass(ticket.status);
+    const quantity = ticket.quantity || 1;
+    const quantityBadge = quantity > 1 ? `<span class="ticket-quantity-badge">x${quantity}</span>` : '';
+    const animationDelay = Math.min(index * 0.06, 0.4);
 
     return `
-        <div class="flip-ticket-wrapper" style="animation-delay: ${Math.min(index * 0.06, 0.4)}s">
+        <div class="flip-ticket-wrapper" style="animation-delay: ${animationDelay}s">
             <button type="button" class="flip-ticket" aria-label="Flip ticket for ${escapeHtml(ticket.title)}" data-ticket-code="${escapeHtml(ticket.ticket_code)}">
                 <div class="flip-ticket-inner">
                     <div class="flip-ticket-face flip-ticket-front">
                         <div class="flip-ticket-zone-top">
                             <div class="flip-ticket-media" style="background-image: url('${imageUrl}')"></div>
                             <span class="flip-ticket-status ${statusCls}">${status}</span>
+                            ${quantityBadge}
                         </div>
                         <div class="flip-ticket-zone-bottom">
                             <h3 class="flip-ticket-event-title">${escapeHtml(ticket.title)}</h3>
@@ -202,7 +231,7 @@ function renderFlipTicketCard(ticket, index) {
                     <div class="flip-ticket-face flip-ticket-back">
                         <div class="flip-ticket-zone-top flip-ticket-qr-zone">
                             <div class="flip-ticket-qr-frame">
-                                <img src="${qrUrl}" alt="QR code for ticket ${escapeHtml(ticket.ticket_code)}" loading="lazy" width="180" height="180">
+                                <img src="${qrUrl}" alt="QR code for ticket ${escapeHtml(ticket.ticket_code)}" loading="lazy">
                             </div>
                             <p class="flip-ticket-qr-hint">Scan at venue entrance</p>
                         </div>
@@ -219,6 +248,12 @@ function renderFlipTicketCard(ticket, index) {
                                 <span class="flip-ticket-back-label">Amount paid</span>
                                 <span class="flip-ticket-back-value price">${formatCurrency(amountPaid)}</span>
                             </div>
+                            ${quantity > 1 ? `
+                            <div class="flip-ticket-back-row">
+                                <span class="flip-ticket-back-label">Tickets</span>
+                                <span class="flip-ticket-back-value">${quantity} tickets</span>
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -260,7 +295,21 @@ async function loadTickets() {
         ]);
         const up = await upRes.json();
         const past = await pastRes.json();
-        allTickets = [...(up.results || []), ...(past.results || [])].map(mapApiTicket);
+        
+        let allMapped = [...(up.results || []), ...(past.results || [])].map(mapApiTicket);
+        
+        const groupedTickets = {};
+        for (const ticket of allMapped) {
+            if (groupedTickets[ticket.event_id]) {
+                groupedTickets[ticket.event_id].quantity += ticket.quantity;
+                groupedTickets[ticket.event_id].ticket_code = ticket.ticket_code;
+            } else {
+                groupedTickets[ticket.event_id] = { ...ticket };
+            }
+        }
+        
+        allTickets = Object.values(groupedTickets);
+        
         if (currentBookingId) {
             allTickets = allTickets.filter(t => t.booking_id === currentBookingId);
         }
@@ -278,7 +327,7 @@ async function loadTickets() {
 function updateHeaderInfo() {
     const headerSubtitle = document.querySelector('.page-header .text-muted');
     if (currentBookingId && headerSubtitle) {
-        headerSubtitle.innerHTML = `Showing tickets for booking: ${currentBookingId.substring(0, 8)}...`;
+        headerSubtitle.textContent = `Showing tickets for booking: ${currentBookingId.substring(0, 8)}...`;
     }
 }
 
@@ -369,20 +418,23 @@ function setupReviewModal() {
         el.addEventListener('click', closeReviewModal);
     });
 
-    document.getElementById('eventReviewStars')?.querySelectorAll('.event-review-star').forEach(star => {
-        star.addEventListener('click', () => {
-            setReviewModalRating(parseInt(star.dataset.rating, 10));
+    const starsContainer = document.getElementById('eventReviewStars');
+    if (starsContainer) {
+        starsContainer.querySelectorAll('.event-review-star').forEach(star => {
+            star.addEventListener('click', () => {
+                setReviewModalRating(parseInt(star.dataset.rating, 10));
+            });
+            star.addEventListener('mouseenter', () => {
+                highlightReviewStars(parseInt(star.dataset.rating, 10));
+            });
         });
-        star.addEventListener('mouseenter', () => {
-            highlightReviewStars(parseInt(star.dataset.rating, 10));
+        starsContainer.addEventListener('mouseleave', () => {
+            highlightReviewStars(reviewModalState.rating);
         });
-    });
+    }
 
-    document.getElementById('eventReviewStars')?.addEventListener('mouseleave', () => {
-        highlightReviewStars(reviewModalState.rating);
-    });
-
-    document.getElementById('eventReviewSubmitBtn')?.addEventListener('click', submitEventReview);
+    const submitBtn = document.getElementById('eventReviewSubmitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', submitEventReview);
 }
 
 function openReviewModal(eventId, eventTitle, reviewId = null) {
@@ -427,7 +479,10 @@ function ratingLabel(rating) {
 }
 
 function highlightReviewStars(rating) {
-    document.getElementById('eventReviewStars')?.querySelectorAll('.event-review-star').forEach(star => {
+    const starsContainer = document.getElementById('eventReviewStars');
+    if (!starsContainer) return;
+    
+    starsContainer.querySelectorAll('.event-review-star').forEach(star => {
         const value = parseInt(star.dataset.rating, 10);
         const icon = star.querySelector('i');
         const active = value <= rating;
@@ -658,12 +713,18 @@ function renderTicketDetail(ticket) {
                     <div class="detail-label">Booking ID:</div>
                     <div class="detail-value">${ticket.booking_id || 'N/A'}</div>
                 </div>
+                ${ticket.quantity > 1 ? `
+                <div class="detail-row">
+                    <div class="detail-label">Quantity:</div>
+                    <div class="detail-value">${ticket.quantity} tickets</div>
+                </div>
+                ` : ''}
             </div>
             <div class="card-footer">
                 <button class="btn-qr" onclick="viewQRCode('${ticket.ticket_code}')">
                     <i class="fas fa-qrcode"></i> View QR Code
                 </button>
-                <button class="btn-back" onclick="window.location.href='/tickets/'">
+                <button class="btn-back" onclick="window.location.href='/tickets/">
                     <i class="fas fa-arrow-left"></i> Back to Tickets
                 </button>
             </div>
@@ -770,6 +831,12 @@ async function loadQRCode() {
                 <span class="info-label">Ticket Code:</span>
                 <span class="info-value"><strong>${ticket.ticket_code}</strong></span>
             </div>
+            ${ticket.quantity > 1 ? `
+            <div class="info-row">
+                <span class="info-label">Quantity:</span>
+                <span class="info-value">${ticket.quantity} tickets</span>
+            </div>
+            ` : ''}
         `;
     }
     
@@ -790,86 +857,20 @@ function exportTicketAsPDF(ticket) {
         <head>
             <title>Ticket - ${ticket.title}</title>
             <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                    font-family: 'Segoe UI', Arial, sans-serif; 
-                    background: #f5f5f5;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    min-height: 100vh;
-                    padding: 20px;
-                }
-                .ticket-card {
-                    max-width: 450px;
-                    width: 100%;
-                    background: white;
-                    border-radius: 20px;
-                    overflow: hidden;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-                }
-                .ticket-header {
-                    background: linear-gradient(135deg, #f59e0b, #ec6408);
-                    color: white;
-                    padding: 20px;
-                    text-align: center;
-                }
-                .ticket-header h1 {
-                    font-size: 22px;
-                    margin-bottom: 5px;
-                }
-                .ticket-header p {
-                    font-size: 12px;
-                    opacity: 0.9;
-                }
-                .ticket-body {
-                    padding: 20px;
-                }
-                .info-row {
-                    display: flex;
-                    margin-bottom: 12px;
-                    padding-bottom: 8px;
-                    border-bottom: 1px solid #e2e8f0;
-                }
-                .info-label {
-                    width: 100px;
-                    font-weight: 600;
-                    color: #475569;
-                    font-size: 13px;
-                }
-                .info-value {
-                    flex: 1;
-                    color: #1e293b;
-                    font-size: 13px;
-                }
-                .qr-section {
-                    text-align: center;
-                    margin: 20px 0;
-                    padding: 15px;
-                    background: #f8fafc;
-                    border-radius: 12px;
-                }
-                .qr-section img {
-                    width: 150px;
-                    height: 150px;
-                }
-                .qr-section p {
-                    font-size: 11px;
-                    color: #64748b;
-                    margin-top: 8px;
-                }
-                .ticket-footer {
-                    background: #f8fafc;
-                    padding: 12px;
-                    text-align: center;
-                    font-size: 10px;
-                    color: #94a3b8;
-                    border-top: 1px solid #e2e8f0;
-                }
-                @media print {
-                    body { background: white; padding: 0; }
-                    .ticket-card { box-shadow: none; }
-                }
+                body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; margin: 0; }
+                .ticket-card { max-width: 450px; width: 100%; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+                .ticket-header { background: linear-gradient(135deg, #f59e0b, #ec6408); color: white; padding: 20px; text-align: center; }
+                .ticket-header h1 { font-size: 22px; margin-bottom: 5px; margin: 0; }
+                .ticket-header p { font-size: 12px; opacity: 0.9; margin: 5px 0 0; }
+                .ticket-body { padding: 20px; }
+                .info-row { display: flex; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+                .info-label { width: 100px; font-weight: 600; color: #475569; font-size: 13px; }
+                .info-value { flex: 1; color: #1e293b; font-size: 13px; }
+                .qr-section { text-align: center; margin: 20px 0; padding: 15px; background: #f8fafc; border-radius: 12px; }
+                .qr-section img { width: 150px; height: 150px; }
+                .qr-section p { font-size: 11px; color: #64748b; margin-top: 8px; }
+                .ticket-footer { background: #f8fafc; padding: 12px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+                @media print { body { background: white; padding: 0; } .ticket-card { box-shadow: none; } }
             </style>
         </head>
         <body>
@@ -990,7 +991,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Make functions globally available
 window.switchTab = switchTab;
 window.viewTicketDetail = viewTicketDetail;
 window.viewQRCode = viewQRCode;

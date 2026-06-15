@@ -1,23 +1,19 @@
 // ============================================
-// BOOKING CART - Complete Payment Flow
-// No Global Loader - Uses local spinners only
-// FIXED: Cart badge disappears when cart page is opened
-// FIXED: Consistent toast messages
-// FIXED: Events dispatched for navbar updates
+// BOOKING CART - Radio Button Selection
+// Only ONE organizer can be selected at a time
+// Booking Summary hidden until selection
 // ============================================
 
 let cartData = null;
-let paymentTimeout = null;
+let selectedOrganizer = null;
 
 // DOM Elements
 const emptyCartEl = document.getElementById('emptyCart');
 const cartContentEl = document.getElementById('cartContent');
 const checkoutViewEl = document.getElementById('checkoutView');
-const paymentViewEl = document.getElementById('paymentView');
 const cartItemsEl = document.getElementById('cartItems');
 const cartItemCountSpan = document.getElementById('cartItemCount');
 const subtotalSpan = document.getElementById('subtotal');
-const platformFeeSpan = document.getElementById('platformFee');
 const discountRow = document.getElementById('discountRow');
 const discountAmountSpan = document.getElementById('discountAmount');
 const totalAmountSpan = document.getElementById('totalAmount');
@@ -34,11 +30,9 @@ document.addEventListener('DOMContentLoaded', function() {
     clearCartBadgeOnView();
 });
 
-// Clear cart badge when viewing the cart page
 function clearCartBadgeOnView() {
     const cartBadge = document.getElementById('cartBadgeDropdown');
     const mobileCartBadge = document.getElementById('mobileCartBadge');
-    
     if (cartBadge) {
         cartBadge.style.display = 'none';
         cartBadge.textContent = '0';
@@ -47,15 +41,12 @@ function clearCartBadgeOnView() {
         mobileCartBadge.style.display = 'none';
         mobileCartBadge.textContent = '0';
     }
-    
-    // Also dispatch event to notify navbar
     window.dispatchEvent(new Event('cart-updated'));
 }
 
 function updateNavBadgesFromCart() {
     const navCartBadge = document.getElementById('navCartBadge');
     const cartCount = cartData?.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0;
-
     if (navCartBadge) {
         if (cartCount > 0) {
             navCartBadge.textContent = cartCount;
@@ -64,17 +55,12 @@ function updateNavBadgesFromCart() {
             navCartBadge.style.display = 'none';
         }
     }
-
     updateCartCount(cartCount);
 }
 
 function setupEventListeners() {
-    if (promoForm) {
-        promoForm.addEventListener('submit', applyPromoCode);
-    }
-    if (checkoutForm) {
-        checkoutForm.addEventListener('submit', processCheckout);
-    }
+    if (promoForm) promoForm.addEventListener('submit', applyPromoCode);
+    if (checkoutForm) checkoutForm.addEventListener('submit', processCheckout);
 }
 
 function loadCart() {
@@ -83,22 +69,32 @@ function loadCart() {
             cartData = window.EventhubCartStorage.loadEventhubCart();
         } else {
             const savedCart = localStorage.getItem('eventhub_cart');
-            cartData = savedCart ? JSON.parse(savedCart) : { items: [], subtotal: 0, platform_fee: 0, total: 0 };
+            cartData = savedCart ? JSON.parse(savedCart) : { items: [], subtotal: 0, total: 0 };
         }
         
-        // Ensure all required properties exist
         cartData.items = cartData.items || [];
         cartData.subtotal = cartData.subtotal || 0;
-        cartData.platform_fee = cartData.platform_fee || 0;
         cartData.total = cartData.total || 0;
         cartData.discount_amount = cartData.discount_amount || 0;
         cartData.promo_code = cartData.promo_code || null;
+        
+        // Ensure each item has organizer field
+        for (let i = 0; i < cartData.items.length; i++) {
+            if (!cartData.items[i].organizer && cartData.items[i].organizer_name) {
+                cartData.items[i].organizer = cartData.items[i].organizer_name;
+            }
+            if (!cartData.items[i].organizer) {
+                cartData.items[i].organizer = 'Event Organizer';
+                cartData.items[i].organizer_name = 'Event Organizer';
+            }
+        }
         
         displayCart();
         
         if (!cartData.items || cartData.items.length === 0) {
             if (emptyCartEl) emptyCartEl.style.display = 'block';
             if (cartContentEl) cartContentEl.style.display = 'none';
+            hideSummary();
         } else {
             if (emptyCartEl) emptyCartEl.style.display = 'none';
             if (cartContentEl) cartContentEl.style.display = 'block';
@@ -110,17 +106,174 @@ function loadCart() {
     }
 }
 
-function displayCart() {
-    try {
-        if (!cartItemsEl) return;
-        
-        if (!cartData.items || cartData.items.length === 0) {
-            cartItemsEl.innerHTML = '<div class="empty-cart-message">Your booking cart is empty</div>';
-            return;
+function hideSummary() {
+    const bookingSummaryCard = document.querySelector('.booking-summary-card');
+    if (bookingSummaryCard) bookingSummaryCard.style.display = 'none';
+    if (subtotalSpan) subtotalSpan.textContent = formatCurrency(0);
+    if (totalAmountSpan) totalAmountSpan.textContent = formatCurrency(0);
+    if (discountRow) discountRow.style.display = 'none';
+    if (appliedPromoDiv) appliedPromoDiv.style.display = 'none';
+    selectedOrganizer = null;
+    const proceedBtn = document.getElementById('proceedToPaymentBtn');
+    if (proceedBtn) proceedBtn.disabled = true;
+}
+
+function updateSummaryForOrganizer(organizerName) {
+    if (!organizerName) {
+        hideSummary();
+        return;
+    }
+    
+    const organizerItems = cartData.items.filter(item => 
+        (item.organizer || item.organizer_name || 'Event Organizer') === organizerName
+    );
+    
+    if (organizerItems.length === 0) {
+        hideSummary();
+        return;
+    }
+    
+    let subtotal = organizerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discount = cartData.discount_amount || 0;
+    const total = subtotal - discount;
+    
+    if (subtotalSpan) subtotalSpan.textContent = formatCurrency(subtotal);
+    if (totalAmountSpan) totalAmountSpan.textContent = formatCurrency(total);
+    
+    if (discount > 0) {
+        if (discountRow) discountRow.style.display = 'flex';
+        if (discountAmountSpan) discountAmountSpan.textContent = `-${formatCurrency(discount)}`;
+    } else {
+        if (discountRow) discountRow.style.display = 'none';
+    }
+    
+    if (cartData.promo_code) {
+        if (appliedPromoDiv) appliedPromoDiv.style.display = 'flex';
+        if (promoCodeDisplaySpan) promoCodeDisplaySpan.textContent = cartData.promo_code;
+    } else {
+        if (appliedPromoDiv) appliedPromoDiv.style.display = 'none';
+    }
+    
+    document.querySelector('.booking-summary-card').style.display = 'block';
+    selectedOrganizer = organizerName;
+    
+    sessionStorage.setItem('selected_organizer', organizerName);
+    sessionStorage.setItem('selected_items', JSON.stringify(organizerItems));
+    sessionStorage.setItem('selected_total', total);
+    
+    const proceedBtn = document.getElementById('proceedToPaymentBtn');
+    if (proceedBtn) proceedBtn.disabled = false;
+}
+
+function hasMultipleOrganizers(items) {
+    const organizers = new Set();
+    for (let i = 0; i < items.length; i++) {
+        const organizerName = items[i].organizer || items[i].organizer_name || 'Event Organizer';
+        organizers.add(organizerName);
+    }
+    return organizers.size > 1;
+}
+
+function groupItemsByOrganizer(items) {
+    const groups = {};
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const orgName = item.organizer || item.organizer_name || 'Event Organizer';
+        if (!groups[orgName]) {
+            groups[orgName] = { organizer: orgName, items: [], total: 0 };
         }
-        
-        cartItemsEl.innerHTML = cartData.items.map(item => {
-            return `
+        groups[orgName].items.push(item);
+        groups[orgName].total += item.price * item.quantity;
+    }
+    return Object.values(groups);
+}
+
+function selectOrganizer(organizerName) {
+    if (selectedOrganizer === organizerName) {
+        hideSummary();
+        const radios = document.querySelectorAll('.organizer-radio');
+        for (let i = 0; i < radios.length; i++) {
+            radios[i].checked = false;
+        }
+        selectedOrganizer = null;
+        sessionStorage.removeItem('selected_organizer');
+        sessionStorage.removeItem('selected_items');
+        sessionStorage.removeItem('selected_total');
+    } else {
+        updateSummaryForOrganizer(organizerName);
+        const radios = document.querySelectorAll('.organizer-radio');
+        for (let i = 0; i < radios.length; i++) {
+            radios[i].checked = (radios[i].value === organizerName);
+        }
+    }
+}
+
+function displayCart() {
+    if (!cartItemsEl) return;
+    
+    if (!cartData.items || cartData.items.length === 0) {
+        cartItemsEl.innerHTML = '<div class="empty-cart-message">Your booking cart is empty</div>';
+        hideSummary();
+        return;
+    }
+    
+    if (hasMultipleOrganizers(cartData.items)) {
+        const groups = groupItemsByOrganizer(cartData.items);
+        let html = '';
+        for (let g = 0; g < groups.length; g++) {
+            const group = groups[g];
+            const isChecked = (selectedOrganizer === group.organizer);
+            html += `
+                <div class="organizer-group" data-organizer="${escapeHtml(group.organizer)}">
+                    <div class="organizer-group-header">
+                        <div class="organizer-select">
+                            <input type="radio" name="selectedOrganizer" class="organizer-radio" value="${escapeHtml(group.organizer)}" ${isChecked ? 'checked' : ''} onclick="selectOrganizer('${escapeHtml(group.organizer).replace(/'/g, "\\'")}')">
+                            <h4>${escapeHtml(group.organizer)}</h4>
+                        </div>
+                        <span class="organizer-total">${formatCurrency(group.total)}</span>
+                    </div>
+                    <div class="organizer-group-items">
+            `;
+            for (let i = 0; i < group.items.length; i++) {
+                const item = group.items[i];
+                html += `
+                    <div class="booking-item" data-id="${item.id}">
+                        <div class="item-image" style="background-image: url('${item.image || '/static/images/placeholder.jpg'}')"></div>
+                        <div class="item-details">
+                            <h4>${escapeHtml(item.title)}</h4>
+                            <p class="item-type">${escapeHtml(item.category || 'Event')}</p>
+                            <p class="item-date">${formatDate(item.date)}</p>
+                            <p class="item-venue">${escapeHtml(item.location)}</p>
+                        </div>
+                        <div class="item-quantity">
+                            <button class="qty-btn minus" onclick="updateItemQuantity(${item.id}, -1)">-</button>
+                            <span class="qty-value">${item.quantity}</span>
+                            <button class="qty-btn plus" onclick="updateItemQuantity(${item.id}, 1)">+</button>
+                        </div>
+                        <div class="item-price">${formatCurrency(item.price * item.quantity)}</div>
+                        <button class="remove-item" onclick="removeItem(${item.id})">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+            }
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        cartItemsEl.innerHTML = html;
+        if (!selectedOrganizer) {
+            hideSummary();
+        } else {
+            updateSummaryForOrganizer(selectedOrganizer);
+        }
+    } else {
+        // Single organizer - simple list
+        let html = '';
+        for (let i = 0; i < cartData.items.length; i++) {
+            const item = cartData.items[i];
+            html += `
                 <div class="booking-item" data-id="${item.id}">
                     <div class="item-image" style="background-image: url('${item.image || '/static/images/placeholder.jpg'}')"></div>
                     <div class="item-details">
@@ -140,527 +293,221 @@ function displayCart() {
                     </button>
                 </div>
             `;
-        }).join('');
-        
-        if (cartItemCountSpan) cartItemCountSpan.textContent = cartData.items.length;
-        if (subtotalSpan) subtotalSpan.textContent = formatCurrency(cartData.subtotal);
-        if (platformFeeSpan) platformFeeSpan.textContent = formatCurrency(cartData.platform_fee || 0);
-        if (totalAmountSpan) totalAmountSpan.textContent = formatCurrency(cartData.total);
-        
-        if (cartData.discount_amount && cartData.discount_amount > 0) {
-            if (discountRow) discountRow.style.display = 'flex';
-            if (discountAmountSpan) discountAmountSpan.textContent = `-${formatCurrency(cartData.discount_amount)}`;
-        } else {
-            if (discountRow) discountRow.style.display = 'none';
         }
+        cartItemsEl.innerHTML = html;
         
-        if (cartData.promo_code) {
-            if (appliedPromoDiv) appliedPromoDiv.style.display = 'flex';
-            if (promoCodeDisplaySpan) promoCodeDisplaySpan.textContent = cartData.promo_code;
-        } else {
-            if (appliedPromoDiv) appliedPromoDiv.style.display = 'none';
+        if (cartData.items.length > 0) {
+            const singleOrganizer = cartData.items[0].organizer || cartData.items[0].organizer_name || 'Event Organizer';
+            updateSummaryForOrganizer(singleOrganizer);
         }
-    } catch (error) {
-        console.error("Error in displayCart:", error);
     }
+    if (cartItemCountSpan) cartItemCountSpan.textContent = cartData.items.length;
 }
 
 async function updateItemQuantity(itemId, delta) {
     const item = cartData.items.find(i => i.id == itemId);
     if (!item) return;
-    
     const newQuantity = item.quantity + delta;
     if (newQuantity < 1) return;
     
-    try {
-        item.quantity = newQuantity;
-        recalculateCartTotals();
-        saveCartToLocalStorage();
-        displayCart();
-        
-        // Dispatch event for navbar update
-        window.dispatchEvent(new Event('cart-updated'));
-        window.dispatchEvent(new Event('storage'));
-        
-        showToast(`🛒 Quantity updated for "${item.title}"`, 'success');
-    } catch (error) {
-        console.error('Error updating quantity:', error);
-        showToast('Failed to update quantity', 'error');
-    }
+    item.quantity = newQuantity;
+    recalculateCartTotals();
+    saveCartToLocalStorage();
+    displayCart();
+    if (selectedOrganizer) updateSummaryForOrganizer(selectedOrganizer);
+    window.dispatchEvent(new Event('cart-updated'));
+    showToast('Quantity updated', 'success');
 }
 
 async function removeItem(itemId) {
     const item = cartData.items.find(i => i.id == itemId);
-    const itemTitle = item ? item.title : 'Event';
+    const removedOrganizer = item?.organizer || item?.organizer_name || 'Event Organizer';
     
-    try {
-        cartData.items = cartData.items.filter(i => i.id != itemId);
-        recalculateCartTotals();
-        saveCartToLocalStorage();
-        displayCart();
-        
-        if (cartData.items.length === 0) {
-            if (emptyCartEl) emptyCartEl.style.display = 'block';
-            if (cartContentEl) cartContentEl.style.display = 'none';
+    cartData.items = cartData.items.filter(i => i.id != itemId);
+    recalculateCartTotals();
+    saveCartToLocalStorage();
+    
+    if (selectedOrganizer === removedOrganizer) {
+        const stillHasItems = cartData.items.some(i => (i.organizer || i.organizer_name) === selectedOrganizer);
+        if (!stillHasItems) {
+            selectedOrganizer = null;
+            hideSummary();
+        } else {
+            updateSummaryForOrganizer(selectedOrganizer);
         }
-        
-        updateCartCount(cartData.items.length);
-        
-        // Dispatch events for navbar update
-        window.dispatchEvent(new Event('cart-updated'));
-        window.dispatchEvent(new Event('storage'));
-        
-        showToast(`🗑️ "${itemTitle}" removed from your booking cart`, 'info');
-    } catch (error) {
-        console.error('Error removing item:', error);
-        showToast('Failed to remove item', 'error');
     }
+    displayCart();
+    
+    if (cartData.items.length === 0) {
+        if (emptyCartEl) emptyCartEl.style.display = 'block';
+        if (cartContentEl) cartContentEl.style.display = 'none';
+        hideSummary();
+    }
+    updateCartCount(cartData.items.length);
+    window.dispatchEvent(new Event('cart-updated'));
+    showToast('Item removed', 'info');
 }
 
 async function clearCart() {
-    if (!confirm('Are you sure you want to clear all events from your booking?')) return;
-    
-    try {
-        cartData.items = [];
-        cartData.subtotal = 0;
-        cartData.total = 0;
-        cartData.discount_amount = 0;
-        cartData.promo_code = null;
-        saveCartToLocalStorage();
-        displayCart();
-        
-        if (emptyCartEl) emptyCartEl.style.display = 'block';
-        if (cartContentEl) cartContentEl.style.display = 'none';
-        updateCartCount(0);
-        
-        // Dispatch events for navbar update
-        window.dispatchEvent(new Event('cart-updated'));
-        window.dispatchEvent(new Event('storage'));
-        
-        showToast('🗑️ Your booking cart has been cleared', 'info');
-    } catch (error) {
-        console.error('Error clearing cart:', error);
-        showToast('Failed to clear booking cart', 'error');
-    }
+    if (!confirm('Clear all events from your booking?')) return;
+    cartData.items = [];
+    cartData.subtotal = 0;
+    cartData.total = 0;
+    cartData.discount_amount = 0;
+    cartData.promo_code = null;
+    saveCartToLocalStorage();
+    displayCart();
+    hideSummary();
+    if (emptyCartEl) emptyCartEl.style.display = 'block';
+    if (cartContentEl) cartContentEl.style.display = 'none';
+    updateCartCount(0);
+    window.dispatchEvent(new Event('cart-updated'));
+    showToast('Cart cleared', 'info');
 }
 
 function recalculateCartTotals() {
-    cartData.subtotal = cartData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    cartData.platform_fee = 0;
-    cartData.total = cartData.subtotal - (cartData.discount_amount || 0);
+    let subtotal = 0;
+    for (let i = 0; i < cartData.items.length; i++) {
+        subtotal += cartData.items[i].price * cartData.items[i].quantity;
+    }
+    cartData.subtotal = subtotal;
+    cartData.total = subtotal - (cartData.discount_amount || 0);
 }
 
 function saveCartToLocalStorage() {
-    try {
-        if (window.EventhubCartStorage) {
-            window.EventhubCartStorage.saveEventhubCart(cartData);
-        } else {
-            localStorage.setItem('eventhub_cart', JSON.stringify(cartData));
-        }
-    } catch (error) {
-        console.error('Failed to save cart:', error);
-        showToast('Could not save cart. Storage may be full.', 'error');
+    if (window.EventhubCartStorage) {
+        window.EventhubCartStorage.saveEventhubCart(cartData);
+    } else {
+        localStorage.setItem('eventhub_cart', JSON.stringify(cartData));
     }
 }
 
 async function applyPromoCode(e) {
     e.preventDefault();
     const code = document.getElementById('promoCode')?.value.trim();
-    if (!code) { 
-        showToast('Please enter a promo code', 'error'); 
-        return; 
-    }
+    if (!code) { showToast('Enter a promo code', 'error'); return; }
     
-    try {
-        if (code.toUpperCase() === 'WELCOME10') {
-            const discountAmount = Math.floor(cartData.subtotal * 0.1);
-            cartData.discount_amount = discountAmount;
-            cartData.promo_code = code.toUpperCase();
-            recalculateCartTotals();
-            saveCartToLocalStorage();
-            displayCart();
-            document.getElementById('promoCode').value = '';
-            
-            // Dispatch event for navbar update
-            window.dispatchEvent(new Event('cart-updated'));
-            
-            showToast(`🎉 Promo code applied! You saved ${formatCurrency(discountAmount)}`, 'success');
-        } else {
-            showToast('Invalid promo code. Please try again.', 'error');
-        }
-    } catch (error) {
+    if (code.toUpperCase() === 'WELCOME10') {
+        const discountAmount = Math.floor(cartData.subtotal * 0.1);
+        cartData.discount_amount = discountAmount;
+        cartData.promo_code = code.toUpperCase();
+        recalculateCartTotals();
+        saveCartToLocalStorage();
+        if (selectedOrganizer) updateSummaryForOrganizer(selectedOrganizer);
+        displayCart();
+        document.getElementById('promoCode').value = '';
+        window.dispatchEvent(new Event('cart-updated'));
+        showToast('Promo applied! You saved ' + formatCurrency(discountAmount), 'success');
+    } else {
         showToast('Invalid promo code', 'error');
     }
 }
 
 async function removePromoCode() {
-    try {
-        cartData.discount_amount = 0;
-        cartData.promo_code = null;
-        recalculateCartTotals();
-        saveCartToLocalStorage();
-        displayCart();
-        
-        // Dispatch event for navbar update
-        window.dispatchEvent(new Event('cart-updated'));
-        
-        showToast('Promo code removed', 'success');
-    } catch (error) {
-        showToast('Failed to remove promo code', 'error');
-    }
+    cartData.discount_amount = 0;
+    cartData.promo_code = null;
+    recalculateCartTotals();
+    saveCartToLocalStorage();
+    if (selectedOrganizer) updateSummaryForOrganizer(selectedOrganizer);
+    displayCart();
+    window.dispatchEvent(new Event('cart-updated'));
+    showToast('Promo removed', 'success');
 }
 
 function proceedToCheckout() {
     const token = localStorage.getItem('attendee_access_token');
-    const user = localStorage.getItem('attendee_user');
-    
-    if (!token || !user) {
+    if (!token) {
         localStorage.setItem('redirect_after_login', '/cart/');
-        showToast('🔐 Please login to complete your booking', 'info');
-        setTimeout(() => {
-            window.location.href = '/login/';
-        }, 1500);
+        showToast('Please login to continue', 'info');
+        setTimeout(() => window.location.href = '/login/', 1500);
         return;
     }
     
-    if (!cartData.items || cartData.items.length === 0) {
-        showToast('Your booking cart is empty', 'error');
+    if (!selectedOrganizer) {
+        showToast('Select an organizer to proceed', 'error');
         return;
     }
     
-    cartContentEl.style.display = 'none';
-    checkoutViewEl.style.display = 'block';
-    prefillBillingInfo();
+    const selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
+    if (!selectedItems.length) {
+        showToast('No items selected', 'error');
+        return;
+    }
     
-    const checkoutOrderSummary = document.getElementById('checkoutOrderSummary');
-    if (checkoutOrderSummary) {
-        checkoutOrderSummary.innerHTML = `
-            <div class="summary-row"><span>Subtotal (${cartData.items.length} items):</span><span>${formatCurrency(cartData.subtotal)}</span></div>
-            ${cartData.discount_amount ? `<div class="summary-row discount"><span>Discount:</span><span>-${formatCurrency(cartData.discount_amount)}</span></div>` : ''}
-            <div class="summary-row total"><span>Total Amount:</span><span>${formatCurrency(cartData.total)}</span></div>
+    // Show billing form
+    if (cartContentEl) cartContentEl.style.display = 'none';
+    if (checkoutViewEl) checkoutViewEl.style.display = 'block';
+    const bookingSummaryCard = document.querySelector('.booking-summary-card');
+    if (bookingSummaryCard) bookingSummaryCard.style.display = 'none';
+    
+    // Prefill user data
+    const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
+    const nameInput = document.getElementById('billingName');
+    const emailInput = document.getElementById('billingEmail');
+    if (nameInput) nameInput.value = user.full_name || user.name || '';
+    if (emailInput) emailInput.value = user.email || '';
+    
+    // Update summary
+    let subtotal = 0;
+    for (let i = 0; i < selectedItems.length; i++) {
+        subtotal += selectedItems[i].price * selectedItems[i].quantity;
+    }
+    const discount = cartData.discount_amount || 0;
+    const total = subtotal - discount;
+    const summaryEl = document.getElementById('checkoutOrderSummary');
+    if (summaryEl) {
+        summaryEl.innerHTML = `
+            <div class="summary-row"><span>Organizer:</span><span>${escapeHtml(selectedOrganizer)}</span></div>
+            <div class="summary-row"><span>Items (${selectedItems.length}):</span><span>${formatCurrency(subtotal)}</span></div>
+            ${discount > 0 ? `<div class="summary-row discount"><span>Discount:</span><span>-${formatCurrency(discount)}</span></div>` : ''}
+            <div class="summary-row total"><span>Total:</span><span>${formatCurrency(total)}</span></div>
         `;
     }
 }
 
-function prefillBillingInfo() {
-    try {
-        const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
-        const nameInput = document.getElementById('billingName');
-        const emailInput = document.getElementById('billingEmail');
-        
-        if (nameInput) {
-            const fullName = user.full_name || user.name || '';
-            nameInput.value = fullName;
-        }
-        if (emailInput) {
-            emailInput.value = user.email || '';
-        }
-    } catch (error) {
-        console.error('Error prefilling billing info:', error);
-    }
-}
-
 function backToCart() {
-    checkoutViewEl.style.display = 'none';
-    cartContentEl.style.display = 'block';
+    if (checkoutViewEl) checkoutViewEl.style.display = 'none';
+    if (cartContentEl) cartContentEl.style.display = 'block';
+    if (selectedOrganizer) {
+        const bookingSummaryCard = document.querySelector('.booking-summary-card');
+        if (bookingSummaryCard) bookingSummaryCard.style.display = 'block';
+    }
 }
 
 async function processCheckout(e) {
     e.preventDefault();
-
-    // Validate form fields
+    
     const billingName = document.getElementById('billingName')?.value.trim();
     const billingEmail = document.getElementById('billingEmail')?.value.trim();
     
-    if (!billingName) {
-        showToast('Please enter your full name', 'error');
-        return;
-    }
+    if (!billingName) { showToast('Enter your full name', 'error'); return; }
+    if (!billingEmail || !isValidEmail(billingEmail)) { showToast('Enter valid email', 'error'); return; }
     
-    if (!billingEmail || !isValidEmail(billingEmail)) {
-        showToast('Please enter a valid email address', 'error');
-        return;
-    }
-
-    if (!window.CheckoutFlow) {
-        showToast('Checkout system is loading. Please try again.', 'error');
-        return;
-    }
-
-    const item = cartData.items[0];
-    if (!item) {
-        showToast('Your booking cart is empty', 'error');
-        return;
-    }
-
-    if (cartData.items.length > 1) {
-        showToast('Please complete payment for one event at a time.', 'info');
-    }
-
-    backToCart();
-    const ticketType = item.ticket_type || item.tier || 'Regular';
-    await window.CheckoutFlow.startCheckout(item.id, ticketType, item.quantity);
-}
-
-function removeEventFromCart(eventId) {
-    if (!eventId || !cartData?.items?.length) return;
-    const idx = cartData.items.findIndex(i => String(i.id) === String(eventId));
-    if (idx === -1) return;
-    cartData.items.splice(idx, 1);
-    recalculateCartTotals();
-    saveCartToLocalStorage();
-    displayCart();
-    updateCartCount(cartData.items.length);
-    if (cartData.items.length === 0) {
-        if (emptyCartEl) emptyCartEl.style.display = 'block';
-        if (cartContentEl) cartContentEl.style.display = 'none';
-    }
-    window.dispatchEvent(new Event('cart-updated'));
-}
-
-function onCartCheckoutSuccess(event) {
-    const eventId = event?.detail?.event_id;
-    removeEventFromCart(eventId);
-    showToast('Payment successful! Your ticket has been issued.', 'success');
-}
-
-function onCartCheckoutSubmitted(event) {
-    const eventId = event?.detail?.event_id;
-    removeEventFromCart(eventId);
-    showToast('Payment proof submitted. The organizer will review and approve your booking.', 'info');
-}
-
-window.addEventListener('checkout-completed', onCartCheckoutSuccess);
-window.addEventListener('checkout-success', onCartCheckoutSuccess);
-window.addEventListener('checkout-submitted', onCartCheckoutSubmitted);
-
-function onCartCheckoutSubmittedLegacy() {
-    showToast('Payment submitted for approval. Your cart will be updated once confirmed.', 'info');
-}
-
-async function initiateMpesaPayment(bookingId, billingInfo) {
-    try {
-        checkoutViewEl.style.display = 'none';
-        paymentViewEl.style.display = 'block';
-        
-        const paymentStatusEl = document.getElementById('paymentStatus');
-        if (paymentStatusEl) {
-            paymentStatusEl.innerHTML = `
-                <div class="mpesa-payment-initiation">
-                    <div class="mpesa-spinner">
-                        <div class="mpesa-ring"></div>
-                        <div class="mpesa-ring"></div>
-                        <div class="mpesa-ring"></div>
-                        <div class="mpesa-ring"></div>
-                    </div>
-                    <i class="fas fa-mobile-alt mpesa-icon"></i>
-                    <h3>Initiating M-Pesa Payment</h3>
-                    <p>Please wait while we connect to M-Pesa...</p>
-                </div>
-            `;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        if (paymentStatusEl) {
-            paymentStatusEl.innerHTML = `
-                <div class="mpesa-stk-push">
-                    <div class="stk-loader">
-                        <div class="stk-wave"></div>
-                        <div class="stk-wave"></div>
-                        <div class="stk-wave"></div>
-                    </div>
-                    <i class="fas fa-phone-alt stk-icon"></i>
-                    <h3>STK Push Sent!</h3>
-                    <p>Please check your phone for the M-Pesa prompt</p>
-                    <div class="phone-number">${formatPhoneNumber(billingInfo.phone)}</div>
-                    <div class="amount">Amount: ${formatCurrency(cartData.total)}</div>
-                    <div class="booking-ref">Booking ID: ${bookingId}</div>
-                    <button class="btn-outline" onclick="cancelPayment()">Cancel Payment</button>
-                </div>
-            `;
-        }
-        
-        await completePayment(bookingId, billingInfo);
-        
-    } catch (error) {
-        showToast(error.message || 'Failed to initiate payment', 'error');
-        backToCart();
-    }
-}
-
-
-    async function completePayment(bookingId, billingInfo) {
-    try {
-        const token = localStorage.getItem('attendee_access_token');
-
-        // Send real STK Push request to Django backend
-        const response = await fetch('/payments/pay/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-                phone_number: billingInfo.phone,
-                amount: cartData.total,
-                event_id: cartData.items[0]?.id,
-                quantity: cartData.items.reduce((sum, item) => sum + item.quantity, 0),
-            })
-        });
-
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.message || 'Payment initiation failed');
-        }
-
-        // Poll for payment confirmation
-        pollCartPaymentStatus(data.checkout_request_id, billingInfo);
-
-    } catch (error) {
-        const paymentStatusEl = document.getElementById('paymentStatus');
-        if (paymentStatusEl) {
-            paymentStatusEl.innerHTML = `
-                <div class="payment-failed">
-                    <i class="fas fa-times-circle"></i>
-                    <h3>Payment Failed</h3>
-                    <p>${error.message || 'Your payment could not be processed. Please try again.'}</p>
-                    <button class="btn-outline" onclick="backToCart()">Try Again</button>
-                </div>
-            `;
-        }
-    }
+    const selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
+    if (!selectedItems.length) { showToast('No items selected', 'error'); return; }
     
-    // Dispatch events for navbar update
-    window.dispatchEvent(new Event('cart-updated'));
-    window.dispatchEvent(new Event('storage'));
-}
-
-function pollCartPaymentStatus(checkoutId, billingInfo) {
-    let attempts = 0;
-    const maxAttempts = 10;
-    const paymentStatusEl = document.getElementById('paymentStatus');
-
-    const interval = setInterval(async () => {
-        attempts++;
-        try {
-            const response = await fetch(`/payments/status/${checkoutId}/`);
-            const data = await response.json();
-
-            if (data.status === 'completed') {
-                clearInterval(interval);
-
-                // Save booking to localStorage
-                const bookingId = 'BK' + Date.now();
-                const newBooking = {
-                    id: bookingId,
-                    booking_date: new Date().toISOString(),
-                    status: 'confirmed',
-                    payment_method: 'M-Pesa',
-                    receipt_number: data.receipt,
-                    total_amount: cartData.total,
-                    subtotal: cartData.subtotal,
-                    booking_fee: cartData.platform_fee,
-                    discount: cartData.discount_amount || 0,
-                    billing_info: {
-                        name: billingInfo.full_name,
-                        email: billingInfo.email,
-                        phone: billingInfo.phone
-                    },
-                    items: cartData.items.map(item => ({
-                        id: item.id,
-                        title: item.title,
-                        category: item.category,
-                        date: item.date,
-                        location: item.location,
-                        price: item.price,
-                        quantity: item.quantity,
-                        image: item.image,
-                        ticket_status: 'active',
-                        ticket_code: 'TKT' + Math.floor(Math.random() * 1000000)
-                    }))
-                };
-
-                const existingBookings = JSON.parse(
-                    localStorage.getItem('eventhub_bookings') || '[]'
-                );
-                existingBookings.unshift(newBooking);
-                localStorage.setItem('eventhub_bookings', JSON.stringify(existingBookings));
-
-                if (paymentStatusEl) {
-                    paymentStatusEl.innerHTML = `
-                        <div class="payment-success">
-                            <i class="fas fa-check-circle"></i>
-                            <h3>Booking Confirmed!</h3>
-                            <p>Your M-Pesa payment was successful.</p>
-                            <div class="payment-details">
-                                <p><strong>Booking ID:</strong> ${bookingId}</p>
-                                <p><strong>M-Pesa Receipt:</strong> ${data.receipt}</p>
-                                <p><strong>Amount Paid:</strong> ${formatCurrency(cartData.total)}</p>
-                            </div>
-                            <div class="redirect-message">
-                                <i class="fas fa-spinner fa-pulse"></i>
-                                <p>Redirecting to your bookings...</p>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                localStorage.removeItem('eventhub_cart');
-                updateCartCount(0);
-                setTimeout(() => window.location.href = '/bookings/', 3000);
-
-            } else if (data.status === 'failed' || data.status === 'cancelled') {
-                clearInterval(interval);
-                if (paymentStatusEl) {
-                    paymentStatusEl.innerHTML = `
-                        <div class="payment-failed">
-                            <i class="fas fa-times-circle"></i>
-                            <h3>Payment Failed</h3>
-                            <p>Your M-Pesa payment was not completed. Please try again.</p>
-                            <button class="btn-outline" onclick="backToCart()">Try Again</button>
-                        </div>
-                    `;
-                }
-
-            } else if (attempts >= maxAttempts) {
-                clearInterval(interval);
-                if (paymentStatusEl) {
-                    paymentStatusEl.innerHTML = `
-                        <div class="payment-failed">
-                            <i class="fas fa-times-circle"></i>
-                            <h3>Payment Timed Out</h3>
-                            <p>We did not receive payment confirmation. Please try again.</p>
-                            <button class="btn-outline" onclick="backToCart()">Try Again</button>
-                        </div>
-                    `;
-                }
-            }
-        } catch (error) {
-            console.error('Polling error:', error);
-        }
-    }, 3000);
-}
-
-function cancelPayment() {
-    if (paymentTimeout) {
-        clearTimeout(paymentTimeout);
-        paymentTimeout = null;
+    sessionStorage.setItem('checkout_billing_info', JSON.stringify({ name: billingName, email: billingEmail }));
+    
+    const firstItem = selectedItems[0];
+    const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+    
+    if (window.CheckoutFlow && typeof window.CheckoutFlow.startCheckout === 'function') {
+        await window.CheckoutFlow.startCheckout(firstItem.id, firstItem.ticket_type || 'regular', totalQuantity);
+    } else {
+        showToast('Payment system unavailable', 'error');
     }
-    backToCart();
-    showToast('Payment cancelled', 'info');
 }
 
+// ========== UTILITIES ==========
 function updateCartCount(count) {
-    const cartBadge = document.getElementById('cartBadgeDropdown');
-    if (cartBadge) {
-        const itemCount = count !== undefined ? count : (cartData?.items?.length || 0);
-        if (itemCount > 0) {
-            cartBadge.textContent = itemCount > 99 ? '99+' : itemCount;
-            cartBadge.style.display = 'inline-block';
+    const badge = document.getElementById('cartBadgeDropdown');
+    if (badge) {
+        const cnt = count !== undefined ? count : (cartData?.items?.length || 0);
+        if (cnt > 0) {
+            badge.textContent = cnt > 99 ? '99+' : cnt;
+            badge.style.display = 'inline-block';
         } else {
-            cartBadge.style.display = 'none';
+            badge.style.display = 'none';
         }
     }
 }
@@ -672,18 +519,21 @@ function isValidEmail(email) {
 function formatDate(dateString) {
     if (!dateString) return 'TBA';
     try {
-        return new Date(dateString).toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch(e) { 
-        return 'TBA'; 
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'TBA';
+        return date.toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch(e) {
+        return 'TBA';
     }
 }
 
 function formatCurrency(amount) {
     try {
         const val = Number(amount);
-        return `KES ${val.toLocaleString('en-KE')}`;
-    } catch(e) { 
-        return 'KES 0'; 
+        if (isNaN(val)) return 'KES 0';
+        return 'KES ' + val.toLocaleString('en-KE');
+    } catch(e) {
+        return 'KES 0';
     }
 }
 
@@ -694,26 +544,27 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function showToast(message, type = 'success') {
+function showToast(message, type) {
+    type = type || 'success';
     const existingToast = document.querySelector('.toast-notification');
     if (existingToast) existingToast.remove();
     
     const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${type}`;
-    const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
-    toast.innerHTML = `<i class="fas ${icon}"></i><span>${escapeHtml(message)}</span>`;
+    toast.className = 'toast-notification toast-' + type;
+    const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
+    toast.innerHTML = '<i class="fas ' + icon + '"></i><span>' + escapeHtml(message) + '</span>';
     document.body.appendChild(toast);
     
-    setTimeout(() => {
+    setTimeout(function() {
         if (toast.parentNode) toast.remove();
     }, 4000);
 }
 
-// Make functions global for onclick handlers
+// Exports
 window.updateItemQuantity = updateItemQuantity;
 window.removeItem = removeItem;
 window.clearCart = clearCart;
 window.removePromoCode = removePromoCode;
-window.proceedToCheckout = proceedToCheckout;
+window.selectOrganizer = selectOrganizer;
 window.backToCart = backToCart;
-window.cancelPayment = cancelPayment;
+window.proceedToCheckout = proceedToCheckout;

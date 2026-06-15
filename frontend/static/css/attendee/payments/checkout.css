@@ -3,6 +3,9 @@
  * Scoped under .checkout-modal to avoid conflicts with generic .modal styles.
  */
 
+/* ============================================
+   MODAL CONTAINER
+   ============================================ */
 .checkout-modal {
     display: none;
     position: fixed;
@@ -28,9 +31,7 @@
     background: #ffffff;
     color: #0f172a;
     border-radius: 16px;
-    box-shadow:
-        0 25px 50px -12px rgba(0, 0, 0, 0.35),
-        0 0 0 1px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.06);
     padding: 1.5rem 1.5rem 1.25rem;
     animation: checkoutModalIn 0.28s ease;
 }
@@ -46,6 +47,9 @@
     }
 }
 
+/* ============================================
+   MODAL HEADER & CLOSE BUTTON
+   ============================================ */
 .checkout-close {
     position: absolute;
     top: 0.85rem;
@@ -89,6 +93,9 @@
     color: #16a34a;
 }
 
+/* ============================================
+   FLOW STEPS
+   ============================================ */
 .checkout-flow-steps {
     display: flex;
     flex-wrap: wrap;
@@ -128,7 +135,9 @@
     margin-bottom: 0.75rem;
 }
 
-/* Summary card */
+/* ============================================
+   SUMMARY CARD
+   ============================================ */
 .checkout-summary {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 1px solid #e2e8f0;
@@ -157,16 +166,18 @@
     font-weight: 700;
 }
 
-/* Typography */
-.checkout-modal .checkout-hint,
-.checkout-modal p.checkout-hint {
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+.checkout-hint,
+p.checkout-hint {
     margin: 0 0 0.85rem;
     font-size: 0.9rem;
     line-height: 1.55;
-    color: #334155 !important;
+    color: #334155;
 }
 
-.checkout-modal .checkout-hint strong {
+.checkout-hint strong {
     color: #0f172a;
     font-weight: 600;
 }
@@ -179,7 +190,9 @@
     color: #0f172a;
 }
 
-/* Payment options */
+/* ============================================
+   PAYMENT OPTIONS
+   ============================================ */
 .checkout-payment-options {
     display: flex;
     flex-direction: column;
@@ -215,6 +228,29 @@
     font-variant-numeric: tabular-nums;
 }
 
+.payment-option-icon {
+    width: 40px;
+    height: 40px;
+    background: #fef3c7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f59e0b;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.payment-option-details {
+    flex: 1;
+}
+
+.payment-option-instruction {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+}
+
 .checkout-copy-btn {
     flex-shrink: 0;
     border: 1px solid #cbd5e1;
@@ -239,9 +275,10 @@
     color: #166534;
 }
 
-/* Inputs */
-.checkout-text-input,
-.checkout-file-input {
+/* ============================================
+   INPUTS
+   ============================================ */
+.checkout-text-input {
     width: 100%;
     box-sizing: border-box;
     padding: 0.75rem 0.85rem;
@@ -259,19 +296,36 @@
     color: #94a3b8;
 }
 
-.checkout-text-input:focus,
-.checkout-file-input:focus {
+.checkout-text-input:focus {
     outline: none;
     border-color: #16a34a;
     box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
 }
 
 .checkout-file-input {
+    width: 100%;
+    box-sizing: border-box;
     padding: 0.65rem;
+    margin-bottom: 0.85rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #0f172a;
     font-size: 0.875rem;
+    font-family: inherit;
     cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+.checkout-file-input:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+/* ============================================
+   PREVIEW
+   ============================================ */
 .checkout-preview {
     margin-bottom: 0.85rem;
     border-radius: 10px;
@@ -287,9 +341,10 @@
     background: #f8fafc;
 }
 
-/* Buttons */
-.checkout-primary-btn,
-.checkout-secondary-btn {
+/* ============================================
+   BUTTONS
+   ============================================ */
+.checkout-primary-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -304,11 +359,8 @@
     cursor: pointer;
     border: none;
     transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
-}
-
-.checkout-primary-btn {
     background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-    color: #ffffff !important;
+    color: #ffffff;
     box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
 }
 
@@ -324,10 +376,23 @@
 }
 
 .checkout-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
     background: #fff;
-    color: #0f172a !important;
+    color: #0f172a;
     border: 1.5px solid #cbd5e1;
     margin-top: 0.5rem;
+    transition: background 0.12s, border-color 0.12s;
 }
 
 .checkout-secondary-btn:hover:not(:disabled) {
@@ -335,26 +400,87 @@
     border-color: #94a3b8;
 }
 
-.checkout-stk-section {
-    margin-bottom: 1.25rem;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid #e2e8f0;
+/* ============================================
+   MANUAL NAME BOX
+   ============================================ */
+.checkout-manual-box {
+    text-align: left;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
 }
 
-.checkout-stk-fallback {
-    margin-top: 0.5rem !important;
+.checkout-manual-box .checkout-label {
+    margin-bottom: 0.5rem;
 }
 
-.checkout-stk-sandbox {
-    font-size: 0.82rem !important;
-    color: #b45309 !important;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    border-radius: 8px;
-    padding: 0.5rem 0.65rem;
+.checkout-manual-box .checkout-text-input {
+    margin-bottom: 0.65rem;
 }
 
-/* Result states */
+.checkout-manual-box .checkout-secondary-btn,
+.checkout-manual-box .checkout-primary-btn {
+    width: 100%;
+}
+
+/* ============================================
+   STREAM LOADER
+   ============================================ */
+.stream-loader {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.stream-loader-spinner {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 1rem;
+    border: 3px solid #e2e8f0;
+    border-top-color: #16a34a;
+    border-radius: 50%;
+    animation: checkoutSpin 0.75s linear infinite;
+}
+
+@keyframes checkoutSpin {
+    to { transform: rotate(360deg); }
+}
+
+.stream-loader-title {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.stream-loader-steps {
+    text-align: left;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.stream-loader-steps .stream-step {
+    padding: 0.45rem 0;
+    font-size: 0.88rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stream-loader-steps .stream-step.active {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.stream-loader-steps .stream-step.done {
+    color: #16a34a;
+}
+
+/* ============================================
+   RESULT STATES
+   ============================================ */
 .checkout-result {
     text-align: center;
     padding: 0.5rem 0 0.25rem;
@@ -431,29 +557,6 @@
     width: 100%;
 }
 
-/* Manual name box */
-.checkout-manual-box {
-    text-align: left;
-    margin-top: 1rem;
-    padding: 1rem;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-}
-
-.checkout-manual-box .checkout-label {
-    margin-bottom: 0.5rem;
-}
-
-.checkout-manual-box .checkout-text-input {
-    margin-bottom: 0.65rem;
-}
-
-.checkout-manual-box .checkout-secondary-btn,
-.checkout-manual-box .checkout-primary-btn {
-    width: 100%;
-}
-
 .checkout-pending-actions {
     margin-top: 1rem;
     display: flex;
@@ -461,59 +564,46 @@
     gap: 0.5rem;
 }
 
-/* Stream loader */
-.stream-loader {
+/* ============================================
+   SCREENSHOT UPLOAD AREA
+   ============================================ */
+.screenshot-upload-area {
+    border: 2px dashed #e2e8f0;
+    border-radius: 12px;
+    padding: 2rem 1rem;
     text-align: center;
-    padding: 1rem 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1rem;
 }
 
-.stream-loader-spinner {
-    width: 44px;
-    height: 44px;
-    margin: 0 auto 1rem;
-    border: 3px solid #e2e8f0;
-    border-top-color: #16a34a;
-    border-radius: 50%;
-    animation: checkoutSpin 0.75s linear infinite;
+.screenshot-upload-area:hover {
+    border-color: #16a34a;
+    background: #f0fdf4;
 }
 
-@keyframes checkoutSpin {
-    to { transform: rotate(360deg); }
+.screenshot-upload-area.dragover {
+    border-color: #16a34a;
+    background: #dcfce7;
 }
 
-.stream-loader-title {
-    margin: 0 0 1rem;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #0f172a;
-}
-
-.stream-loader-steps {
-    text-align: left;
-    max-width: 320px;
-    margin: 0 auto;
-}
-
-.stream-loader-steps .stream-step {
-    padding: 0.45rem 0;
-    font-size: 0.88rem;
+.screenshot-upload-area i {
+    font-size: 2rem;
     color: #64748b;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    display: block;
 }
 
-.stream-loader-steps .stream-step.active {
-    color: #0f172a;
-    font-weight: 600;
+.screenshot-upload-area p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #64748b;
 }
 
-.stream-loader-steps .stream-step.done {
-    color: #16a34a;
-}
-
-/* Tier badges (checkout scope) */
-.checkout-modal .checkout-tier-badge {
+/* ============================================
+   TIER BADGES
+   ============================================ */
+.checkout-tier-badge {
     display: inline-block;
     padding: 0.2rem 0.65rem;
     border-radius: 999px;
@@ -523,21 +613,35 @@
     letter-spacing: 0.04em;
 }
 
-.checkout-modal .ticket-tier-regular {
+.ticket-tier-regular {
     background: #e2e8f0;
     color: #334155;
 }
 
-.checkout-modal .ticket-tier-vip {
+.ticket-tier-vip {
     background: #fef3c7;
     color: #b45309;
 }
 
-.checkout-modal .ticket-tier-vvip {
+.ticket-tier-vvip {
     background: #ede9fe;
     color: #6d28d9;
 }
 
+/* ============================================
+   STEP VISIBILITY
+   ============================================ */
+.checkout-step {
+    display: none;
+}
+
+.checkout-step:first-of-type {
+    display: block;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 480px) {
     .checkout-modal {
         padding: 0.5rem;
@@ -552,5 +656,14 @@
 
     .checkout-amount {
         font-size: 1.5rem;
+    }
+
+    .checkout-payment-option {
+        flex-wrap: wrap;
+    }
+
+    .checkout-copy-btn {
+        width: 100%;
+        margin-top: 0.5rem;
     }
 }
