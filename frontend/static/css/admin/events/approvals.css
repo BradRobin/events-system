@@ -1,6 +1,8 @@
+
 /* ============================================
    PENDING APPROVALS CSS - Premium Modern Design
    EventHub Admin Event Approval - Fully Responsive
+   UPDATED: Event Cards match Featured Events styling
    ============================================ */
 
 :root {
@@ -404,131 +406,270 @@
 }
 
 /* ============================================
-   EVENTS GRID - Modern Cards
+   EVENT CARDS - MATCHING FEATURED EVENTS
    ============================================ */
 
 .events-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
     margin-bottom: 1.75rem;
 }
 
 .event-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    overflow: hidden;
-    transition: all var(--transition-normal);
     position: relative;
+    background: #ffffff;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f1f5f9;
+    cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .event-card:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-4px);
+    transform: translateY(-6px);
+    box-shadow: 0 0 0 2px #f59e0b, 0 12px 20px -8px rgba(0, 0, 0, 0.08);
+    border-color: #f59e0b;
 }
 
 .event-card.selected {
-    border-color: var(--primary);
+    border-color: #f59e0b;
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
 }
 
+/* Card Checkbox */
 .event-checkbox {
     position: absolute;
     top: 12px;
     left: 12px;
-    z-index: 10;
+    z-index: 20;
 }
 
 .event-checkbox input {
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: var(--primary);
+    accent-color: #f59e0b;
 }
 
+/* Event Image Container */
 .event-image {
-    height: 180px;
-    background-size: cover;
-    background-position: center;
     position: relative;
-    background-color: var(--light);
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+    background: #f1f5f9;
+    flex-shrink: 0;
+    z-index: 1;
 }
 
+.event-image img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.event-card:hover .event-image img {
+    transform: scale(1.06);
+}
+
+/* Gradient Overlay at Bottom */
+.event-image::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, #ffffff 100%);
+    pointer-events: none;
+    z-index: 5;
+}
+
+/* Category Badge on Image */
 .event-image .category-badge {
     position: absolute;
     top: 12px;
     right: 12px;
-    background: rgba(0,0,0,0.75);
+    background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(4px);
     color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-full);
-    font-size: 0.7rem;
-    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    z-index: 10;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
+/* Status Badge */
+.event-status-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    z-index: 10;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.event-status-badge.pending {
+    background: rgba(245, 158, 11, 0.9);
+}
+
+.event-status-badge.approved {
+    background: rgba(16, 185, 129, 0.9);
+}
+
+.event-status-badge.rejected {
+    background: rgba(239, 68, 68, 0.9);
+}
+
+/* Event Content - Matching Featured Card */
 .event-content {
-    padding: 1rem;
+    padding: 12px 16px;
+    background: #ffffff;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 10;
 }
 
 .event-title {
     font-size: 1rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: var(--dark);
-    line-height: 1.3;
+    margin-bottom: 6px;
+    color: #1e293b;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: color 0.2s ease;
+}
+
+.event-card:hover .event-title {
+    color: #ec6408;
 }
 
 .event-organizer {
-    font-size: 0.75rem;
-    color: var(--gray);
-    margin-bottom: 0.5rem;
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 5px;
 }
 
+.event-organizer i {
+    color: #f59e0b;
+    font-size: 0.65rem;
+    width: 14px;
+}
+
+/* Event Details Meta */
 .event-details {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 8px;
     font-size: 0.7rem;
-    color: var(--gray);
-    margin-bottom: 0.75rem;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+
+.event-details span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .event-details i {
-    width: 14px;
-    color: var(--primary);
+    color: #f59e0b;
+    font-size: 0.65rem;
+    width: 12px;
 }
 
+/* Event Footer */
 .event-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--border);
-    gap: 0.5rem;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
 .event-price {
     font-weight: 700;
-    color: var(--primary);
-    font-size: 0.875rem;
+    font-size: 1rem;
+    color: #ec6408;
 }
 
+/* Event Action Buttons */
 .event-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
 .event-actions button {
-    padding: 0.35rem 0.75rem;
+    padding: 6px 12px;
+    border-radius: 8px;
     font-size: 0.7rem;
-    border-radius: var(--radius-md);
-    font-weight: 500;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-view {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.btn-view:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+    transform: translateY(-1px);
+}
+
+.btn-approve-card {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.btn-approve-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.btn-reject-card {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.btn-reject-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
 /* ============================================
@@ -768,8 +909,12 @@ textarea.form-control {
     }
     
     .events-grid {
-        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 1.75rem;
+    }
+    
+    .event-image {
+        height: 200px;
     }
 }
 
@@ -780,7 +925,7 @@ textarea.form-control {
     }
     
     .events-grid {
-        gap: 1rem;
+        gap: 1.25rem;
     }
 }
 
@@ -801,6 +946,10 @@ textarea.form-control {
     
     .stat-icon i {
         font-size: 1.25rem;
+    }
+    
+    .event-image {
+        height: 170px;
     }
 }
 
@@ -835,6 +984,27 @@ textarea.form-control {
     
     .events-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .event-image {
+        height: 200px;
+    }
+    
+    .event-content {
+        padding: 10px 12px;
+    }
+    
+    .event-title {
+        font-size: 0.9rem;
+    }
+    
+    .event-details {
+        font-size: 0.65rem;
+    }
+    
+    .event-price {
+        font-size: 0.9rem;
     }
     
     .bulk-actions-bar {
@@ -942,6 +1112,36 @@ textarea.form-control {
     .empty-state i {
         font-size: 2.5rem;
     }
+    
+    .event-image {
+        height: 180px;
+    }
+    
+    .event-content {
+        padding: 8px 10px;
+    }
+    
+    .event-title {
+        font-size: 0.85rem;
+    }
+    
+    .event-organizer {
+        font-size: 0.6rem;
+    }
+    
+    .event-details {
+        font-size: 0.6rem;
+        gap: 5px;
+    }
+    
+    .event-price {
+        font-size: 0.85rem;
+    }
+    
+    .event-actions button {
+        padding: 5px 8px;
+        font-size: 0.6rem;
+    }
 }
 
 /* Touch Device Optimizations */
@@ -949,7 +1149,8 @@ textarea.form-control {
     .btn-primary, .btn-secondary, .btn-outline,
     .btn-approve, .btn-reject,
     .bulk-btn, .pagination button,
-    .stat-card, .modal-close {
+    .stat-card, .modal-close,
+    .event-actions button {
         min-height: 44px;
     }
     
