@@ -53,37 +53,41 @@
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--has-tip" tabindex="0" aria-describedby="kpiTipTotalSales">
             <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
             <div class="kpi-info">
                 <span class="kpi-label">Total Sales</span>
                 <h3 class="kpi-value" id="totalSales">Kes 0</h3>
                 <span class="kpi-trend up" id="salesTrend"><i class="fas fa-arrow-up"></i> +0%</span>
             </div>
+            <div class="kpi-tooltip" id="kpiTipTotalSales" role="tooltip"></div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--has-tip" tabindex="0" aria-describedby="kpiTipTicketsSold">
             <div class="kpi-icon"><i class="fas fa-ticket-alt"></i></div>
             <div class="kpi-info">
                 <span class="kpi-label">Tickets Sold</span>
                 <h3 class="kpi-value" id="totalTicketsSold">0</h3>
                 <span class="kpi-trend up" id="ticketsTrend"><i class="fas fa-arrow-up"></i> +0%</span>
             </div>
+            <div class="kpi-tooltip" id="kpiTipTicketsSold" role="tooltip"></div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--has-tip" tabindex="0" aria-describedby="kpiTipAvgOrder">
             <div class="kpi-icon"><i class="fas fa-shopping-cart"></i></div>
             <div class="kpi-info">
                 <span class="kpi-label">Avg Order Value</span>
                 <h3 class="kpi-value" id="avgOrderValue">Kes 0</h3>
                 <span class="kpi-trend up" id="avgOrderTrend"><i class="fas fa-arrow-up"></i> +0%</span>
             </div>
+            <div class="kpi-tooltip" id="kpiTipAvgOrder" role="tooltip"></div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--has-tip" tabindex="0" aria-describedby="kpiTipGrowthRate">
             <div class="kpi-icon"><i class="fas fa-chart-simple"></i></div>
             <div class="kpi-info">
                 <span class="kpi-label">Growth Rate</span>
                 <h3 class="kpi-value" id="growthRate">0%</h3>
                 <span class="kpi-trend up" id="growthTrend"><i class="fas fa-arrow-up"></i> vs last period</span>
             </div>
+            <div class="kpi-tooltip" id="kpiTipGrowthRate" role="tooltip"></div>
         </div>
     </div>
 

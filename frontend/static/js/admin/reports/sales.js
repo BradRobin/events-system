@@ -36,6 +36,7 @@ async function loadSalesReport() {
         currentSalesData = data;
         
         updateSalesKPIs(data.kpis);
+        updateSalesKpiTooltips(data);
         updateSalesChart(data);
         updateTopSellingEvents(data.top_events);
         updateCategorySalesChart(data.categories);
@@ -67,6 +68,70 @@ function updateSalesTrend(elementId, trend) {
     const direction = trend.percentage >= 0 ? 'up' : 'down';
     element.innerHTML = `<i class="fas fa-arrow-${direction}"></i> ${Math.abs(trend.percentage)}%`;
     element.className = `kpi-trend ${direction}`;
+}
+
+function formatReportDateRange(start, end) {
+    if (!start || !end) return 'the selected date range';
+    const opts = { month: 'short', day: 'numeric', year: 'numeric' };
+    const startLabel = new Date(`${start}T00:00:00`).toLocaleDateString('en-KE', opts);
+    const endLabel = new Date(`${end}T00:00:00`).toLocaleDateString('en-KE', opts);
+    return `${startLabel} – ${endLabel}`;
+}
+
+function setKpiTooltip(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+}
+
+function updateSalesKpiTooltips(data) {
+    const period = data?.period || {};
+    const kpis = data?.kpis || {};
+    const current = period.current_totals || {};
+    const previous = period.previous_totals || {};
+    const range = formatReportDateRange(period.start_date, period.end_date);
+    const prevRange = formatReportDateRange(period.previous_start, period.previous_end);
+    const days = period.days || 0;
+
+    setKpiTooltip('kpiTipTotalSales', `
+        <strong>Total Sales</strong>
+        Sum of ticket revenue (price × quantity) from non-cancelled purchases between ${range}.
+        Current total: <strong>${formatCurrency(current.total_sales || kpis.total_sales || 0)}</strong>.
+        Previous period (${prevRange}): ${formatCurrency(previous.total_sales || 0)}.
+        Trend badge: ${formatNumber(Math.abs(kpis.sales_trend?.percentage || 0))}% ${(kpis.sales_trend?.percentage || 0) >= 0 ? 'increase' : 'decrease'} vs prior period.
+    `);
+
+    setKpiTooltip('kpiTipTicketsSold', `
+        <strong>Tickets Sold</strong>
+        Total ticket quantity from non-cancelled purchases between ${range}.
+        Current count: <strong>${formatNumber(current.total_tickets ?? kpis.total_tickets ?? 0)}</strong> tickets across ${formatNumber(current.order_count || 0)} orders.
+        Previous period (${prevRange}): ${formatNumber(previous.total_tickets || 0)} tickets.
+        Trend badge: ${formatNumber(Math.abs(kpis.tickets_trend?.percentage || 0))}% ${(kpis.tickets_trend?.percentage || 0) >= 0 ? 'increase' : 'decrease'} vs prior period.
+    `);
+
+    setKpiTooltip('kpiTipAvgOrder', `
+        <strong>Average Order Value</strong>
+        Total sales divided by number of ticket orders in ${range}.
+        Formula: ${formatCurrency(current.total_sales || kpis.total_sales || 0)} ÷ ${formatNumber(current.order_count || 0)} orders = <strong>${formatCurrency(kpis.avg_order_value || 0)}</strong>.
+        Previous period average: ${formatCurrency(previous.avg_order_value || 0)}.
+        Trend badge: ${formatNumber(Math.abs(kpis.avg_order_trend?.percentage || 0))}% ${(kpis.avg_order_trend?.percentage || 0) >= 0 ? 'increase' : 'decrease'} vs prior period.
+    `);
+
+    const currentSales = current.total_sales ?? kpis.total_sales ?? 0;
+    const previousSales = previous.total_sales ?? 0;
+    const growth = kpis.growth_rate ?? 0;
+    const growthFormula = previousSales > 0
+        ? `(${formatCurrency(currentSales)} − ${formatCurrency(previousSales)}) ÷ ${formatCurrency(previousSales)} × 100`
+        : (currentSales > 0
+            ? 'No revenue in the previous period; growth is reported as 100% when current revenue exists.'
+            : 'No revenue in either period.');
+
+    setKpiTooltip('kpiTipGrowthRate', `
+        <strong>Growth Rate</strong>
+        Percentage change in total sales revenue vs the immediately preceding ${days}-day period (${prevRange}).
+        ${growthFormula}
+        Result: <strong>${formatNumber(growth)}%</strong>.
+        Current period (${range}): ${formatCurrency(currentSales)}. Previous period: ${formatCurrency(previousSales)}.
+    `);
 }
 
 function updateSalesChart(data) {

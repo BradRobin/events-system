@@ -30,37 +30,41 @@
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--has-tip" tabindex="0" aria-describedby="kpiTipRevenue">
             <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
             <div class="kpi-info">
                 <span class="kpi-label">Total Revenue</span>
                 <h3 class="kpi-value" id="totalRevenue">Kes 0</h3>
                 <span class="kpi-trend up" id="revenueTrend"><i class="fas fa-arrow-up"></i> +0%</span>
             </div>
+            <div class="kpi-tooltip" id="kpiTipRevenue" role="tooltip"></div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--has-tip" tabindex="0" aria-describedby="kpiTipTickets">
             <div class="kpi-icon"><i class="fas fa-ticket-alt"></i></div>
             <div class="kpi-info">
                 <span class="kpi-label">Tickets Sold</span>
                 <h3 class="kpi-value" id="totalTickets">0</h3>
                 <span class="kpi-trend up" id="ticketsTrend"><i class="fas fa-arrow-up"></i> +0%</span>
             </div>
+            <div class="kpi-tooltip" id="kpiTipTickets" role="tooltip"></div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--has-tip" tabindex="0" aria-describedby="kpiTipUsers">
             <div class="kpi-icon"><i class="fas fa-users"></i></div>
             <div class="kpi-info">
                 <span class="kpi-label">Active Users</span>
                 <h3 class="kpi-value" id="activeUsers">0</h3>
                 <span class="kpi-trend up" id="usersTrend"><i class="fas fa-arrow-up"></i> +0%</span>
             </div>
+            <div class="kpi-tooltip" id="kpiTipUsers" role="tooltip"></div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card kpi-card--has-tip" tabindex="0" aria-describedby="kpiTipEvents">
             <div class="kpi-icon"><i class="fas fa-calendar-check"></i></div>
             <div class="kpi-info">
                 <span class="kpi-label">Events Completed</span>
                 <h3 class="kpi-value" id="completedEvents">0</h3>
                 <span class="kpi-trend up" id="eventsTrend"><i class="fas fa-arrow-up"></i> +0%</span>
             </div>
+            <div class="kpi-tooltip" id="kpiTipEvents" role="tooltip"></div>
         </div>
     </div>
 

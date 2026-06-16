@@ -269,6 +269,80 @@
     color: #991b1b;
 }
 
+.kpi-card--has-tip {
+    cursor: help;
+    overflow: visible;
+}
+
+.kpi-tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 0.65rem);
+    transform: translateX(-50%) translateY(4px);
+    width: min(18rem, calc(100vw - 2rem));
+    padding: 0.65rem 0.75rem;
+    background: var(--dark, #1e293b);
+    color: #f8fafc;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    font-weight: 500;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--transition-fast), transform var(--transition-fast), visibility var(--transition-fast);
+    z-index: 30;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.kpi-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--dark, #1e293b);
+}
+
+.kpi-card--has-tip:hover .kpi-tooltip,
+.kpi-card--has-tip:focus-within .kpi-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 640px) {
+    .kpi-tooltip {
+        bottom: auto;
+        top: calc(100% + 0.65rem);
+        transform: translateX(-50%) translateY(-4px);
+    }
+
+    .kpi-tooltip::after {
+        top: auto;
+        bottom: 100%;
+        border-top-color: transparent;
+        border-bottom-color: var(--dark, #1e293b);
+    }
+
+    .kpi-card--has-tip:hover .kpi-tooltip,
+    .kpi-card--has-tip:focus-within .kpi-tooltip {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.kpi-tooltip strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #fbbf24;
+}
+
 /* ============================================
    FILTERS CARD
    ============================================ */

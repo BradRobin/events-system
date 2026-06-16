@@ -2344,6 +2344,9 @@ def reports_sales(request):
                 'end_date': end_date.isoformat(),
                 'previous_start': prev_start.isoformat(),
                 'previous_end': prev_end.isoformat(),
+                'days': period_days,
+                'current_totals': current,
+                'previous_totals': previous,
             },
             'sales': [{
                 'id': t.ticket_number,

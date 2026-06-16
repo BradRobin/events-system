@@ -53,6 +53,7 @@ async function loadKPIData(days) {
             updateTrend('eventsTrend', data.kpi.events_trend);
             
             currentData.kpis = data.kpi;
+            updateAnalyticsKpiTooltips(data.kpi, days);
         }
     } catch (error) {
         console.error('Error loading KPI data:', error);
@@ -321,6 +322,43 @@ async function exportReport() {
 
 function viewAllEvents() {
     window.location.href = '/admin-portal/events/all/';
+}
+
+function setAnalyticsKpiTooltip(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+}
+
+function updateAnalyticsKpiTooltips(kpi, days) {
+    const rangeNote = `Chart widgets below use the last ${days} days; these headline figures are platform-wide totals.`;
+
+    setAnalyticsKpiTooltip('kpiTipRevenue', `
+        <strong>Total Revenue</strong>
+        Sum of ticket revenue (price × quantity) from all non-cancelled purchases on the platform.
+        Current total: <strong>${formatCurrency(kpi.total_revenue || 0)}</strong>.
+        ${rangeNote}
+    `);
+
+    setAnalyticsKpiTooltip('kpiTipTickets', `
+        <strong>Tickets Sold</strong>
+        Total ticket quantity from all non-cancelled purchases platform-wide.
+        Current count: <strong>${formatNumber(kpi.total_tickets || 0)}</strong>.
+        ${rangeNote}
+    `);
+
+    setAnalyticsKpiTooltip('kpiTipUsers', `
+        <strong>Active Users</strong>
+        Total registered user accounts on the platform (attendees, organizers, and admins).
+        Current count: <strong>${formatNumber(kpi.active_users || 0)}</strong>.
+        ${rangeNote}
+    `);
+
+    setAnalyticsKpiTooltip('kpiTipEvents', `
+        <strong>Events Completed</strong>
+        Events whose start date is already in the past.
+        Current count: <strong>${formatNumber(kpi.completed_events || 0)}</strong> of ${formatNumber(kpi.total_events || 0)} total events.
+        ${rangeNote}
+    `);
 }
 
 function formatCurrency(amount) {
