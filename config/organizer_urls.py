@@ -37,8 +37,13 @@ urlpatterns = [
          TemplateView.as_view(template_name='organizer/dashboard/tickets.html'),
          name='organizer_tickets'),
     path('tickets/scan/',
-         TemplateView.as_view(template_name='organizer/dashboard/tickets.html'),
+         RedirectView.as_view(url='/organizer/scan/', permanent=False),
          name='organizer_tickets_scan'),
+
+    # QR Scanner (check-in)
+    path('scan/',
+         TemplateView.as_view(template_name='organizer/dashboard/scanner.html'),
+         name='organizer_scan'),
 
     # Attendees
     path('attendees/',

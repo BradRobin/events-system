@@ -1,5 +1,7 @@
 // frontend/static/js/organizer/tickets.js
 let ticketPage = 1, stream = null, scanInterval = null;
+let lastTicketScanCode = '';
+let lastTicketScanTime = 0;
 
 function isCheckedIn(status) {
     return status === 'checked_in' || status === 'used';
@@ -46,14 +48,17 @@ async function loadTickets() {
 }
 
 async function verifyTicket(ticketNumber) {
+    const parsed = typeof parseTicketNumberFromScan === 'function'
+        ? parseTicketNumberFromScan(ticketNumber)
+        : ticketNumber.trim();
     try {
-        const result = await OrganizerAPI.tickets.verify(ticketNumber);
+        const result = await OrganizerAPI.tickets.verify(parsed);
         const div = document.getElementById('scanResult');
         const ticket = result.ticket || {};
         const name = ticket.customer_name || ticket.attendee_name || 'Guest';
         if (result.success) {
             div.innerHTML = `<div class="alert alert-success">✓ Valid: ${escapeHtml(name)}</div>`;
-            await checkinTicket(ticketNumber, true);
+            await checkinTicket(parsed, true);
         } else {
             div.innerHTML = `<div class="alert alert-danger">✗ ${escapeHtml(result.message || 'Invalid ticket')}</div>`;
         }
@@ -108,7 +113,17 @@ function startQRScanning() {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, canvas.width, canvas.height);
-            if (code) verifyTicket(code.data);
+            if (code && code.data) {
+                const parsed = typeof parseTicketNumberFromScan === 'function'
+                    ? parseTicketNumberFromScan(code.data)
+                    : code.data.trim();
+                const now = Date.now();
+                if (parsed && (parsed !== lastTicketScanCode || now - lastTicketScanTime > 3500)) {
+                    lastTicketScanCode = parsed;
+                    lastTicketScanTime = now;
+                    verifyTicket(parsed);
+                }
+            }
         }
     }, 500);
 }

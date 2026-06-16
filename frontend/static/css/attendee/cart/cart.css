@@ -8,7 +8,7 @@
 .booking-page {
     background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
     min-height: calc(100vh - 70px - 300px);
-    padding: 2rem 0 5.5rem;
+    padding: 2rem 0 3rem;
 }
 
 .container {
@@ -364,15 +364,13 @@
 }
 
 .cart-checkout-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 900;
-    background: rgba(255, 255, 255, 0.98);
-    border-top: 1px solid #e2e8f0;
-    box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.12);
-    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 24px rgba(245, 158, 11, 0.35);
+    padding: 0.75rem 1rem;
 }
 
 .cart-checkout-bar-inner {
@@ -382,39 +380,42 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    padding: 0 0.5rem;
 }
 
 .cart-checkout-bar-label {
     display: block;
     font-size: 0.75rem;
-    color: #64748b;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .cart-checkout-bar-amount {
     font-size: 1.1rem;
-    color: #0f172a;
+    color: #ffffff;
 }
 
 .cart-checkout-bar-btn {
     flex-shrink: 0;
     padding: 0.7rem 1.25rem;
-    background: linear-gradient(135deg, #16a34a, #15803d);
-    color: #fff;
+    background: #ffffff;
+    color: #c2410c;
     border: none;
     border-radius: 0.5rem;
     font-weight: 700;
     font-size: 0.9rem;
     cursor: pointer;
     white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
 }
 
 .cart-checkout-bar-btn:disabled {
-    background: #94a3b8;
+    background: rgba(255, 255, 255, 0.55);
+    color: rgba(194, 65, 12, 0.6);
     cursor: not-allowed;
 }
 
 .cart-checkout-bar-btn:not(:disabled):hover {
-    filter: brightness(1.05);
+    background: #fff7ed;
 }
 
 /* ========== BOOKING ITEM ========== */

@@ -1,0 +1,99 @@
+{% extends "organizer/base.html" %}
+{% load static %}
+
+{% block title %}QR Scanner | EventHub Organizer{% endblock %}
+{% block page_title %}QR Scanner{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/organizers/scanner.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="scanner-page">
+    <div class="scanner-page-header">
+        <div>
+            <h1 class="scanner-title">QR Check-in Scanner</h1>
+            <p class="scanner-subtitle">Scan attendee ticket QR codes to verify and check them in at the venue.</p>
+        </div>
+        <a href="/organizer/tickets/" class="btn btn-outline btn-sm scanner-tickets-link">
+            <i class="fas fa-list me-1"></i> All tickets
+        </a>
+    </div>
+
+    <div class="scanner-layout">
+        <section class="scanner-panel scanner-panel--camera">
+            <div class="scanner-viewport" id="scannerViewport">
+                <video id="scannerVideo" playsinline muted autoplay></video>
+                <div class="scanner-viewfinder" aria-hidden="true">
+                    <span class="scanner-corner scanner-corner--tl"></span>
+                    <span class="scanner-corner scanner-corner--tr"></span>
+                    <span class="scanner-corner scanner-corner--bl"></span>
+                    <span class="scanner-corner scanner-corner--br"></span>
+                </div>
+                <div class="scanner-placeholder" id="scannerPlaceholder">
+                    <i class="fas fa-qrcode"></i>
+                    <p>Camera preview will appear here</p>
+                </div>
+            </div>
+
+            <div class="scanner-controls">
+                <button type="button" class="btn btn-primary" id="startScannerBtn">
+                    <i class="fas fa-camera me-2"></i>Start camera
+                </button>
+                <button type="button" class="btn btn-secondary" id="stopScannerBtn" style="display:none;">
+                    <i class="fas fa-stop me-2"></i>Stop camera
+                </button>
+            </div>
+
+            <div class="scanner-manual">
+                <label for="manualTicketInput" class="form-label">Or enter ticket number manually</label>
+                <div class="input-group">
+                    <input type="text" id="manualTicketInput" class="form-control" placeholder="e.g. TICK-A1B2C3D4" autocomplete="off">
+                    <button type="button" class="btn btn-outline-primary" id="manualCheckinBtn">Check in</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="scanner-panel scanner-panel--result">
+            <div id="scanResultCard" class="scan-result-card scan-result-card--idle">
+                <div class="scan-result-icon"><i class="fas fa-ticket-alt"></i></div>
+                <h3>Ready to scan</h3>
+                <p>Point the camera at an attendee's ticket QR code. Valid tickets are checked in automatically.</p>
+            </div>
+
+            <div class="scanner-stats row g-3">
+                <div class="col-4">
+                    <div class="scanner-stat">
+                        <span id="scannerStatTotal" class="scanner-stat-value">--</span>
+                        <span class="scanner-stat-label">Total</span>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="scanner-stat">
+                        <span id="scannerStatCheckedIn" class="scanner-stat-value">--</span>
+                        <span class="scanner-stat-label">Checked in</span>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="scanner-stat">
+                        <span id="scannerStatSession" class="scanner-stat-value">0</span>
+                        <span class="scanner-stat-label">This session</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scanner-recent">
+                <h4>Recent check-ins</h4>
+                <ul id="recentScansList" class="scanner-recent-list">
+                    <li class="scanner-recent-empty text-muted">No check-ins yet this session</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="{% static 'js/organizer/scanner.js' %}"></script>
+{% endblock %}

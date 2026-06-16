@@ -75,8 +75,29 @@
         greetingTextEl.textContent = greeting;
     }
 
+    /** Extract ticket number from QR text (plain code or pipe-delimited payload). */
+    function parseTicketNumberFromScan(raw) {
+        if (!raw) return '';
+        let value = String(raw).trim();
+        if (!value) return '';
+
+        try {
+            value = decodeURIComponent(value);
+        } catch (_) { /* keep original */ }
+
+        if (value.includes('|')) {
+            value = value.split('|')[0].trim();
+        }
+
+        const ticketMatch = value.match(/TICK-[A-Z0-9]+/i);
+        if (ticketMatch) return ticketMatch[0].toUpperCase();
+
+        return value.split(/\s+/)[0].trim();
+    }
+
     global.escapeHtml = escapeHtml;
     global.renderPagination = renderPagination;
     global.showToast = showToast;
     global.displayGreeting = displayGreeting;
+    global.parseTicketNumberFromScan = parseTicketNumberFromScan;
 })(window);

@@ -10,6 +10,16 @@
 {% endblock %}
 
 {% block content %}
+<div id="cartCheckoutBar" class="cart-checkout-bar" style="display: none;" aria-live="polite">
+    <div class="cart-checkout-bar-inner">
+        <div class="cart-checkout-bar-meta">
+            <span id="checkoutBarLabel" class="cart-checkout-bar-label">Ready to pay</span>
+            <strong id="checkoutBarAmount" class="cart-checkout-bar-amount">KES 0</strong>
+        </div>
+        <button type="button" id="checkoutBarBtn" class="cart-checkout-bar-btn" onclick="proceedFromCheckoutBar()">Proceed to payment</button>
+    </div>
+</div>
+
 <div class="booking-page">
     <div class="container">
         <div class="booking-header">
@@ -80,16 +90,6 @@
 </div>
 
 {% include 'attendee/events/checkout_modal.html' %}
-
-<div id="cartCheckoutBar" class="cart-checkout-bar" style="display: none;" aria-live="polite">
-    <div class="cart-checkout-bar-inner">
-        <div class="cart-checkout-bar-meta">
-            <span id="checkoutBarLabel" class="cart-checkout-bar-label">Ready to pay</span>
-            <strong id="checkoutBarAmount" class="cart-checkout-bar-amount">KES 0</strong>
-        </div>
-        <button type="button" id="checkoutBarBtn" class="cart-checkout-bar-btn" onclick="proceedFromCheckoutBar()">Proceed to payment</button>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
