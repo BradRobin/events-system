@@ -630,7 +630,12 @@ function proceedToCheckout() {
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
     const nameInput = document.getElementById('billingName');
     const emailInput = document.getElementById('billingEmail');
+    const mpesaNameInput = document.getElementById('billingMpesaName');
     if (nameInput) nameInput.value = user.full_name || user.name || '';
+    if (emailInput) emailInput.value = user.email || '';
+    if (mpesaNameInput && !mpesaNameInput.value.trim()) {
+        mpesaNameInput.value = user.mpesa_name || user.full_name || user.name || '';
+    }
     if (emailInput) emailInput.value = user.email || '';
 
     const organizerName = getOrganizerName(selectedItems[0]);
@@ -683,14 +688,19 @@ async function processCheckout(e) {
 
     const billingName = document.getElementById('billingName')?.value.trim();
     const billingEmail = document.getElementById('billingEmail')?.value.trim();
+    const billingMpesaName = document.getElementById('billingMpesaName')?.value.trim();
 
     if (!billingName) { showToast('Enter your full name', 'error'); return; }
     if (!billingEmail || !isValidEmail(billingEmail)) { showToast('Enter valid email', 'error'); return; }
+    if (!billingMpesaName || billingMpesaName.length < 2) {
+        showToast('Enter your M-Pesa name as shown on the transaction', 'error');
+        return;
+    }
 
     const selectedItems = getSelectedGroupItems();
     if (!selectedItems.length) { showToast('No items selected', 'error'); return; }
 
-    const billingInfo = { name: billingName, email: billingEmail };
+    const billingInfo = { name: billingName, email: billingEmail, mpesa_name: billingMpesaName };
     sessionStorage.setItem('checkout_billing_info', JSON.stringify(billingInfo));
 
     if (window.CheckoutFlow?.startOrganizerCheckout) {

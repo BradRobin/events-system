@@ -360,9 +360,19 @@ window.loadPendingPayments = async function() {
             const verifyBadge = o.screenshot_verified === true
                 ? '<span class="badge bg-success ms-1">Auto-verified</span>'
                 : '<span class="badge bg-secondary ms-1">Manual review</span>';
-            const mpesaName = o.submitted_mpesa_name
-                ? escapeHtml(o.submitted_mpesa_name)
-                : '<em class="text-muted">Not provided</em>';
+            const mpesaName = (o.submitted_mpesa_name || '').trim();
+            const verifyMsg = o.verification_message
+                ? formatVerificationMessage(o.verification_message)
+                : '';
+            const reviewLines = [];
+            if (mpesaName) {
+                reviewLines.push(`<strong>M-Pesa name:</strong> ${escapeHtml(mpesaName)}`);
+            } else {
+                reviewLines.push('<strong>M-Pesa name:</strong> <em class="text-muted">Not provided</em>');
+            }
+            if (verifyMsg) {
+                reviewLines.push(`<strong>Verification:</strong> ${escapeHtml(verifyMsg)}`);
+            }
             return `
             <div class="border rounded p-3 mb-2">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -371,10 +381,9 @@ window.loadPendingPayments = async function() {
                         <span class="badge bg-warning text-dark ms-2">${escapeHtml(o.ticket_type)}</span>
                         ${verifyBadge}<br>
                         <small>Attendee: ${escapeHtml(o.attendee_name)}</small><br>
-                        <small>M-Pesa name: <strong>${mpesaName}</strong></small><br>
                         <small>Amount: KES ${Number(o.total_amount).toLocaleString()} &middot; Qty: ${o.quantity}</small>
-                        ${o.verification_message ? `<br><small class="text-muted">${escapeHtml(formatVerificationMessage(o.verification_message))}</small>` : ''}
-                        ${o.has_screenshot ? `<br><button type="button" class="btn btn-sm btn-link p-0 view-screenshot-btn" data-id="${o.id}">View screenshot</button>` : ''}
+                        <div class="payment-review-note mt-1"><small>${reviewLines.join('<br>')}</small></div>
+                        ${o.has_screenshot ? `<button type="button" class="btn btn-sm btn-link p-0 view-screenshot-btn" data-id="${o.id}">View screenshot</button>` : ''}
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-success approve-payment-btn" data-id="${o.id}">Approve</button>

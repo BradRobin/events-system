@@ -51,6 +51,7 @@ const ORGANIZER_API_CONFIG = {
             create: '/events/create/',
             update: (id) => `/events/${id}/update/`,
             delete: (id) => `/events/${id}/delete/`,
+            bulkDelete: '/events/bulk-delete/',
             duplicate: (id) => `/events/${id}/duplicate/`,
             submitApproval: (id) => `/events/${id}/submit-approval/`,
             cancel: (id) => `/events/${id}/cancel/`,

@@ -14,6 +14,7 @@ from accounts.auth import authenticate_bearer, parse_json_body
 from bookings.services import compute_order_total, fulfill_payment_order, FulfillmentError
 from events.api_organizer_views import organizer_required
 from events.models import Event
+from events.checkout import get_event_checkout_status, normalize_ticket_type
 
 from .models import PaymentOrder, OrganizerNotification, AttendeeNotification
 from .mpesa import MpesaClient
@@ -118,20 +119,22 @@ def _notify_organizer_payment_review(order, *, ocr_passed):
 
     attendee = order.attendee
     attendee_name = attendee.get_full_name() or attendee.username
+    mpesa_name = (order.submitted_mpesa_name or '').strip()
+    mpesa_hint = f' M-Pesa name: {mpesa_name}.' if mpesa_name else ''
     if ocr_passed:
         title = 'Payment ready to approve (auto-verified)'
         message = (
             f'{attendee_name} — M-Pesa screenshot auto-verified for '
-            f'{order.event.title} ({order.ticket_type}, KES {order.total_amount}). '
-            f'Approve to issue the ticket.'
+            f'{order.event.title} ({order.ticket_type}, KES {order.total_amount}).'
+            f'{mpesa_hint} Approve to issue the ticket.'
         )
         notification_type = 'success'
     else:
         title = 'Payment approval needed'
         message = (
             f'{attendee_name} — screenshot could not be auto-verified for '
-            f'{order.event.title} ({order.ticket_type}, KES {order.total_amount}). '
-            f'Review the screenshot and approve to issue the ticket.'
+            f'{order.event.title} ({order.ticket_type}, KES {order.total_amount}).'
+            f'{mpesa_hint} Review the screenshot and approve to issue the ticket.'
         )
         notification_type = 'warning'
 
@@ -204,7 +207,7 @@ def create_payment_order(request):
         return JsonResponse({'success': False, 'message': 'Invalid JSON body.'}, status=400)
 
     event_id = data.get('event_id')
-    ticket_type = data.get('ticket_type', 'Regular')
+    ticket_type = normalize_ticket_type(data.get('ticket_type', 'Regular'))
     quantity = data.get('quantity', 1)
 
     try:
@@ -219,27 +222,30 @@ def create_payment_order(request):
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found.'}, status=404)
 
-    if event.status != 'published':
-        return JsonResponse({'success': False, 'message': 'This event is not available for booking.'}, status=400)
-
-    if event.end_date < timezone.now():
-        return JsonResponse({'success': False, 'message': 'This event has already ended.'}, status=400)
-
-    if event.available_seats < quantity:
-        return JsonResponse({'success': False, 'message': 'Not enough tickets available.'}, status=400)
-
     organizer = event.organizer
-    if not organizer.has_mpesa_payment_config():
-        return JsonResponse({
+    can_checkout, block_reason, block_code = get_event_checkout_status(event, quantity=quantity)
+    if not can_checkout:
+        payload = {
             'success': False,
-            'message': 'Organizer has not configured M-Pesa payment details yet.',
-        }, status=400)
+            'message': block_reason,
+            'code': block_code,
+        }
+        if block_code == 'organizer_payment_not_configured':
+            payload['organizer_name'] = (
+                organizer.mpesa_display_name
+                or organizer.organization_name
+                or organizer.get_full_name()
+                or organizer.username
+            )
+        status = 403 if block_code == 'organizer_payment_not_configured' else 400
+        return JsonResponse(payload, status=status)
 
     try:
         unit_price, qty, total_amount = compute_order_total(event, ticket_type, quantity)
     except FulfillmentError as exc:
         return JsonResponse({'success': False, 'message': exc.message}, status=400)
 
+    mpesa_name = (data.get('mpesa_name') or '').strip()
     order_fields = {
         'attendee': user,
         'event': event,
@@ -251,6 +257,8 @@ def create_payment_order(request):
         'status': 'pending_payment',
         'payment_rail': 'manual',
     }
+    if mpesa_name:
+        order_fields['submitted_mpesa_name'] = mpesa_name
     try:
         order = PaymentOrder.objects.create(**order_fields)
     except ProgrammingError as exc:
@@ -311,6 +319,15 @@ def verify_screenshot(request, order_id):
     if not screenshot:
         return JsonResponse({'success': False, 'message': 'Screenshot file is required.'}, status=400)
 
+    mpesa_name = (request.POST.get('mpesa_name') or '').strip()
+    if not mpesa_name:
+        mpesa_name = (order.submitted_mpesa_name or '').strip()
+    if len(mpesa_name) < 2:
+        return JsonResponse({
+            'success': False,
+            'message': 'Please enter your M-Pesa name as shown on the transaction.',
+        }, status=400)
+
     if screenshot.size > MAX_SCREENSHOT_SIZE:
         return JsonResponse({'success': False, 'message': 'Screenshot must be 5 MB or smaller.'}, status=400)
 
@@ -327,7 +344,15 @@ def verify_screenshot(request, order_id):
     order.payment_rail = 'manual'
     order.screenshot_data = data_uri
     order.verification_message = ''
-    order.save(update_fields=['status', 'payment_rail', 'screenshot_data', 'verification_message', 'updated_at'])
+    order.submitted_mpesa_name = mpesa_name
+    order.save(update_fields=[
+        'status',
+        'payment_rail',
+        'screenshot_data',
+        'verification_message',
+        'submitted_mpesa_name',
+        'updated_at',
+    ])
 
     def event_stream():
         yield _sse_event('upload_received', 'Screenshot received')
@@ -354,6 +379,7 @@ def verify_screenshot(request, order_id):
                 order,
                 ocr_passed=False,
                 verification_message='Payment submitted for manual review.',
+                mpesa_name=mpesa_name,
             )
             yield _sse_event(
                 'pending_approval',
@@ -371,6 +397,7 @@ def verify_screenshot(request, order_id):
                 order,
                 ocr_passed=False,
                 verification_message='Payment submitted for manual review.',
+                mpesa_name=mpesa_name,
             )
             yield _sse_event(
                 'pending_approval',
@@ -396,6 +423,7 @@ def verify_screenshot(request, order_id):
             order,
             ocr_passed=ocr_passed,
             verification_message=verification_notes,
+            mpesa_name=mpesa_name,
         )
         order.refresh_from_db()
 

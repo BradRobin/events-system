@@ -134,20 +134,55 @@
         }
     }
 
-    async function createOrder(eventId, ticketType, quantity) {
+    async function createOrder(eventId, ticketType, quantity, mpesaName) {
         const maxQuantity = Math.min(quantity, 8);
         if (quantity > 8) {
             showToast('Maximum 8 tickets per booking. Reducing to 8.', 'warning');
         }
 
+        const payload = { event_id: eventId, ticket_type: ticketType, quantity: maxQuantity };
+        if (mpesaName) payload.mpesa_name = mpesaName;
+
         const response = await fetch('/api/attendee/payment-orders/create/', {
             method: 'POST',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ event_id: eventId, ticket_type: ticketType, quantity: maxQuantity }),
+            body: JSON.stringify(payload),
         });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Checkout failed');
         return data.order;
+    }
+
+    function getCheckoutMpesaName() {
+        const step2 = document.getElementById('checkoutStep2MpesaName')?.value.trim();
+        if (step2) return step2;
+        const manual = document.getElementById('checkoutMpesaName')?.value.trim();
+        if (manual) return manual;
+        const pending = document.getElementById('checkoutPendingMpesaName')?.value.trim();
+        if (pending) return pending;
+        return (checkoutQueueBilling?.mpesa_name || '').trim();
+    }
+
+    function prefillCheckoutMpesaName() {
+        const name = (checkoutQueueBilling?.mpesa_name || '').trim();
+        if (!name) return;
+        ['checkoutStep2MpesaName', 'checkoutMpesaName', 'checkoutPendingMpesaName'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && !el.value.trim()) el.value = name;
+        });
+    }
+
+    async function submitMpesaName(orderId, mpesaName) {
+        const response = await fetch(`/api/attendee/payment-orders/${orderId}/submit-mpesa-name/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ mpesa_name: mpesaName }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Could not submit M-Pesa name');
+        }
+        return data;
     }
 
     async function checkOrderStatus(orderId) {
@@ -159,9 +194,10 @@
         return data.order;
     }
 
-    async function verifyScreenshot(orderId, file) {
+    async function verifyScreenshot(orderId, file, mpesaName) {
         const formData = new FormData();
         formData.append('screenshot', file);
+        if (mpesaName) formData.append('mpesa_name', mpesaName);
         const token = localStorage.getItem('attendee_access_token');
         const headers = {};
         if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -409,6 +445,7 @@
 
         updateQueueProgressUI(order);
         renderPaymentOptions(order);
+        prefillCheckoutMpesaName();
         showStep(1);
 
         document.getElementById('checkoutStreamSteps').innerHTML = '';
@@ -448,6 +485,7 @@
                 item.id,
                 item.ticket_type || item.tier || 'regular',
                 item.quantity || 1,
+                checkoutQueueBilling?.mpesa_name || '',
             );
             openCheckoutModal(order);
         } catch (e) {
@@ -485,7 +523,7 @@
         try {
             checkoutQueue = [];
             checkoutQueueIndex = 0;
-            const order = await createOrder(eventId, ticketType, quantity);
+            const order = await createOrder(eventId, ticketType, quantity, getCheckoutMpesaName());
             openCheckoutModal(order);
         } catch (e) {
             showToast(e.message, 'error');
@@ -517,12 +555,17 @@
             verifyBtn.addEventListener('click', async () => {
                 if (!currentOrder) return;
                 const file = document.getElementById('checkoutScreenshot')?.files[0];
+                const mpesaName = getCheckoutMpesaName();
+                if (!mpesaName || mpesaName.length < 2) {
+                    showToast('Enter your M-Pesa name as shown on the transaction', 'error');
+                    return;
+                }
                 if (!file) { showToast('Upload screenshot first', 'error'); return; }
                 showStep(3);
                 document.getElementById('checkoutStreamSteps').innerHTML = '';
                 verifyBtn.disabled = true;
                 try {
-                    const result = await verifyScreenshot(currentOrder.id, file);
+                    const result = await verifyScreenshot(currentOrder.id, file, mpesaName);
                     if (result.step === 'completed') {
                         showStep(6);
                         updateSuccessActions();
@@ -556,6 +599,57 @@
             document.getElementById('checkoutScreenshotPreview').innerHTML = '';
             showStep(2);
         });
+
+        const manualBtn = document.getElementById('checkoutManualBtn');
+        if (manualBtn) {
+            manualBtn.addEventListener('click', () => {
+                const box = document.getElementById('checkoutManualNameBox');
+                if (box) box.style.display = 'block';
+                prefillCheckoutMpesaName();
+            });
+        }
+
+        const submitNameBtn = document.getElementById('checkoutSubmitNameBtn');
+        if (submitNameBtn) {
+            submitNameBtn.addEventListener('click', async () => {
+                if (!currentOrder) return;
+                const mpesaName = document.getElementById('checkoutMpesaName')?.value.trim();
+                if (!mpesaName || mpesaName.length < 2) {
+                    showToast('Enter your M-Pesa name as shown on the transaction', 'error');
+                    return;
+                }
+                submitNameBtn.disabled = true;
+                try {
+                    await submitMpesaName(currentOrder.id, mpesaName);
+                    handlePaymentSubmitted(currentOrder, 'Your M-Pesa name has been sent to the organizer for approval.');
+                } catch (e) {
+                    showToast(e.message || 'Could not submit M-Pesa name', 'error');
+                } finally {
+                    submitNameBtn.disabled = false;
+                }
+            });
+        }
+
+        const pendingNameBtn = document.getElementById('checkoutPendingNameBtn');
+        if (pendingNameBtn) {
+            pendingNameBtn.addEventListener('click', async () => {
+                if (!currentOrder) return;
+                const mpesaName = document.getElementById('checkoutPendingMpesaName')?.value.trim();
+                if (!mpesaName || mpesaName.length < 2) {
+                    showToast('Enter your M-Pesa name', 'error');
+                    return;
+                }
+                pendingNameBtn.disabled = true;
+                try {
+                    await submitMpesaName(currentOrder.id, mpesaName);
+                    showToast('M-Pesa name saved for organizer review', 'success');
+                } catch (e) {
+                    showToast(e.message || 'Could not save M-Pesa name', 'error');
+                } finally {
+                    pendingNameBtn.disabled = false;
+                }
+            });
+        }
 
         const successClose = document.getElementById('checkoutSuccessCloseBtn');
         if (successClose) {

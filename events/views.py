@@ -382,6 +382,7 @@ def organizer_dashboard_performance(request):
 
 from django.db.models import Q, Case, When, Value, IntegerField
 from .models import Category, Event
+from .checkout import get_event_checkout_status
 
 
 def _events_with_image_first(queryset):
@@ -454,11 +455,11 @@ def api_event_list(request):
         return JsonResponse(cached_data)
         
     events = Event.objects.filter(status='published', end_date__gte=timezone.now()).select_related('category', 'organizer')
-        events = events.filter(
-            Q(title__icontains=query) |
-            Q(description__icontains=query) |
-            Q(venue__icontains=query)
-        )
+    events = events.filter(
+        Q(title__icontains=query) |
+        Q(description__icontains=query) |
+        Q(venue__icontains=query)
+    )
         
     if category_id:
         # Support both numeric id and slug (front-end sends slug)
@@ -590,6 +591,12 @@ def api_event_detail(request, event_id):
             'organizer': e.organizer.organization_name or e.organizer.username,
             'images': [img.url for img in e.images.all()],
         }
+        can_checkout, checkout_block_reason, checkout_block_code = get_event_checkout_status(e)
+        data['organizer_mpesa_configured'] = e.organizer.has_mpesa_payment_config()
+        data['event_status'] = e.status
+        data['can_checkout'] = can_checkout
+        data['checkout_block_reason'] = checkout_block_reason
+        data['checkout_block_code'] = checkout_block_code
         return JsonResponse({'success': True, 'event': data})
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found'}, status=404)

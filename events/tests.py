@@ -150,3 +150,84 @@ class EventImageUploadTests(TestCase):
         self.assertEqual(data['status'], 'approved')
 
 
+class OrganizerEventDeleteTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.organizer = User.objects.create_user(
+            username='organizer_delete',
+            email='delete@example.com',
+            password='Password123',
+            role='organizer',
+        )
+        self.other_organizer = User.objects.create_user(
+            username='other_org',
+            email='other@example.com',
+            password='Password123',
+            role='organizer',
+        )
+        self.category = Category.objects.create(name='Tech', slug='tech')
+        self.event = Event.objects.create(
+            title='Delete Me',
+            description='Temporary event',
+            category=self.category,
+            organizer=self.organizer,
+            start_date=timezone.now() + timedelta(days=2),
+            end_date=timezone.now() + timedelta(days=2, hours=2),
+            venue='Hall A',
+            price=10.00,
+            total_seats=50,
+            available_seats=50,
+        )
+        self.second_event = Event.objects.create(
+            title='Delete Me Too',
+            description='Another temporary event',
+            category=self.category,
+            organizer=self.organizer,
+            start_date=timezone.now() + timedelta(days=3),
+            end_date=timezone.now() + timedelta(days=3, hours=2),
+            venue='Hall B',
+            price=15.00,
+            total_seats=30,
+            available_seats=30,
+        )
+        self.client.login(username='organizer_delete', password='Password123')
+
+    def test_organizer_can_delete_own_event(self):
+        response = self.client.delete(f'/api/organizer/events/{self.event.id}/delete/')
+        self.assertEqual(response.status_code, 200, response.content)
+        data = json.loads(response.content)
+        self.assertTrue(data['success'])
+        self.assertFalse(Event.objects.filter(id=self.event.id).exists())
+
+    def test_organizer_cannot_delete_other_organizer_event(self):
+        other_event = Event.objects.create(
+            title='Not yours',
+            description='Protected',
+            category=self.category,
+            organizer=self.other_organizer,
+            start_date=timezone.now() + timedelta(days=4),
+            end_date=timezone.now() + timedelta(days=4, hours=2),
+            venue='Hall C',
+            price=12.00,
+            total_seats=20,
+            available_seats=20,
+        )
+        response = self.client.delete(
+            f'/api/organizer/events/{other_event.id}/delete/'
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Event.objects.filter(id=other_event.id).exists())
+
+    def test_organizer_can_bulk_delete_events(self):
+        response = self.client.post(
+            '/api/organizer/events/bulk-delete/',
+            data=json.dumps({'event_ids': [self.event.id, self.second_event.id]}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        data = json.loads(response.content)
+        self.assertTrue(data['success'])
+        self.assertEqual(data['count'], 2)
+        self.assertFalse(Event.objects.filter(id__in=[self.event.id, self.second_event.id]).exists())
+
+

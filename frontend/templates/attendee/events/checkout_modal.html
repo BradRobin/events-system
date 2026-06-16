@@ -59,6 +59,8 @@
         <div id="checkoutStep2" style="display:none;">
             <span class="checkout-step-pill">Step 2 — upload proof</span>
             <p class="checkout-hint"><strong>Upload your M-Pesa confirmation screenshot.</strong> We will check it automatically, then the organizer will approve your booking.</p>
+            <label class="checkout-label" for="checkoutStep2MpesaName">Your M-Pesa name (as shown on the transaction) *</label>
+            <input type="text" id="checkoutStep2MpesaName" class="checkout-text-input" placeholder="e.g. JOHN DOE" autocomplete="name" required>
             <label class="checkout-label" for="checkoutScreenshot">Screenshot (JPEG, PNG, or WebP)</label>
             <input type="file" id="checkoutScreenshot" accept="image/jpeg,image/png,image/webp" class="checkout-file-input">
             <div id="checkoutScreenshotPreview" class="checkout-preview"></div>

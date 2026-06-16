@@ -4,6 +4,54 @@ let currentPage = 1;
 let ticketTypes = [];
 let scheduleItems = [];
 let analyticsChart = null;
+let selectionMode = false;
+let selectedEventIds = new Set();
+let lastLoadedEvents = [];
+
+function updateSelectionUI() {
+    const bulkBar = document.getElementById('eventsBulkActions');
+    const countEl = document.getElementById('eventsSelectedCount');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteEventsBtn');
+    const toggleBtn = document.getElementById('toggleEventSelectionBtn');
+    const count = selectedEventIds.size;
+
+    if (bulkBar) bulkBar.classList.toggle('d-none', !selectionMode);
+    if (countEl) countEl.textContent = `${count} selected`;
+    if (bulkDeleteBtn) bulkDeleteBtn.disabled = count === 0;
+    if (toggleBtn) {
+        toggleBtn.innerHTML = selectionMode
+            ? '<i class="fas fa-times me-2"></i>Cancel selection'
+            : '<i class="fas fa-check-square me-2"></i>Select events';
+        toggleBtn.classList.toggle('btn-outline-secondary', !selectionMode);
+        toggleBtn.classList.toggle('btn-secondary', selectionMode);
+    }
+
+    document.querySelectorAll('.event-select-wrap').forEach((wrap) => {
+        wrap.classList.toggle('d-none', !selectionMode);
+    });
+    document.getElementById('eventsContainer')?.classList.toggle('selection-mode', selectionMode);
+    document.querySelectorAll('.event-select-checkbox').forEach((cb) => {
+        cb.checked = selectedEventIds.has(String(cb.value));
+    });
+}
+
+function toggleEventSelection(eventId, checked) {
+    const id = String(eventId);
+    if (checked) selectedEventIds.add(id);
+    else selectedEventIds.delete(id);
+    updateSelectionUI();
+}
+
+function clearEventSelection() {
+    selectedEventIds.clear();
+    updateSelectionUI();
+}
+
+function setSelectionMode(enabled) {
+    selectionMode = enabled;
+    if (!selectionMode) clearEventSelection();
+    updateSelectionUI();
+}
 
 // Load events grid
 async function loadEvents(page = 1) {
@@ -11,9 +59,11 @@ async function loadEvents(page = 1) {
         const data = await OrganizerAPI.events.getAll(page, 12);
         const container = document.getElementById('eventsContainer');
         const events = Array.isArray(data) ? data : (Array.isArray(data.results) ? data.results : []);
+        lastLoadedEvents = events;
 
         if (!events.length) {
             container.innerHTML = '<div class="text-center text-muted col-12">No events found</div>';
+            updateSelectionUI();
             return;
         }
 
@@ -26,13 +76,18 @@ async function loadEvents(page = 1) {
             const capacity = event.capacity || 0;
             const status = event.status || 'draft';
             const badgeClass = status === 'published' || status === 'active' ? 'bg-success' : status === 'draft' ? 'bg-secondary' : status === 'approved' ? 'bg-info' : 'bg-danger';
+            const isSelected = selectedEventIds.has(String(event.id));
+            const selectHidden = selectionMode ? '' : 'd-none';
             return `
             <div class="col-md-4 col-lg-3">
-                <div class="event-card" data-event-id="${event.id}" onclick="editEvent(${event.id})">
+                <div class="event-card${isSelected ? ' event-card-selected' : ''}" data-event-id="${event.id}">
                     <div class="event-image" style="background-image: url('${event.image_url || '/static/images/placeholder.jpg'}')">
+                        <label class="event-select-wrap ${selectHidden}" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="event-select-checkbox" value="${event.id}" ${isSelected ? 'checked' : ''} aria-label="Select ${titleAttr}">
+                        </label>
                         <div class="event-status"><span class="badge ${badgeClass}">${status}</span></div>
                         <div class="event-card-menu dropdown">
-                            <button type="button" class="event-card-menu-btn" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Event options" onclick="event.stopPropagation()">
+                            <button type="button" class="event-card-menu-btn" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Event options">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end event-card-dropdown">
@@ -44,7 +99,7 @@ async function loadEvents(page = 1) {
                             </ul>
                         </div>
                     </div>
-                    <div class="p-3">
+                    <div class="p-3 event-card-body">
                         <h6 class="mb-1">${title}</h6>
                         <small class="text-muted">${dateText}</small>
                         <div class="mt-2"><i class="fas fa-ticket-alt"></i> ${ticketsSold}/${capacity}</div>
@@ -55,6 +110,7 @@ async function loadEvents(page = 1) {
         }).join('');
 
         attachEventCardMenus();
+        updateSelectionUI();
 
         if (typeof renderPagination === 'function' && data && data.total_pages) {
             renderPagination(data, page, (newPage) => { currentPage = newPage; loadEvents(currentPage); }, 'eventsPagination');
@@ -66,30 +122,84 @@ async function loadEvents(page = 1) {
 }
 
 function attachEventCardMenus() {
-    document.querySelectorAll('.event-card-menu-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => e.stopPropagation());
+    document.querySelectorAll('.event-card-menu, .event-card-menu-btn, .event-card-dropdown').forEach(el => {
+        el.addEventListener('click', (e) => e.stopPropagation());
+        el.addEventListener('mousedown', (e) => e.stopPropagation());
     });
+
     document.querySelectorAll('.delete-event-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('mousedown', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            deleteEvent(btn.dataset.id, btn.dataset.title);
+        });
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const dropdown = btn.closest('.dropdown');
+            if (dropdown) {
+                const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+                const instance = toggle ? bootstrap.Dropdown.getInstance(toggle) : null;
+                if (instance) instance.hide();
+            }
+            await deleteEvent(btn.dataset.id, btn.dataset.title);
+        });
+    });
+
+    document.querySelectorAll('.event-select-checkbox').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            e.stopPropagation();
+            toggleEventSelection(cb.value, cb.checked);
+            const card = cb.closest('.event-card');
+            if (card) card.classList.toggle('event-card-selected', cb.checked);
         });
     });
 }
 
+async function deleteEvents(eventIds, label = 'these events') {
+    const ids = [...new Set(eventIds.map((id) => parseInt(id, 10)).filter((id) => !Number.isNaN(id)))];
+    if (!ids.length) return false;
+
+    const message = ids.length === 1
+        ? `Are you sure you want to permanently delete ${label}? This action cannot be undone.`
+        : `Are you sure you want to permanently delete ${ids.length} events? This action cannot be undone.`;
+
+    if (!confirm(message)) return false;
+
+    try {
+        let result;
+        if (ids.length === 1) {
+            result = await OrganizerAPI.events.delete(ids[0]);
+        } else {
+            result = await OrganizerAPI.events.bulkDelete(ids);
+        }
+
+        if (result && result.success === false) {
+            throw new Error(result.message || 'Failed to delete event(s)');
+        }
+
+        ids.forEach((id) => selectedEventIds.delete(String(id)));
+        if (window.showToast) {
+            window.showToast(
+                result?.message || (ids.length === 1 ? 'Event deleted successfully' : `${ids.length} events deleted successfully`),
+                'success'
+            );
+        }
+        await loadEvents(currentPage);
+        return true;
+    } catch (e) {
+        if (window.showToast) window.showToast(e.message || 'Failed to delete event(s)', 'error');
+        return false;
+    }
+}
+
 async function deleteEvent(eventId, eventTitle = '') {
     const label = eventTitle ? `"${eventTitle}"` : 'this event';
-    if (!confirm(`Are you sure you want to permanently delete ${label}? This action cannot be undone.`)) {
-        return;
-    }
-    try {
-        await OrganizerAPI.events.delete(eventId);
-        if (window.showToast) window.showToast('Event deleted successfully', 'success');
-        loadEvents(currentPage);
-    } catch (e) {
-        if (window.showToast) window.showToast(e.message || 'Failed to delete event', 'error');
-    }
+    return deleteEvents([eventId], label);
+}
+
+async function deleteSelectedEvents() {
+    if (!selectedEventIds.size) return;
+    await deleteEvents([...selectedEventIds]);
 }
 
 // Edit or create event
@@ -487,9 +597,54 @@ function togglePriceInput(type) {
     }
 }
 window.togglePriceInput = togglePriceInput;
+window.deleteEvent = deleteEvent;
+window.editEvent = editEvent;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadEvents();
+
+    document.getElementById('eventsContainer')?.addEventListener('click', (e) => {
+        if (e.target.closest('.event-card-menu, .event-select-wrap, .dropdown-menu, .delete-event-btn')) {
+            return;
+        }
+        const card = e.target.closest('.event-card[data-event-id]');
+        if (!card) return;
+
+        const eventId = parseInt(card.dataset.eventId, 10);
+        if (Number.isNaN(eventId)) return;
+
+        if (selectionMode) {
+            const cb = card.querySelector('.event-select-checkbox');
+            if (!cb) return;
+            cb.checked = !cb.checked;
+            toggleEventSelection(cb.value, cb.checked);
+            card.classList.toggle('event-card-selected', cb.checked);
+            return;
+        }
+
+        if (e.target.closest('.event-card-body, .event-image')) {
+            editEvent(eventId);
+        }
+    });
+
+    document.getElementById('toggleEventSelectionBtn')?.addEventListener('click', () => {
+        setSelectionMode(!selectionMode);
+    });
+    document.getElementById('clearEventSelectionBtn')?.addEventListener('click', () => {
+        clearEventSelection();
+    });
+    document.getElementById('selectAllEventsBtn')?.addEventListener('click', () => {
+        lastLoadedEvents.forEach((event) => selectedEventIds.add(String(event.id)));
+        updateSelectionUI();
+        document.querySelectorAll('.event-select-checkbox').forEach((cb) => {
+            cb.checked = true;
+            cb.closest('.event-card')?.classList.add('event-card-selected');
+        });
+    });
+    document.getElementById('bulkDeleteEventsBtn')?.addEventListener('click', () => {
+        deleteSelectedEvents();
+    });
+
     const params = new URLSearchParams(window.location.search);
     const editId = params.get('edit');
     if (editId) {

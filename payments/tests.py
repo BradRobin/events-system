@@ -144,13 +144,14 @@ class PaymentOrderTests(TestCase):
         self.client.force_login(self.attendee)
         response = self.client.post(
             f'/api/attendee/payment-orders/{order.id}/verify-screenshot/',
-            data={'screenshot': screenshot},
+            data={'screenshot': screenshot, 'mpesa_name': 'JOHN DOE'},
         )
         self.assertEqual(response.status_code, 200)
         body = b''.join(response.streaming_content).decode()
         self.assertIn('pending_approval', body)
         order.refresh_from_db()
         self.assertEqual(order.status, 'manual_review')
+        self.assertEqual(order.submitted_mpesa_name, 'JOHN DOE')
         self.assertTrue(order.screenshot_verified)
         self.assertTrue(order.screenshot_data.startswith('data:image/'))
         self.assertFalse(Ticket.objects.filter(attendee=self.attendee).exists())
@@ -178,13 +179,14 @@ class PaymentOrderTests(TestCase):
         self.client.force_login(self.attendee)
         response = self.client.post(
             f'/api/attendee/payment-orders/{order.id}/verify-screenshot/',
-            data={'screenshot': screenshot},
+            data={'screenshot': screenshot, 'mpesa_name': 'JANE SMITH'},
         )
         self.assertEqual(response.status_code, 200)
         body = b''.join(response.streaming_content).decode()
         self.assertIn('pending_approval', body)
         order.refresh_from_db()
         self.assertEqual(order.status, 'manual_review')
+        self.assertEqual(order.submitted_mpesa_name, 'JANE SMITH')
         self.assertFalse(order.screenshot_verified)
         self.assertFalse(Ticket.objects.filter(attendee=self.attendee).exists())
         self.assertEqual(OrganizerNotification.objects.filter(payment_order=order).count(), 1)

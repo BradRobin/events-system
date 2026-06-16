@@ -8,9 +8,22 @@
 
 {% block content %}
 <div>
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div><h1 class="h2">Events Management</h1><p class="text-muted">Create, edit, and manage your events</p></div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#eventModal" onclick="resetEventForm()"><i class="fas fa-plus me-2"></i>Create Event</button>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div id="eventsBulkActions" class="events-bulk-actions d-flex align-items-center gap-2 d-none">
+                <span id="eventsSelectedCount" class="text-muted small">0 selected</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="selectAllEventsBtn">Select all</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteEventsBtn" disabled>
+                    <i class="fas fa-trash me-1"></i>Delete selected
+                </button>
+                <button type="button" class="btn btn-link btn-sm text-muted px-1" id="clearEventSelectionBtn">Clear</button>
+            </div>
+            <button type="button" class="btn btn-outline-secondary" id="toggleEventSelectionBtn">
+                <i class="fas fa-check-square me-2"></i>Select events
+            </button>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#eventModal" onclick="resetEventForm()"><i class="fas fa-plus me-2"></i>Create Event</button>
+        </div>
     </div>
     <div class="row g-4" id="eventsContainer">Loading events...</div>
     <nav class="mt-4"><ul class="pagination justify-content-center" id="eventsPagination"></ul></nav>

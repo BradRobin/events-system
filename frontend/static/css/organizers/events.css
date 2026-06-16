@@ -20,11 +20,43 @@
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     overflow: hidden;
 }
+.event-card-selected {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.25);
+}
+.event-select-wrap {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 3;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 6px;
+    padding: 6px 8px;
+    cursor: pointer;
+}
+.event-select-wrap input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
 .event-status {
     position: absolute;
     top: 12px;
     left: 12px;
     z-index: 1;
+}
+#eventsContainer.selection-mode .event-status {
+    left: 44px;
+}
+.events-bulk-actions {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.03);
+}
+.event-card-body {
+    cursor: pointer;
 }
 .event-card-menu {
     position: absolute;

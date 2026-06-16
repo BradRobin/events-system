@@ -742,7 +742,12 @@ class OrganizerAPIService {
             
             // Robust check: if backend endpoint returns 404 because view hasn't been set up yet,
             // fallback gracefully to mock database!
-            if (response.status === 404) {
+            // Never mock destructive event operations — failures must surface to the UI.
+            const isDestructiveEventWrite = (
+                (method === 'DELETE' && endpoint.includes('/events/') && endpoint.includes('/delete/'))
+                || (method === 'POST' && endpoint.includes('/events/bulk-delete/'))
+            );
+            if (response.status === 404 && !isDestructiveEventWrite) {
                 console.warn(`[API 404] Endpoint "${endpoint}" not found in Django views. Serving LocalStorage mock fallback.`);
                 return this.getMockResponse(method, endpoint, data, options);
             }

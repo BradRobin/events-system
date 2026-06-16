@@ -331,12 +331,12 @@ def api_organizer_events_update(request, event_id):
 @organizer_required
 @require_http_methods(["DELETE"])
 def api_organizer_events_delete(request, event_id):
-    """Delete an event."""
+    """Permanently delete an event owned by the logged-in organizer."""
     try:
         event = Event.objects.get(id=event_id, organizer=request.user)
         title = event.title
         event.delete()
-        
+
         try:
             send_organizer_event_crud_email(
                 organizer_email=request.user.email,
@@ -348,11 +348,66 @@ def api_organizer_events_delete(request, event_id):
         except Exception as email_err:
             print("Failed to dispatch organizer CRUD email:", email_err)
 
-        return JsonResponse({'success': True, 'message': 'Event deleted successfully'})
+        return JsonResponse({'success': True, 'message': 'Event deleted successfully', 'id': event_id})
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found'}, status=404)
     except Exception as e:
         return safe_api_error_response(request, e, context_key='events', status=400)
+
+
+@csrf_exempt
+@organizer_required
+@require_http_methods(["POST"])
+def api_organizer_events_bulk_delete(request):
+    """Permanently delete multiple events owned by the logged-in organizer."""
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON body.'}, status=400)
+
+    raw_ids = data.get('event_ids') or []
+    if not isinstance(raw_ids, list) or not raw_ids:
+        return JsonResponse({'success': False, 'message': 'Select at least one event to delete.'}, status=400)
+
+    event_ids = []
+    for value in raw_ids:
+        try:
+            event_ids.append(int(value))
+        except (TypeError, ValueError):
+            continue
+
+    if not event_ids:
+        return JsonResponse({'success': False, 'message': 'No valid event IDs provided.'}, status=400)
+
+    events = list(Event.objects.filter(id__in=event_ids, organizer=request.user))
+    if not events:
+        return JsonResponse({'success': False, 'message': 'No matching events found.'}, status=404)
+
+    deleted_ids = []
+    deleted_titles = []
+    for event in events:
+        deleted_titles.append(event.title)
+        deleted_ids.append(event.id)
+        event.delete()
+
+    for title in deleted_titles:
+        try:
+            send_organizer_event_crud_email(
+                organizer_email=request.user.email,
+                organizer_name=request.user.username,
+                event_title=title,
+                action='deleted',
+                details=None
+            )
+        except Exception as email_err:
+            print("Failed to dispatch organizer CRUD email:", email_err)
+
+    return JsonResponse({
+        'success': True,
+        'message': f'{len(deleted_ids)} event(s) deleted successfully',
+        'deleted_ids': deleted_ids,
+        'count': len(deleted_ids),
+    })
 
 
 # ============ ORGANIZER SETTINGS VIEWS ============

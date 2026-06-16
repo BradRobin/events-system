@@ -42,6 +42,10 @@ const OrganizerEventsAPI = {
     create: (data) => OrganizerAPI.post(ORGANIZER_API_CONFIG.ENDPOINTS.EVENTS.create, data),
     update: (id, data) => OrganizerAPI.put(ORGANIZER_API_CONFIG.ENDPOINTS.EVENTS.update(id), data),
     delete: (id) => OrganizerAPI.delete(ORGANIZER_API_CONFIG.ENDPOINTS.EVENTS.delete(id)),
+    bulkDelete: (eventIds) => OrganizerAPI.post(
+        ORGANIZER_API_CONFIG.ENDPOINTS.EVENTS.bulkDelete,
+        { event_ids: eventIds }
+    ),
     duplicate: (id) => OrganizerAPI.post(ORGANIZER_API_CONFIG.ENDPOINTS.EVENTS.duplicate(id), {}),
     submitApproval: (id) => OrganizerAPI.post(ORGANIZER_API_CONFIG.ENDPOINTS.EVENTS.submitApproval(id), {}),
     cancel: (id, reason) => OrganizerAPI.post(ORGANIZER_API_CONFIG.ENDPOINTS.EVENTS.cancel(id), { reason }),
