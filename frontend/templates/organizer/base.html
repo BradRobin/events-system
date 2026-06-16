@@ -3,85 +3,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}EventHub Organizer{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}EventHub organizer portal — create events, manage tickets, track bookings, and check in attendees.{% endblock %}">
     <meta name="robots" content="noindex, nofollow">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&family=Outfit:wght@300..800&display=swap" rel="stylesheet">
-    <!-- Font Awesome + Bootstrap -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Global Dashboard CSS (dark theme) -->
     <link rel="stylesheet" href="/static/css/organizers/dashboard.css">
     <link rel="stylesheet" href="/static/css/organizer/billing.css">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-<aside class="organizer-sidebar" id="organizerSidebar" aria-hidden="true">
-    <div class="organizer-sidebar-header">
-        <div class="organizer-sidebar-brand">
-            <h2>EventHub</h2>
-            <span class="organizer-sidebar-badge">Organizer</span>
+<div class="organizer-wrapper">
+    <aside class="organizer-sidebar" id="organizerSidebar">
+        <div class="organizer-sidebar-header">
+            <div class="organizer-sidebar-brand">
+                <h2>EventHub</h2>
+                <span class="organizer-sidebar-badge">Organizer</span>
+            </div>
+            <button type="button" class="organizer-sidebar-close" id="organizerSidebarClose" aria-label="Close navigation">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        <button type="button" class="organizer-sidebar-close" id="organizerSidebarClose" aria-label="Close navigation">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    <nav class="organizer-sidebar-nav" id="organizerSidebarNav">
-        <a href="/organizer/dashboard/" class="menu-item"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
-        <a href="/organizer/events/" class="menu-item"><i class="fas fa-calendar-alt"></i><span>Events</span></a>
-        <a href="/organizer/attendees/" class="menu-item"><i class="fas fa-users"></i><span>Attendees</span></a>
-        <a href="/organizer/bookings/" class="menu-item"><i class="fas fa-ticket-alt"></i><span>Bookings</span></a>
-        <a href="/organizer/promotions/" class="menu-item"><i class="fas fa-tags"></i><span>Promotions</span></a>
-        <a href="/organizer/billing/" class="menu-item"><i class="fas fa-credit-card"></i><span>Plans &amp; Billing</span></a>
-        <a href="/organizer/reviews/" class="menu-item"><i class="fas fa-star"></i><span>Reviews</span></a>
-        <a href="/organizer/settings/" class="menu-item"><i class="fas fa-cog"></i><span>Settings</span></a>
-        <a href="/organizer/faq/" class="menu-item"><i class="fas fa-circle-question"></i><span>FAQs</span></a>
-    </nav>
-    <div class="organizer-sidebar-footer">
-        <span id="organizerSidebarEmail" class="organizer-sidebar-email">{{ user.email|default:"Organizer" }}</span>
-        <a href="/" class="menu-item organizer-sidebar-home"><i class="fas fa-home"></i><span>Back to Home</span></a>
-    </div>
-</aside>
-<div class="organizer-sidebar-overlay" id="organizerSidebarOverlay" aria-hidden="true"></div>
 
-<nav class="top-navbar">
-    <div class="navbar-left">
-        <button type="button" class="navbar-toggle" id="navbarToggleBtn" aria-expanded="false" aria-controls="organizerSidebar" aria-label="Open navigation">
-            <i class="fas fa-bars"></i>
-        </button>
-        <div class="navbar-brand">
-            <h2>EventHub</h2>
+        <nav class="organizer-sidebar-nav" id="organizerSidebarNav">
+            <div class="organizer-nav-top">
+                <a href="/organizer/dashboard/" class="menu-item"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+                <a href="/organizer/events/" class="menu-item"><i class="fas fa-calendar-alt"></i><span>Events</span></a>
+                <a href="/organizer/attendees/" class="menu-item"><i class="fas fa-users"></i><span>Attendees</span></a>
+                <a href="/organizer/bookings/" class="menu-item"><i class="fas fa-ticket-alt"></i><span>Bookings</span></a>
+                <a href="/organizer/promotions/" class="menu-item"><i class="fas fa-tags"></i><span>Promotions</span></a>
+                <a href="/organizer/billing/" class="menu-item"><i class="fas fa-credit-card"></i><span>Plans &amp; Billing</span></a>
+                <a href="/organizer/reviews/" class="menu-item"><i class="fas fa-star"></i><span>Reviews</span></a>
+            </div>
+            <div class="organizer-nav-bottom">
+                <div class="organizer-nav-divider"></div>
+                <a href="/organizer/settings/" class="menu-item"><i class="fas fa-cog"></i><span>Settings</span></a>
+                <a href="/organizer/faq/" class="menu-item"><i class="fas fa-question-circle"></i><span>FAQs</span></a>
+                <a href="/" class="menu-item organizer-sidebar-home"><i class="fas fa-home"></i><span>Back to Home</span></a>
+            </div>
+        </nav>
+    </aside>
+
+    <div class="organizer-sidebar-overlay" id="organizerSidebarOverlay" aria-hidden="true"></div>
+
+    <main class="organizer-main">
+        <header class="organizer-topbar">
+            <div class="organizer-topbar-left">
+                <button type="button" class="organizer-sidebar-toggle" id="organizerSidebarToggle" aria-expanded="false" aria-controls="organizerSidebar" aria-label="Open navigation">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="organizer-page-title" id="organizerPageTitle">{% block page_title %}Organizer Portal{% endblock %}</h1>
+            </div>
+            <div class="organizer-topbar-right">
+                <span id="organizerProfileEmail" class="organizer-topbar-email">{{ user.email|default:"Organizer" }}</span>
+                <a href="/" class="organizer-topbar-home" title="Back to Home"><i class="fas fa-external-link-alt"></i></a>
+            </div>
+        </header>
+
+        <div class="organizer-content">
+            {% block content %}{% endblock %}
         </div>
-    </div>
-    <div class="navbar-menu" id="navbarMenu">
-        <a href="/organizer/dashboard/" class="menu-item">Dashboard</a>
-        <a href="/organizer/events/" class="menu-item">Events</a>
-        <a href="/organizer/attendees/" class="menu-item">Attendees</a>
-        <a href="/organizer/bookings/" class="menu-item">Bookings</a>
-
-        <a href="/organizer/promotions/" class="menu-item">Promotions</a>
-        <a href="/organizer/billing/" class="menu-item">Plans & Billing</a>
-        <a href="/organizer/reviews/" class="menu-item">Reviews</a>
-        <a href="/organizer/settings/" class="menu-item">Settings</a>
-        <a href="/organizer/faq/" class="menu-item">FAQs</a>
-        <a href="/" class="menu-item back-home-mobile">Back to Home</a>
-    </div>
-    <div class="navbar-user">
-        <span id="organizerProfileEmail" class="profile-email">{{ user.email|default:"Organizer" }}</span>
-        <a href="/" class="back-home-btn" title="Back to Home"><i class="fas fa-sign-out-alt"></i></a>
-    </div>
-</nav>
-
-<div class="dashboard-wrapper">
-    <!-- Main Content -->
-    <main class="main-content">
-        {% block content %}{% endblock %}
     </main>
 </div>
 
-<!-- Scripts -->
 <script src="{% static 'js/shared/user-friendly-errors.js' %}"></script>
 <script src="{% static 'js/shared/presence.js' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -95,10 +81,9 @@
 <script>
     (function syncOrganizerProfileEmail() {
         const el = document.getElementById('organizerProfileEmail');
-        const sidebarEl = document.getElementById('organizerSidebarEmail');
-        if (!el && !sidebarEl) return;
+        if (!el) return;
 
-        const serverEmail = (el?.textContent || sidebarEl?.textContent || '').trim();
+        const serverEmail = (el.textContent || '').trim();
         if (serverEmail && serverEmail !== 'Organizer') return;
 
         try {
@@ -106,8 +91,7 @@
             if (!raw) return;
             const user = JSON.parse(raw);
             if (user && user.email) {
-                if (el) el.textContent = user.email;
-                if (sidebarEl) sidebarEl.textContent = user.email;
+                el.textContent = user.email;
             }
         } catch (e) {
             // Keep default label when storage is unavailable.
@@ -116,7 +100,9 @@
 
     (function highlightActiveMenuItem() {
         const currentPath = window.location.pathname;
-        const menuItems = document.querySelectorAll('.navbar-menu .menu-item, .organizer-sidebar-nav .menu-item');
+        const menuItems = document.querySelectorAll('.organizer-sidebar-nav .menu-item');
+        const pageTitleEl = document.getElementById('organizerPageTitle');
+        let activeLabel = '';
 
         menuItems.forEach(item => {
             const href = item.getAttribute('href');
@@ -127,18 +113,23 @@
 
             if (isExactMatch || isSubPathMatch) {
                 item.classList.add('active');
+                activeLabel = item.querySelector('span')?.textContent?.trim() || '';
             } else {
                 item.classList.remove('active');
             }
         });
+
+        if (pageTitleEl && activeLabel && pageTitleEl.textContent.trim() === 'Organizer Portal') {
+            pageTitleEl.textContent = activeLabel;
+        }
     })();
 
     (function initOrganizerSidebar() {
         const sidebar = document.getElementById('organizerSidebar');
         const overlay = document.getElementById('organizerSidebarOverlay');
-        const toggleBtn = document.getElementById('navbarToggleBtn');
+        const toggleBtn = document.getElementById('organizerSidebarToggle');
         const closeBtn = document.getElementById('organizerSidebarClose');
-        const navLinks = document.querySelectorAll('.organizer-sidebar-nav .menu-item, .organizer-sidebar-home');
+        const navLinks = document.querySelectorAll('.organizer-sidebar-nav .menu-item');
         const mobileBreakpoint = 992;
 
         function isMobileNav() {
@@ -148,7 +139,6 @@
         function openSidebar() {
             if (!sidebar || !isMobileNav()) return;
             sidebar.classList.add('open');
-            sidebar.setAttribute('aria-hidden', 'false');
             overlay?.classList.add('active');
             overlay?.setAttribute('aria-hidden', 'false');
             toggleBtn?.setAttribute('aria-expanded', 'true');
@@ -158,7 +148,6 @@
         function closeSidebar() {
             if (!sidebar) return;
             sidebar.classList.remove('open');
-            sidebar.setAttribute('aria-hidden', 'true');
             overlay?.classList.remove('active');
             overlay?.setAttribute('aria-hidden', 'true');
             toggleBtn?.setAttribute('aria-expanded', 'false');
