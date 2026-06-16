@@ -105,7 +105,48 @@
     gap: 0.25rem;
     flex: 1;
     justify-content: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+/* Desktop & tablet: spread primary nav across the navbar */
+@media (min-width: 769px) {
+    .navbar-container {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    .logo {
+        grid-column: 1;
+    }
+
+    .nav-links {
+        grid-column: 2;
+        flex: 1;
+        width: 100%;
+        justify-content: space-evenly;
+        gap: 1rem;
+        padding: 0 0.5rem;
+    }
+
+    .nav-links > a.nav-link,
+    .nav-links > .nav-item-dropdown {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: 11rem;
+        justify-content: center;
+    }
+
+    .nav-item-dropdown .dropdown-trigger {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .nav-actions {
+        grid-column: 3;
+    }
 }
 
 .nav-link {
@@ -1049,29 +1090,63 @@
 
 /* Desktop (1025px and above) */
 @media (min-width: 1025px) {
+    .nav-links {
+        gap: 1.25rem;
+        padding: 0 1rem;
+    }
+
+    .nav-links > a.nav-link,
+    .nav-links > .nav-item-dropdown {
+        max-width: 12rem;
+    }
+
     .nav-link span {
         display: inline;
     }
 }
 
-/* Tablet (769px - 1024px) - Icons only */
+/* Tablet (769px - 1024px) — compact labels, still evenly spaced */
 @media (min-width: 769px) and (max-width: 1024px) {
     .navbar-container {
         padding: 0.7rem 1.5rem;
-        gap: 0.8rem;
+        gap: 1rem;
     }
-    
+
+    .nav-links {
+        gap: 0.75rem;
+        padding: 0 0.25rem;
+    }
+
+    .nav-links > a.nav-link,
+    .nav-links > .nav-item-dropdown {
+        max-width: 9rem;
+    }
+
     .nav-link span {
-        display: none;
+        display: inline;
+        font-size: 0.72rem;
     }
-    
+
     .nav-link {
-        padding: 0.5rem;
+        padding: 0.45rem 0.65rem;
+        gap: 0.35rem;
+        flex-direction: column;
+        text-align: center;
     }
-    
+
     .nav-link i {
-        font-size: 1.1rem;
+        font-size: 1rem;
         margin: 0;
+    }
+
+    .nav-item-dropdown .dropdown-trigger {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .nav-item-dropdown .dropdown-arrow {
+        font-size: 0.55rem;
+        margin-top: -0.15rem;
     }
     
     .search-form-desktop {
