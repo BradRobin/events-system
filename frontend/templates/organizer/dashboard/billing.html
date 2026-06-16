@@ -1,0 +1,81 @@
+{% extends "organizer/base.html" %}
+{% load static %}
+
+{% block title %}Plans & Billing | EventHub Organizer{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/payments/checkout.css' %}">
+<link rel="stylesheet" href="{% static 'css/organizer/billing.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="main-content-header">
+    <h1>Plans & Billing</h1>
+    <p>Choose a plan to create more events and boost your visibility in search results.</p>
+</div>
+
+<div id="subscriptionUsageBanner" class="subscription-usage-banner" style="display:none;"></div>
+<div id="ocrStatusBanner" class="ocr-status-banner" style="display:none;"></div>
+
+<div id="planCards" class="plan-cards-grid">
+    <div class="text-muted">Loading plans…</div>
+</div>
+
+<div id="subscriptionCheckoutModal" class="modal checkout-modal" style="display:none;" role="dialog" aria-modal="true">
+    <div class="checkout-modal-content">
+        <button type="button" id="subCheckoutClose" class="checkout-close" aria-label="Close">&times;</button>
+        <header class="checkout-modal-header">
+            <h3><i class="fas fa-mobile-alt"></i> Upgrade with M-Pesa</h3>
+            <ol class="checkout-flow-steps">
+                <li>Pay EventHub</li>
+                <li>Upload screenshot</li>
+                <li>Admin approves</li>
+            </ol>
+        </header>
+
+        <div id="subStep1">
+            <div class="checkout-summary">
+                <span id="subPlanBadge" class="checkout-tier-badge ticket-tier-regular">Plus</span>
+                <div class="checkout-amount" id="subTotalAmount">KES 500</div>
+                <div class="checkout-receiver">Pay to: <strong id="subReceiverName">EventHub — 0743042018</strong></div>
+            </div>
+            <span class="checkout-step-pill">Step 1 — pay monthly fee</span>
+            <p class="checkout-hint">Send the exact amount below to <strong>0743042018</strong>, then tap <strong>I have paid</strong>.</p>
+            <div id="subPaymentOptions" class="checkout-payment-options"></div>
+            <button type="button" id="subPaidBtn" class="checkout-primary-btn">I have paid</button>
+        </div>
+
+        <div id="subStep2" style="display:none;">
+            <span class="checkout-step-pill">Step 2 — upload proof</span>
+            <p class="checkout-hint">Upload your M-Pesa confirmation screenshot for verification.</p>
+            <input type="file" id="subScreenshot" accept="image/jpeg,image/png,image/webp" class="checkout-file-input">
+            <div id="subScreenshotPreview" class="checkout-preview"></div>
+            <button type="button" id="subVerifyBtn" class="checkout-primary-btn">Verify payment</button>
+        </div>
+
+        <div id="subStep3" style="display:none;">
+            <div class="stream-loader">
+                <div class="stream-loader-spinner"></div>
+                <h3 class="stream-loader-title">Verifying your payment</h3>
+                <div id="subStreamSteps" class="stream-loader-steps"></div>
+            </div>
+        </div>
+
+        <div id="subStepPending" style="display:none;" class="checkout-result pending">
+            <i class="fas fa-clock"></i>
+            <h4>Awaiting approval</h4>
+            <p id="subPendingMessage">Your upgrade request has been submitted. EventHub will activate your plan after reviewing your payment.</p>
+            <button type="button" id="subPendingCloseBtn" class="checkout-primary-btn">Done</button>
+        </div>
+
+        <div id="subStepFail" style="display:none;" class="checkout-result fail">
+            <p id="subFailMessage">Something went wrong.</p>
+            <button type="button" id="subRetryBtn" class="checkout-secondary-btn">Try again</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/organizer/subscription.js' %}?v=1"></script>
+{% endblock %}

@@ -121,6 +121,19 @@ def api_organizer_events_list(request):
 @require_http_methods(["POST"])
 def api_organizer_events_create(request):
     """Create a new event."""
+    from subscriptions.services import can_create_event, get_subscription_usage
+
+    allowed, message, code = can_create_event(request.user)
+    if not allowed:
+        usage = get_subscription_usage(request.user)
+        return JsonResponse({
+            'success': False,
+            'message': message,
+            'code': code,
+            'upgrade_required': code == 'upgrade_required',
+            'usage': usage,
+        }, status=403)
+
     try:
         data = json.loads(request.body)
         name = data.get('name', '').strip() or data.get('title', '').strip()

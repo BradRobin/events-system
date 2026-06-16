@@ -55,6 +55,16 @@ from payments.order_views import (
     organizer_reject_order,
     organizer_payment_order_screenshot,
 )
+from subscriptions.views import (
+    ocr_health,
+    organizer_subscription_status,
+    create_subscription_order,
+    subscription_order_status,
+    verify_subscription_screenshot,
+    admin_pending_subscription_orders,
+    admin_approve_subscription_order,
+    admin_reject_subscription_order,
+)
 from reviews.views import (
     api_my_reviews,
     api_event_reviews,
@@ -275,6 +285,16 @@ urlpatterns = [
     path('api/organizer/settings/api-keys/<str:key_id>/revoke/', api_organizer_settings_apikeys_revoke, name='api_organizer_settings_apikeys_revoke'),
     path('api/organizer/settings/mpesa/', api_organizer_settings_mpesa, name='api_organizer_settings_mpesa'),
     path('api/organizer/settings/mpesa/update/', api_organizer_settings_mpesa_update, name='api_organizer_settings_mpesa_update'),
+
+    # Organizer subscription plans
+    path('api/health/ocr/', ocr_health, name='ocr_health'),
+    path('api/organizer/subscription/', organizer_subscription_status, name='organizer_subscription_status'),
+    path('api/organizer/subscription/orders/create/', create_subscription_order, name='create_subscription_order'),
+    path('api/organizer/subscription/orders/<int:order_id>/status/', subscription_order_status, name='subscription_order_status'),
+    path('api/organizer/subscription/orders/<int:order_id>/verify-screenshot/', verify_subscription_screenshot, name='verify_subscription_screenshot'),
+    path('api/admin/subscription-orders/pending/', admin_pending_subscription_orders, name='admin_pending_subscription_orders'),
+    path('api/admin/subscription-orders/<int:order_id>/approve/', admin_approve_subscription_order, name='admin_approve_subscription_order'),
+    path('api/admin/subscription-orders/<int:order_id>/reject/', admin_reject_subscription_order, name='admin_reject_subscription_order'),
 
     # Manual M-Pesa payment orders
     path('api/attendee/payment-orders/create/', create_payment_order, name='create_payment_order'),

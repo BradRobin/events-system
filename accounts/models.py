@@ -51,6 +51,20 @@ class User(AbstractUser):
         blank=True,
     )
 
+    SUBSCRIPTION_PLAN_CHOICES = (
+        ('free', 'Free'),
+        ('plus', 'Plus'),
+        ('premium', 'Premium'),
+    )
+    subscription_plan = models.CharField(
+        max_length=20,
+        choices=SUBSCRIPTION_PLAN_CHOICES,
+        default='free',
+        blank=True,
+    )
+    subscription_started_at = models.DateTimeField(null=True, blank=True)
+    subscription_expires_at = models.DateTimeField(null=True, blank=True)
+
     def has_mpesa_payment_config(self):
         return bool(
             self.mpesa_display_name.strip()

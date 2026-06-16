@@ -75,6 +75,12 @@ urlpatterns = [
     path('settings/',
          TemplateView.as_view(template_name='organizer/dashboard/settings.html'),
          name='organizer_settings'),
+
+    # Subscription billing
+    path('billing/',
+         TemplateView.as_view(template_name='organizer/dashboard/billing.html'),
+         name='organizer_billing'),
+
     path('settings/general/',
          TemplateView.as_view(template_name='organizer/dashboard/settings.html'),
          name='organizer_settings_general'),

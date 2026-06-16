@@ -819,6 +819,11 @@ class OrganizerAPIService {
         if (errorData && errorData.admin_details) {
             error.adminDetails = errorData.admin_details;
         }
+        if (errorData) {
+            error.upgrade_required = errorData.upgrade_required;
+            error.usage = errorData.usage;
+            error.code = errorData.code;
+        }
         
         switch (response.status) {
             case 400:

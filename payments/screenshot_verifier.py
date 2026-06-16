@@ -83,8 +83,19 @@ def _number_in_text(numbers, text):
     normalized = re.sub(r'\D', '', text or '')
     for number in numbers:
         digits = re.sub(r'\D', '', number or '')
-        if digits and digits in normalized:
+        if not digits:
+            continue
+        if digits in normalized:
             return True, number
+        # Kenyan local 07xx vs 2547xx
+        if digits.startswith('254') and len(digits) >= 12:
+            local = '0' + digits[3:]
+            if local in normalized:
+                return True, number
+        if digits.startswith('0') and len(digits) >= 10:
+            intl = '254' + digits[1:]
+            if intl in normalized:
+                return True, number
     return False, None
 
 

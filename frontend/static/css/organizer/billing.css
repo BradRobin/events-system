@@ -1,0 +1,153 @@
+.plan-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.plan-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.plan-card.is-current {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35);
+}
+
+.plan-card.is-featured {
+    border-color: #16a34a;
+}
+
+.plan-card h3 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1.25rem;
+}
+
+.plan-price {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #f59e0b;
+}
+
+.plan-price span {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+}
+
+.plan-features li {
+    padding: 0.25rem 0;
+}
+
+.plan-features li i {
+    color: #22c55e;
+    margin-right: 0.4rem;
+}
+
+.plan-upgrade-btn {
+    margin-top: auto;
+    padding: 0.65rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+}
+
+.plan-upgrade-btn:disabled {
+    background: #475569;
+    cursor: not-allowed;
+}
+
+.subscription-usage-banner,
+.ocr-status-banner {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.subscription-usage-banner {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fde68a;
+}
+
+.ocr-status-banner.ok {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    color: #bbf7d0;
+}
+
+.ocr-status-banner.warn {
+    background: rgba(251, 191, 36, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    color: #fde68a;
+}
+
+.upgrade-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.upgrade-modal {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 420px;
+    width: 100%;
+    color: #e2e8f0;
+}
+
+.upgrade-modal h3 {
+    margin-top: 0;
+    color: #f59e0b;
+}
+
+.upgrade-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.upgrade-modal-actions button {
+    flex: 1;
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.upgrade-modal-actions .primary {
+    background: #16a34a;
+    color: #fff;
+}
+
+.upgrade-modal-actions .secondary {
+    background: #334155;
+    color: #e2e8f0;
+}

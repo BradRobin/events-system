@@ -201,6 +201,16 @@ async function saveEvent() {
         bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
         loadEvents(currentPage);
     } catch(e) {
+        if (e.upgrade_required) {
+            if (typeof window.showOrganizerUpgradeModal === 'function') {
+                window.showOrganizerUpgradeModal(e.message);
+            } else {
+                if (window.confirm((e.message || 'Upgrade required') + '\n\nGo to Plans & Billing now?')) {
+                    window.location.href = '/organizer/billing/';
+                }
+            }
+            return;
+        }
         if(window.showToast) window.showToast(e.message, 'error');
     }
 }

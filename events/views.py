@@ -385,14 +385,29 @@ from .models import Category, Event
 
 
 def _events_with_image_first(queryset):
-    """Prioritize events that have a banner image, then soonest start date."""
+    """Premium/Plus boost, then banner image, then soonest start date."""
+    now = timezone.now()
     return queryset.annotate(
+        _plan_rank=Case(
+            When(
+                Q(organizer__subscription_plan='premium')
+                & (Q(organizer__subscription_expires_at__isnull=True) | Q(organizer__subscription_expires_at__gt=now)),
+                then=Value(3),
+            ),
+            When(
+                Q(organizer__subscription_plan='plus')
+                & (Q(organizer__subscription_expires_at__isnull=True) | Q(organizer__subscription_expires_at__gt=now)),
+                then=Value(2),
+            ),
+            default=Value(1),
+            output_field=IntegerField(),
+        ),
         _has_image=Case(
             When(Q(banner_image='') | Q(banner_image__isnull=True), then=Value(0)),
             default=Value(1),
             output_field=IntegerField(),
-        )
-    ).order_by('-_has_image', 'start_date')
+        ),
+    ).order_by('-_plan_rank', '-_has_image', 'start_date')
 
 
 def resolve_banner_image(value):
@@ -431,7 +446,7 @@ def api_event_list(request):
 
     # Construct unique cache key based on query params
     params_str = f"search:{query}|cat:{category_id}|city:{city}|ord:{ordering}|page:{page}|limit:{limit}"
-    cache_key = f"api_event_list_v2_{hashlib.md5(params_str.encode('utf-8')).hexdigest()}"
+    cache_key = f"api_event_list_v3_{hashlib.md5(params_str.encode('utf-8')).hexdigest()}"
 
     # Try cache lookup first
     cached_data = cache.get(cache_key)
@@ -439,8 +454,6 @@ def api_event_list(request):
         return JsonResponse(cached_data)
         
     events = Event.objects.filter(status='published', end_date__gte=timezone.now()).select_related('category', 'organizer')
-    
-    if query:
         events = events.filter(
             Q(title__icontains=query) |
             Q(description__icontains=query) |
