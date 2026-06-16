@@ -39,12 +39,14 @@ class GlobalErrorHandler {
         
         let userMessage = 'An unexpected error occurred. Please refresh or try again.';
         if (error && error.message) {
-            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            if (window.UserFriendlyErrors) {
+                userMessage = window.UserFriendlyErrors.sanitizeUserMessage(error.message, {
+                    fallback: userMessage,
+                });
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
                 userMessage = 'Network connection lost. Please check your internet connection.';
             } else if (error instanceof TypeError) {
                 userMessage = 'A display error occurred. Please reload the page.';
-            } else {
-                userMessage = error.message;
             }
         }
         
@@ -59,6 +61,7 @@ class GlobalErrorHandler {
 
         if (reason) {
             const message = reason.message || String(reason);
+            const url = reason.url || (typeof window !== 'undefined' ? window.location.pathname : '');
             
             if (reason.status) {
                 switch (reason.status) {
@@ -84,12 +87,14 @@ class GlobalErrorHandler {
                         userMessage = 'Server error. Please try again later.';
                         break;
                     default:
-                        userMessage = message;
+                        userMessage = window.UserFriendlyErrors
+                            ? window.UserFriendlyErrors.sanitizeUserMessage(message, { url: url, status: reason.status })
+                            : 'Something went wrong. Please try again.';
                 }
             } else if (message.includes('Failed to fetch') || message.includes('timeout') || message.includes('NetworkError')) {
                 userMessage = 'Network connection failed. Please check your internet connection.';
-            } else {
-                userMessage = message;
+            } else if (window.UserFriendlyErrors) {
+                userMessage = window.UserFriendlyErrors.sanitizeUserMessage(message, { url: url });
             }
         }
 
@@ -104,6 +109,12 @@ class GlobalErrorHandler {
     }
 
     showToast(message, type = 'error') {
+        if ((type === 'error' || type === 'danger') && window.UserFriendlyErrors) {
+            message = window.UserFriendlyErrors.sanitizeUserMessage(message, {
+                fallback: 'Something went wrong. Please try again.',
+            });
+        }
+
         // Suppress 404s from popping up as intrusive toasts
         if (message && (message.includes('404') || message.includes('not found') || message.toLowerCase().includes('resource not found'))) {
             return;

@@ -26,6 +26,7 @@ from events.views import (
 )
 from events.seo_views import robots_txt, sitemap_xml
 from accounts.auth_views import register_submit, login_submit
+from accounts.api_errors import safe_api_error_response
 from bookings.views import (
     ticket_checkout_api, api_tickets_upcoming, api_tickets_past,
     api_ticket_detail, api_ticket_qr, api_ticket_download,
@@ -162,7 +163,7 @@ def api_contact_submit(request):
         
         return JsonResponse({'success': True, 'message': 'Thank you! We will get back to you soon.'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='support', status=500)
 
 @csrf_exempt
 @require_http_methods(["GET"])

@@ -44,7 +44,13 @@ async function loadPendingOrganizers() {
         console.error('Error loading pending organizers:', error);
         const container = document.getElementById('pendingOrganizersList');
         if (container) {
-            container.innerHTML = '<div class="empty-state">Failed to load applications</div>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Unable to Load Applications</h3>
+                    <p>The system was unable to fetch pending organizers. Please refresh the page or try again later.</p>
+                </div>
+            `;
         }
     } finally {
         if (typeof Loader !== 'undefined') Loader.hide();

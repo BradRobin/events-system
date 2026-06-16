@@ -11,6 +11,7 @@ from datetime import timedelta
 import dateutil.parser
 
 from accounts.auth import authenticate_bearer
+from accounts.api_errors import safe_api_error_response
 from bookings.email_service import send_organizer_event_crud_email
 
 from bookings.models import Ticket
@@ -204,7 +205,7 @@ def api_organizer_events_create(request):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 @csrf_exempt
 @organizer_required
@@ -311,7 +312,7 @@ def api_organizer_events_update(request, event_id):
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 @csrf_exempt
 @organizer_required
@@ -338,7 +339,7 @@ def api_organizer_events_delete(request, event_id):
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 
 # ============ ORGANIZER SETTINGS VIEWS ============
@@ -380,7 +381,7 @@ def api_organizer_settings_general_update(request):
         user.save()
         return JsonResponse({'success': True, 'message': 'General settings saved successfully!'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 @csrf_exempt
 @organizer_required
@@ -435,7 +436,7 @@ def api_organizer_settings_mpesa_update(request):
         user.save()
         return JsonResponse({'success': True, 'message': 'M-Pesa payment settings saved successfully!'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 
 @csrf_exempt
@@ -472,7 +473,7 @@ def api_organizer_payouts_settings_update(request):
         user.save()
         return JsonResponse({'success': True, 'message': 'Payment Settlement settings updated!'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 @csrf_exempt
 @organizer_required
@@ -520,7 +521,7 @@ def api_organizer_settings_team_add(request):
         
         return JsonResponse({'success': True, 'message': 'Team member invited!'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 @csrf_exempt
 @organizer_required
@@ -537,7 +538,7 @@ def api_organizer_settings_team_remove(request, member_id):
         except TeamMember.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Member not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 @csrf_exempt
 @organizer_required
@@ -585,7 +586,7 @@ def api_organizer_settings_apikeys_create(request):
             'created_at': k.created_at.isoformat()
         })
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 @csrf_exempt
 @organizer_required
@@ -602,7 +603,7 @@ def api_organizer_settings_apikeys_revoke(request, key_id):
         except ApiKey.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'API Key not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=400)
+        return safe_api_error_response(request, e, context_key='events', status=400)
 
 
 @csrf_exempt
@@ -769,7 +770,7 @@ def api_organizer_event_analytics(request, event_id):
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='events', status=500)
 
 
 ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.svg', '.webp', '.gif'}
@@ -894,7 +895,7 @@ def api_organizer_upload_image(request, event_id):
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found.'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='events', status=500)
 
 
 @csrf_exempt
@@ -954,7 +955,7 @@ def api_organizer_upload_gallery(request, event_id):
     except Event.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Event not found.'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='events', status=500)
 
 
 @csrf_exempt
@@ -984,6 +985,6 @@ def api_organizer_delete_gallery_image(request, event_id, image_id):
     except EventImage.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Gallery image not found.'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='events', status=500)
 
 

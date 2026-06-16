@@ -2,6 +2,7 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from accounts.api_errors import safe_api_error_response
 from .mpesa import MpesaClient
 from .models import Payment
 
@@ -49,7 +50,7 @@ def initiate_payment(request):
             })
 
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='payments', status=500)
 
 
 @csrf_exempt

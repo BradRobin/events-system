@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .auth import issue_token_pair, login_user
+from .api_errors import safe_api_error_response
 from .models import User as CustomUser
 from .views import PUBLIC_REGISTRATION_ROLES, user_payload
 
@@ -63,7 +64,7 @@ def login_submit(request):
             },
         })
     except Exception as exc:
-        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+        return safe_api_error_response(request, exc, message='Sign in could not be completed. Please try again.')
 
 
 @csrf_exempt
@@ -122,4 +123,4 @@ def register_submit(request):
             },
         }, status=201)
     except Exception as exc:
-        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+        return safe_api_error_response(request, exc, message='Registration could not be completed. Please try again.')

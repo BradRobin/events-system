@@ -69,6 +69,8 @@ async function apiRequest(url, method = 'GET', data = null) {
         options.body = JSON.stringify(data);
     }
     
+    const sanitizeOptions = { url: url };
+    
     try {
         const response = await fetch(url, options);
         
@@ -80,13 +82,20 @@ async function apiRequest(url, method = 'GET', data = null) {
         } else {
             const text = await response.text();
             if (!response.ok) {
-                throw new Error(`Server returned an invalid response (${response.status})`);
+                const msg = window.UserFriendlyErrors
+                    ? window.UserFriendlyErrors.getContextualMessage(url, response.status)
+                    : 'The system encountered a problem. Please try again shortly.';
+                throw new Error(msg);
             }
             return text;
         }
         
         if (!response.ok) {
-            const errorObj = new Error(result.message || result.error || result.detail || 'Request failed');
+            const msg = window.UserFriendlyErrors
+                ? window.UserFriendlyErrors.extractApiErrorMessage(result, { url: url, status: response.status })
+                : (result.message || result.error || result.detail || 'Request failed');
+            const errorObj = new Error(msg);
+            errorObj.status = response.status;
             if (result.admin_details) {
                 errorObj.adminDetails = result.admin_details;
             }
@@ -97,16 +106,24 @@ async function apiRequest(url, method = 'GET', data = null) {
     } catch (error) {
         console.error('API Error:', error);
         
-        let msg = error.message;
-        if (error instanceof SyntaxError || msg.includes('JSON')) {
+        let msg = error.message || '';
+        if (window.UserFriendlyErrors) {
+            msg = window.UserFriendlyErrors.sanitizeUserMessage(msg, {
+                url: url,
+                status: error.status,
+            });
+        } else if (error instanceof SyntaxError || msg.includes('JSON')) {
             msg = 'Server connection error. Please try again.';
         }
         
         // Suppress 404 Not Found from showing toast popups automatically
-        if (!msg.includes('404')) {
+        if (error.status !== 404 && !msg.includes('404')) {
             showToast(msg, 'error', error.adminDetails);
         }
-        throw error;
+        const sanitizedError = new Error(msg);
+        sanitizedError.status = error.status;
+        sanitizedError.adminDetails = error.adminDetails;
+        throw sanitizedError;
     }
 }
 
@@ -128,6 +145,11 @@ function getCSRFToken() {
 
 // Toast Notification - Bottom Right
 function showToast(message, type = 'success', adminDetails = null) {
+    if ((type === 'error' || type === 'danger') && window.UserFriendlyErrors) {
+        message = window.UserFriendlyErrors.sanitizeUserMessage(message, {
+            fallback: 'Something went wrong. Please try again.',
+        });
+    }
     const toast = document.createElement('div');
     toast.className = `admin-toast ${type === 'error' ? 'toast-error' : ''}`;
     

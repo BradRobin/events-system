@@ -1,8 +1,9 @@
 import logging
 import traceback
+
 from django.http import JsonResponse
-from django.conf import settings
-from django.shortcuts import render
+
+from accounts.api_errors import context_key_from_path, friendly_message
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +27,25 @@ class GlobalExceptionMiddleware:
         is_api = request.path.startswith('/api/') or request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
         if is_api:
-            # Prepare standard generic error response
+            context_key = context_key_from_path(request.path)
+            user_message = friendly_message(context_key)
             response_data = {
-                'error': 'Something went wrong. Please try again later.'
+                'success': False,
+                'message': user_message,
+                'error': user_message,
             }
 
-            # If user is admin, provide technical details
-            if hasattr(request, 'user') and request.user.is_authenticated and getattr(request.user, 'role', '') == 'admin':
+            user = getattr(request, 'user', None)
+            is_admin = (
+                user
+                and user.is_authenticated
+                and (
+                    user.is_staff
+                    or user.is_superuser
+                    or getattr(user, 'role', '') == 'admin'
+                )
+            )
+            if is_admin:
                 response_data['admin_details'] = traceback.format_exc()
 
             return JsonResponse(response_data, status=500)

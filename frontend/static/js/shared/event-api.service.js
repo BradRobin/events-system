@@ -31,13 +31,20 @@ class EventApiService {
             
             if (!response.ok) {
                 const error = await response.json().catch(() => ({ message: 'Request failed' }));
-                throw new Error(error.message || 'Request failed');
+                const rawMessage = error.message || error.error || 'Request failed';
+                const safeMessage = window.UserFriendlyErrors
+                    ? window.UserFriendlyErrors.sanitizeUserMessage(rawMessage, { url: endpoint })
+                    : rawMessage;
+                throw new Error(safeMessage);
             }
             
             return await response.json();
         } catch (error) {
             console.error('API Error:', error);
-            this.showToast(error.message, 'error');
+            const toastMessage = window.UserFriendlyErrors
+                ? window.UserFriendlyErrors.sanitizeUserMessage(error.message, { url: endpoint })
+                : (error.message || 'Something went wrong. Please try again.');
+            this.showToast(toastMessage, 'error');
             return null;
         }
     }

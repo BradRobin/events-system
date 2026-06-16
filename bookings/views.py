@@ -8,6 +8,7 @@ from events.views import resolve_banner_image
 from .models import Ticket
 from .email_service import send_ticket_confirmation
 from accounts.auth import authenticate_bearer
+from accounts.api_errors import safe_api_error_response
 from django.utils import timezone
 
 User = get_user_model()
@@ -90,7 +91,7 @@ def ticket_checkout_api(request):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='checkout', status=500)
 
 
 @csrf_exempt

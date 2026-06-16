@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 
 from events.models import Event, Category
 from bookings.models import Ticket
+from accounts.api_errors import safe_api_error_response
 from accounts.admin_store import (
     get_notifications, mark_notification_read, mark_all_notifications_read,
     delete_notification, dismiss_notification,
@@ -86,7 +87,7 @@ def dashboard_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -104,7 +105,7 @@ def recent_events(request):
         } for e in events]
         return JsonResponse({'success': True, 'events': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -124,7 +125,7 @@ def recent_bookings(request):
         } for b in bookings]
         return JsonResponse({'success': True, 'bookings': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -160,7 +161,7 @@ def top_events(request):
             })
         return JsonResponse({'success': True, 'events': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -207,7 +208,7 @@ def revenue_chart(request):
 
         return JsonResponse({'success': True, 'labels': labels, 'values': values})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -224,7 +225,7 @@ def categories_chart(request):
         values = [cat.ticket_count for cat in categories]
         return JsonResponse({'success': True, 'labels': labels, 'values': values})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -254,7 +255,7 @@ def user_growth_chart(request):
             
         return JsonResponse({'success': True, 'labels': labels, 'values': values})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -301,7 +302,7 @@ def recent_activity(request):
         activities = sorted(activities, key=lambda x: x['created_at'], reverse=True)[:6]
         return JsonResponse({'success': True, 'activities': activities})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -311,7 +312,7 @@ def pending_count(request):
         count = Event.objects.filter(status='pending').count()
         return JsonResponse({'success': True, 'pending_count': count, 'count': count})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 2. EVENTS APIS (ALL & PENDING) ============
@@ -358,7 +359,7 @@ def events_list_api(request):
         }
         return JsonResponse({'success': True, 'events': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -412,7 +413,7 @@ def api_pending_events(request):
         }
         return JsonResponse({'success': True, 'events': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -466,7 +467,7 @@ def api_event_detail(request, event_id):
         }
         return JsonResponse({'success': True, 'event': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -479,7 +480,7 @@ def api_approve_event(request, event_id):
         expire_notifications_for_entity('event', e.id, ['event_pending_approval'])
         return JsonResponse({'success': True, 'message': 'Event approved successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -500,7 +501,7 @@ def api_reject_event(request, event_id):
         expire_notifications_for_entity('event', e.id, ['event_pending_approval'])
         return JsonResponse({'success': True, 'message': 'Event rejected successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["DELETE"])
@@ -511,7 +512,7 @@ def api_delete_event(request, event_id):
         e.delete()
         return JsonResponse({'success': True, 'message': 'Event deleted successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -550,7 +551,7 @@ def api_event_history(request, event_id):
             })
         return JsonResponse({'success': True, 'history': history})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -568,7 +569,7 @@ def api_event_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -582,7 +583,7 @@ def api_bulk_approve(request):
             expire_notifications_for_entity('event', event_id, ['event_pending_approval'])
         return JsonResponse({'success': True, 'message': f'Successfully approved {len(ids)} events'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -596,7 +597,7 @@ def api_bulk_reject(request):
             expire_notifications_for_entity('event', event_id, ['event_pending_approval'])
         return JsonResponse({'success': True, 'message': f'Successfully rejected {len(ids)} events'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -607,7 +608,7 @@ def categories_list_api(request):
         data = [{'id': c.id, 'name': c.name} for c in categories]
         return JsonResponse({'success': True, 'categories': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -622,7 +623,7 @@ def events_upcoming_api(request):
         } for e in events]
         return JsonResponse({'success': True, 'events': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -650,7 +651,7 @@ def api_events_export(request):
             ])
         return response
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 3. BOOKINGS & REFUNDS APIS ============
@@ -710,7 +711,7 @@ def bookings_list_api(request):
         }
         return JsonResponse({'success': True, 'bookings': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -736,7 +737,7 @@ def bookings_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -757,7 +758,7 @@ def bookings_revenue_metrics(request):
         )
         return JsonResponse({'success': True, **data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -782,7 +783,7 @@ def booking_detail(request, booking_id):
         }
         return JsonResponse({'success': True, 'booking': booking})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -795,7 +796,7 @@ def booking_refund(request, booking_id):
         expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund processed successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -807,7 +808,7 @@ def booking_cancel(request, booking_id):
         t.save()
         return JsonResponse({'success': True, 'message': 'Booking cancelled successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -835,7 +836,7 @@ def bookings_export(request):
             ])
         return response
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 4. REFUNDS MANAGEMENT APIS ============
@@ -890,7 +891,7 @@ def refunds_list_api(request):
         }
         return JsonResponse({'success': True, 'refunds': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -913,7 +914,7 @@ def refunds_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -934,7 +935,7 @@ def refund_detail_api(request, refund_id):
         }
         return JsonResponse({'success': True, 'refund': refund})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -947,7 +948,7 @@ def refund_approve_api(request, refund_id):
         expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund approved successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -960,7 +961,7 @@ def refund_reject_api(request, refund_id):
         expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund rejected. Ticket restored.'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -986,7 +987,7 @@ def refunds_export(request):
             ])
         return response
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 5. USERS MANAGEMENT APIS ============
@@ -1048,7 +1049,7 @@ def users_list_api(request):
         }
         return JsonResponse({'success': True, 'users': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1081,7 +1082,7 @@ def users_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1091,7 +1092,7 @@ def user_reset_password(request, user_id):
         # Return success simulation
         return JsonResponse({'success': True, 'message': 'Password reset link sent successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1103,7 +1104,7 @@ def user_suspend(request, user_id):
         u.save()
         return JsonResponse({'success': True, 'message': 'User suspended successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1158,7 +1159,7 @@ def user_detail_api(request, user_id):
             })
         return JsonResponse({'success': True, 'user': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1170,7 +1171,7 @@ def user_activate(request, user_id):
         u.save()
         return JsonResponse({'success': True, 'message': 'User activated successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1202,7 +1203,7 @@ def users_export(request):
             ])
         return response
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ ORGANIZER MANAGEMENT APIS ============
@@ -1233,7 +1234,7 @@ def organizers_stats_api(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1283,7 +1284,7 @@ def organizers_verified_api(request):
         }
         return JsonResponse({'success': True, 'organizers': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1320,7 +1321,7 @@ def organizers_suspended_api(request):
         }
         return JsonResponse({'success': True, 'organizers': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 def _pending_organizers_queryset():
     approved_ids = set(get_approved_organizer_ids())
@@ -1348,7 +1349,7 @@ def organizers_pending_stats_api(request):
             }
         })
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -1382,7 +1383,7 @@ def organizers_pending_api(request):
         }
         return JsonResponse({'success': True, 'organizers': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1404,7 +1405,7 @@ def organizer_detail_api(request, organizer_id):
         }
         return JsonResponse({'success': True, 'organizer': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1445,7 +1446,7 @@ def organizer_create_api(request):
         )
         return JsonResponse({'success': True, 'message': 'Organizer created successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1457,7 +1458,7 @@ def organizer_suspend_api(request, organizer_id):
         u.save()
         return JsonResponse({'success': True, 'message': 'Organizer suspended successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1468,7 +1469,7 @@ def organizer_verify_api(request, organizer_id):
         approve_organizer(u.id)
         return JsonResponse({'success': True, 'message': 'Organizer verified successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1482,7 +1483,7 @@ def organizer_reject_api(request, organizer_id):
         u.save()
         return JsonResponse({'success': True, 'message': f'Organizer rejected. Reason: {reason}'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1494,7 +1495,7 @@ def organizer_reactivate_api(request, organizer_id):
         u.save()
         return JsonResponse({'success': True, 'message': 'Organizer reactivated successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1505,7 +1506,7 @@ def organizer_delete_api(request, organizer_id):
         u.delete()
         return JsonResponse({'success': True, 'message': 'Organizer deleted successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 6. TICKETS MANAGEMENT & QR VERIFY APIS ============
@@ -1556,7 +1557,7 @@ def tickets_list_api(request):
         }
         return JsonResponse({'success': True, 'tickets': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1578,7 +1579,7 @@ def ticket_detail_api(request, ticket_number):
         }
         return JsonResponse({'success': True, 'ticket': ticket})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1593,7 +1594,7 @@ def ticket_checkin_api(request, ticket_number):
         t.save()
         return JsonResponse({'success': True, 'message': 'Check-in processed successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1639,7 +1640,7 @@ def ticket_verify_api(request, ticket_number):
             'ticket': ticket_data
         })
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1666,7 +1667,7 @@ def event_tickets_stats(request, event_id):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1681,7 +1682,7 @@ def event_recent_checkins(request, event_id):
         } for t in tickets]
         return JsonResponse({'success': True, 'checkins': checkins})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1706,7 +1707,7 @@ def tickets_export(request):
             ])
         return response
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 7. PAYMENTS (TRANSACTIONS) & PAYOUTS APIS ============
@@ -1761,7 +1762,7 @@ def transactions_list_api(request):
         }
         return JsonResponse({'success': True, 'transactions': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1794,7 +1795,7 @@ def transactions_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1824,7 +1825,7 @@ def transaction_detail_api(request, transaction_id):
         }
         return JsonResponse({'success': True, 'transaction': transaction})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1840,7 +1841,7 @@ def transaction_refund_api(request):
         expire_notifications_for_entity('refund', t.id, ['refund_pending'])
         return JsonResponse({'success': True, 'message': 'Refund completed successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1872,7 +1873,7 @@ def transactions_export(request):
             ])
         return response
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # Payouts API
@@ -1905,7 +1906,7 @@ def payouts_list_api(request):
             })
         return JsonResponse({'success': True, 'payouts': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -1935,7 +1936,7 @@ def payouts_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -1980,7 +1981,7 @@ def payout_detail_api(request, payout_id):
         }
         return JsonResponse({'success': True, 'payout': payout})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 8. REPORTS & ANALYTICS APIS ============
@@ -2033,7 +2034,7 @@ def reports_kpi(request):
             'summary': summary_data
         })
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2123,7 +2124,7 @@ def reports_sales(request):
             },
         })
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2182,7 +2183,7 @@ def reports_events_api(request):
         }
         return JsonResponse({'success': True, 'events': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2232,7 +2233,7 @@ def reports_events_summary(request):
         }
         return JsonResponse({'success': True, 'summary': summary, 'stats': summary})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 9. SUPPORT TICKETS APIS (DYNAMIC JSON STORE) ============
@@ -2254,7 +2255,7 @@ def support_tickets_list(request):
             
         return JsonResponse({'success': True, 'tickets': tickets})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2266,7 +2267,7 @@ def support_ticket_detail_api(request, ticket_id):
             return JsonResponse({'success': False, 'message': 'Ticket not found'}, status=404)
         return JsonResponse({'success': True, 'ticket': t})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -2286,7 +2287,7 @@ def support_ticket_reply(request, ticket_id):
             
         return JsonResponse({'success': True, 'message': 'Reply sent successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2302,7 +2303,7 @@ def support_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 10. NOTIFICATIONS APIS (DYNAMIC JSON STORE) ============
@@ -2315,7 +2316,7 @@ def notifications_api(request):
         notifications = get_notifications()
         return JsonResponse({'success': True, 'notifications': notifications})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2326,7 +2327,7 @@ def api_notifications_recent(request):
         unread_count = len([n for n in notifications if not n['is_read']])
         return JsonResponse({'success': True, 'notifications': notifications[:10], 'unread_count': unread_count})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -2336,7 +2337,7 @@ def api_notification_mark_read(request, notification_id):
         mark_notification_read(notification_id)
         return JsonResponse({'success': True})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -2346,7 +2347,7 @@ def api_notifications_mark_all_read(request):
         mark_all_notifications_read()
         return JsonResponse({'success': True})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["DELETE"])
@@ -2358,7 +2359,7 @@ def api_notification_delete(request, notification_id):
             return JsonResponse({'success': False, 'message': 'Notification not found'}, status=404)
         return JsonResponse({'success': True})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -2371,7 +2372,7 @@ def api_notification_dismiss(request, notification_id):
         dismissed = dismiss_notification(notification_id, on_view=on_view, force=force)
         return JsonResponse({'success': True, 'dismissed': dismissed})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -2381,7 +2382,7 @@ def api_notifications_prune(request):
         notifications = get_notifications()
         return JsonResponse({'success': True, 'notifications': notifications})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 11. PROFILE & SETTINGS APIS ============
@@ -2408,7 +2409,7 @@ def user_profile(request):
         data = _serialize_admin_profile(u)
         return JsonResponse({'success': True, 'user': data, **data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2430,7 +2431,7 @@ def user_profile_update(request):
         profile = _serialize_admin_profile(u)
         return JsonResponse({'success': True, 'message': 'Profile updated', 'user': profile, **profile})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2449,7 +2450,7 @@ def user_profile_change_password(request):
         request.user.save()
         return JsonResponse({'success': True, 'message': 'Password changed successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2469,7 +2470,7 @@ def user_profile_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 def _default_settings():
@@ -2569,7 +2570,7 @@ def settings_api(request):
         settings = _get_stored_settings()
         return JsonResponse({'success': True, 'settings': settings, **settings})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2584,7 +2585,7 @@ def settings_general_api(request):
         _save_stored_settings(data)
         return JsonResponse({'success': True, 'message': 'Settings saved successfully'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2605,7 +2606,7 @@ def settings_security_api(request):
         _save_stored_settings({k: data[k] for k in security_keys if k in data})
         return JsonResponse({'success': True, 'message': 'Security settings saved'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2617,7 +2618,7 @@ def settings_api_key_api(request):
         api_key = store.get('api_key', 'eh_live_' + 'x' * 32)
         return JsonResponse({'success': True, 'api_key': api_key})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2632,7 +2633,7 @@ def settings_regenerate_api_key(request):
         save_store(store)
         return JsonResponse({'success': True, 'api_key': api_key})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2678,7 +2679,7 @@ def notification_templates_api(request):
         _save_notification_templates(templates)
         return JsonResponse({'success': True, 'template': template})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2703,7 +2704,7 @@ def notification_template_detail_api(request, template_id):
         _save_notification_templates(templates)
         return JsonResponse({'success': True, 'template': templates[idx]})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 @csrf_exempt
@@ -2717,7 +2718,7 @@ def user_profile_upload_avatar(request):
         avatar_url = u.get_avatar_url()
         return JsonResponse({'success': True, 'avatar_url': avatar_url, 'message': 'Avatar updated'})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 12. BRANDS MARKETING BROADCAST EMAIL API ============
@@ -2766,7 +2767,7 @@ def api_admin_broadcast(request):
         })
         
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 
 # ============ 9. CHECK-IN HISTORY & STATS APIS ============
@@ -2810,7 +2811,7 @@ def checkin_stats(request):
         }
         return JsonResponse({'success': True, 'stats': stats})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2858,7 +2859,7 @@ def checkin_events(request):
         }
         return JsonResponse({'success': True, 'events': data, 'pagination': pagination})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2891,7 +2892,7 @@ def checkin_recent(request):
             })
         return JsonResponse({'success': True, 'checkins': data})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2916,7 +2917,7 @@ def checkin_event_details(request, event_id):
         }
         return JsonResponse({'success': True, 'details': details})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2944,7 +2945,7 @@ def checkin_event_timeline(request, event_id):
 
         return JsonResponse({'success': True, 'labels': labels, 'values': values})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -2981,7 +2982,7 @@ def checkin_export(request):
             ])
         return response
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 
 @csrf_exempt
 @require_http_methods(["GET"])
@@ -3006,5 +3007,5 @@ def checkin_event_export(request, event_id):
             ])
         return response
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e)
 

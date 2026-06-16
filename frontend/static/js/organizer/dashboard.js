@@ -17,6 +17,11 @@ window.displayGreeting = function() {
 };
 
 window.showToast = function(message, type = 'info') {
+    if ((type === 'error' || type === 'danger') && window.UserFriendlyErrors) {
+        message = window.UserFriendlyErrors.sanitizeUserMessage(message, {
+            fallback: 'Something went wrong. Please try again.',
+        });
+    }
     let toastContainer = document.getElementById('toastContainer');
     if (!toastContainer) {
         toastContainer = document.createElement('div');

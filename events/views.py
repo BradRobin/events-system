@@ -10,6 +10,7 @@ from django.views.decorators.cache import cache_page
 
 from events.models import Event
 from accounts.models import User
+from accounts.api_errors import safe_api_error_response
 from bookings.models import Ticket
 from django.db.models import Sum, Avg
 
@@ -269,7 +270,7 @@ def organizer_dashboard_revenue(request):
             'values': values
         })
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='reports', status=500)
 
 
 def _organizer_user_from_request(request):
@@ -866,7 +867,7 @@ def api_events_check_expired(request):
         
     except Exception as e:
         logger.error("Error in api_events_check_expired: %s", e)
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        return safe_api_error_response(request, e, context_key='events', status=500)
 
 
 # ---------------------------------------------------------------------------
@@ -1068,7 +1069,9 @@ def api_db_status(request):
         )
         
     except Exception as e:
-        status_info['error'] = str(e)
+        status_info['error'] = 'Unable to load migration status. Please try again.'
+        if hasattr(request, 'user') and getattr(request.user, 'is_staff', False):
+            status_info['admin_details'] = str(e)
         
     return JsonResponse(status_info)
 

@@ -206,7 +206,7 @@ class AttendeeAPIService {
             this.pendingRequests.delete(requestKey);
             
             if (!response.ok) {
-                const error = await this.handleErrorResponse(response);
+                const error = await this.handleErrorResponse(response, endpoint);
                 throw error;
             }
             
@@ -237,11 +237,12 @@ class AttendeeAPIService {
     }
     
     // Handle error responses
-    async handleErrorResponse(response) {
+    async handleErrorResponse(response, endpoint = '') {
         let errorMessage = 'An error occurred';
+        let errorData = null;
         
         try {
-            const errorData = await response.json();
+            errorData = await response.json();
             if (errorData.errors) {
                 const detail = Object.values(errorData.errors).flat().join(' ');
                 if (detail) errorMessage = detail;
@@ -254,6 +255,10 @@ class AttendeeAPIService {
         const error = new Error(errorMessage);
         error.status = response.status;
         error.statusText = response.statusText;
+        error.url = endpoint;
+        if (errorData && errorData.admin_details) {
+            error.adminDetails = errorData.admin_details;
+        }
         
         switch (response.status) {
             case 400:
@@ -275,8 +280,18 @@ class AttendeeAPIService {
                 error.message = 'Too many requests. Please try again later';
                 break;
             case 500:
+            case 502:
+            case 503:
+            case 504:
                 error.message = 'Server error. Please try again later';
                 break;
+        }
+
+        if (window.UserFriendlyErrors) {
+            error.message = window.UserFriendlyErrors.sanitizeUserMessage(error.message, {
+                url: endpoint,
+                status: response.status,
+            });
         }
         
         return error;
