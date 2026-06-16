@@ -9,6 +9,7 @@ from django.views.decorators.http import require_http_methods
 from bookings.models import Ticket
 from bookings.views import get_authenticated_attendee
 from events.models import Event
+from payments.organizer_notifications import notify_organizer_event_review
 
 from .models import EventReview
 
@@ -28,14 +29,14 @@ def _review_payload(review):
 def _user_can_review_event(user, event):
     """Attendee may review only past events they attended (valid ticket)."""
     if event.end_date >= timezone.now():
-        return False, 'You can only review events that have ended.'
+        return False, 'You can only review events that have ended.', None
     ticket = Ticket.objects.filter(
         attendee=user,
         event=event,
         status__in=['valid', 'checked_in'],
     ).order_by('-purchase_date').first()
     if not ticket:
-        return False, 'You need a ticket for this event to leave a review.'
+        return False, 'You need a ticket for this event to leave a review.', None
     return True, None, ticket
 
 
@@ -122,6 +123,7 @@ def api_create_review(request, event_id):
         rating=rating,
         comment=comment,
     )
+    notify_organizer_event_review(review)
     return JsonResponse({'success': True, 'review': _review_payload(review)}, status=201)
 
 

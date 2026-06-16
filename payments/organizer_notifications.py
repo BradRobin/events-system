@@ -55,3 +55,28 @@ def notify_organizer_event_rejected(event, reason=''):
         action_type='event_rejected',
         action_url=f'/organizer/events/?edit={event.id}',
     )
+
+
+def notify_organizer_event_review(review):
+    """Notify organizer when an attendee leaves a review for their event."""
+    event = review.event
+    attendee_name = (
+        getattr(review.user, 'full_name', None)
+        or review.user.get_full_name()
+        or review.user.username
+    )
+    stars = '★' * review.rating
+    excerpt = (review.comment or '').strip()
+    if len(excerpt) > 120:
+        excerpt = excerpt[:117] + '...'
+    detail = f' "{excerpt}"' if excerpt else ''
+    return create_organizer_notification(
+        organizer=event.organizer,
+        title='New event review',
+        message=(
+            f'{attendee_name} rated "{event.title}" {stars} ({review.rating}/5).{detail}'
+        ),
+        notification_type='info',
+        action_type='event_review',
+        action_url='/organizer/reviews/',
+    )

@@ -313,6 +313,7 @@
         if (notif.action_type === 'payment_approval') return 'fa-receipt';
         if (notif.action_type === 'event_approved') return 'fa-calendar-check';
         if (notif.action_type === 'event_rejected') return 'fa-calendar-times';
+        if (notif.action_type === 'event_review') return 'fa-star';
         return organizerIconForType(notif.notification_type || notif.type);
     }
 
@@ -370,7 +371,15 @@
             tokenKey: 'organizer_access_token',
             useSessionAuth: true,
             actionUrl: function (n) {
-                if (n.action_url) return n.action_url;
+                if (n.action_url) {
+                    if (n.action_url.indexOf('/tickets/detail/?ticket=') === 0) {
+                        return '/tickets/';
+                    }
+                    return n.action_url;
+                }
+                if (n.action_type === 'event_review') {
+                    return '/organizer/reviews/';
+                }
                 if (n.requires_action || n.action_type === 'payment_approval') {
                     return '/organizer/dashboard/';
                 }

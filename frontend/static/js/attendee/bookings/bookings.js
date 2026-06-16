@@ -446,23 +446,19 @@ function openReviewModal(eventId, initialRating) {
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
     const userName = user.name || 'Guest User';
     
-    let existingTitle = '';
     let existingContent = '';
     
     try {
         const reviews = JSON.parse(localStorage.getItem(`reviews_${eventId}`) || '[]');
         const userReview = reviews.find(r => r.userName === userName);
         if (userReview) {
-            existingTitle = userReview.title || '';
-            existingContent = userReview.content || '';
+            existingContent = userReview.content || userReview.comment || '';
         }
     } catch (e) {
         console.error('Error fetching existing review details:', e);
     }
     
-    const titleInput = document.getElementById('reviewTitle');
     const contentTextarea = document.getElementById('reviewText');
-    if (titleInput) titleInput.value = existingTitle;
     if (contentTextarea) contentTextarea.value = existingContent;
     
     setupModalStars(initialRating);
@@ -536,7 +532,6 @@ function setupReviewModalHandlers() {
 function submitBookingReview() {
     const eventId = document.getElementById('reviewEventId')?.value;
     const rating = parseInt(document.getElementById('reviewRating')?.value || 0, 10);
-    const title = document.getElementById('reviewTitle')?.value.trim();
     const content = document.getElementById('reviewText')?.value.trim();
 
     if (!eventId) {
@@ -547,14 +542,16 @@ function submitBookingReview() {
         showToast('Please select a rating between 1 and 5', 'error');
         return;
     }
+    if (!content) {
+        showToast('Please write your review before submitting', 'error');
+        return;
+    }
 
     const token = localStorage.getItem('attendee_access_token');
     if (!token) {
         showToast('Please login to write a review', 'info');
         return;
     }
-
-    const comment = [title, content].filter(Boolean).join('\n\n');
 
     fetch(`/api/attendee/reviews/create/${eventId}/`, {
         method: 'POST',
@@ -563,7 +560,7 @@ function submitBookingReview() {
             'Content-Type': 'application/json',
         },
         credentials: 'same-origin',
-        body: JSON.stringify({ rating, comment }),
+        body: JSON.stringify({ rating, comment: content }),
     })
         .then((res) => res.json().then((data) => ({ res, data })))
         .then(({ res, data }) => {

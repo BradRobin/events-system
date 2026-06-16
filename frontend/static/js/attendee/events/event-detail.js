@@ -148,7 +148,6 @@ function renderReviewsList(eventId) {
                 </div>
                 <div class="review-rating">${renderStars(review.rating)}</div>
             </div>
-            <div class="review-title">${escapeHtml(review.title)}</div>
             <div class="review-content">${escapeHtml(review.content)}</div>
         </div>
     `).join('');
@@ -750,11 +749,14 @@ function resetReviewForm() {
 
 async function submitReview(eventId) {
     const rating = parseInt(document.getElementById('reviewRating')?.value || 0, 10);
-    const title = document.getElementById('reviewTitle')?.value.trim();
     const content = document.getElementById('reviewText')?.value.trim();
 
     if (rating < 1 || rating > 5) {
         showToast('Please select a rating between 1 and 5', 'error');
+        return;
+    }
+    if (!content) {
+        showToast('Please write your review before submitting', 'error');
         return;
     }
 
@@ -764,8 +766,6 @@ async function submitReview(eventId) {
         return;
     }
 
-    const comment = [title, content].filter(Boolean).join('\n\n');
-
     try {
         const response = await fetch(`/api/attendee/reviews/create/${eventId}/`, {
             method: 'POST',
@@ -774,9 +774,14 @@ async function submitReview(eventId) {
                 'Content-Type': 'application/json',
             },
             credentials: 'same-origin',
-            body: JSON.stringify({ rating, comment }),
+            body: JSON.stringify({ rating, comment: content }),
         });
-        const data = await response.json();
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            throw new Error('Could not submit review. Please try again.');
+        }
         if (!response.ok || !data.success) {
             throw new Error(data.message || 'Could not submit review');
         }

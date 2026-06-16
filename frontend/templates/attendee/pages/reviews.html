@@ -237,7 +237,7 @@
     </div>
 </div>
 
-<div class="write-review-btn" id="writeReviewBtn">
+<div class="write-review-btn" id="writeReviewBtn" title="Review a past event">
     <i class="fas fa-pen"></i>
 </div>
 
@@ -245,110 +245,36 @@
     <div class="modal-content">
         <div class="modal-close" id="closeModal">&times;</div>
         <h3 style="margin-bottom: 1rem;">Write a Review</h3>
-        <form id="reviewForm">
-            <div class="form-group">
-                <label>Rating</label>
-                <div class="rating-select" style="display: flex; gap: 0.5rem; font-size: 1.5rem; color: #cbd5e1;">
-                    <i class="fas fa-star" data-rating="1"></i>
-                    <i class="fas fa-star" data-rating="2"></i>
-                    <i class="fas fa-star" data-rating="3"></i>
-                    <i class="fas fa-star" data-rating="4"></i>
-                    <i class="fas fa-star" data-rating="5"></i>
-                </div>
-                <input type="hidden" id="reviewRating" value="5">
-            </div>
-            <div class="form-group">
-                <label>Title</label>
-                <input type="text" id="reviewTitle" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label>Your Review</label>
-                <textarea id="reviewText" rows="4" class="form-control" required></textarea>
-            </div>
-            <div class="form-group">
-                <label>Event</label>
-                <select id="reviewEvent" class="form-control" disabled>
-                    <option value="">Sign in after attending an event to leave a review</option>
-                </select>
-            </div>
-            <button type="submit" class="btn-primary" style="width: 100%;">Submit Review</button>
-        </form>
+        <p style="color: var(--np-gray); margin-bottom: 1rem; font-size: 0.9rem;">
+            Reviews can be submitted from past events you attended. Open an event from your tickets and use the Reviews tab.
+        </p>
+        <a href="/tickets/?tab=past" class="btn-primary" style="display: block; text-align: center; text-decoration: none; width: 100%; padding: 0.75rem;">
+            View past events
+        </a>
     </div>
 </div>
 
 <script>
-// Rating stars
-const stars = document.querySelectorAll('.rating-select i');
-const ratingInput = document.getElementById('reviewRating');
-
-stars.forEach(star => {
-    star.addEventListener('mouseenter', function() {
-        const rating = parseInt(this.dataset.rating);
-        stars.forEach((s, i) => {
-            if (i < rating) {
-                s.style.color = '#f59e0b';
-            } else {
-                s.style.color = '#cbd5e1';
-            }
-        });
-    });
-    
-    star.addEventListener('click', function() {
-        const rating = parseInt(this.dataset.rating);
-        ratingInput.value = rating;
-        stars.forEach((s, i) => {
-            if (i < rating) {
-                s.style.color = '#f59e0b';
-            } else {
-                s.style.color = '#cbd5e1';
-            }
-        });
-    });
-});
-
-document.querySelector('.rating-select').addEventListener('mouseleave', function() {
-    const currentRating = parseInt(ratingInput.value);
-    stars.forEach((s, i) => {
-        if (i < currentRating) {
-            s.style.color = '#f59e0b';
-        } else {
-            s.style.color = '#cbd5e1';
-        }
-    });
-});
-
-// Modal handling
 const writeBtn = document.getElementById('writeReviewBtn');
 const modal = document.getElementById('reviewModal');
 const closeModal = document.getElementById('closeModal');
 
-writeBtn.addEventListener('click', () => {
-    modal.classList.add('active');
-});
+if (writeBtn && modal) {
+    writeBtn.addEventListener('click', () => {
+        modal.classList.add('active');
+    });
+}
 
-closeModal.addEventListener('click', () => {
-    modal.classList.remove('active');
-});
-
-modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
+if (closeModal && modal) {
+    closeModal.addEventListener('click', () => {
         modal.classList.remove('active');
-    }
-});
+    });
 
-// Form submission
-document.getElementById('reviewForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    showToast('Sign in from an event you attended to submit a verified review.', 'info');
-    modal.classList.remove('active');
-});
-
-function showToast(message, type) {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
 }
 </script>
 {% endblock %}

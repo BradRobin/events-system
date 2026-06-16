@@ -40,6 +40,7 @@ CONTEXT_MESSAGES = {
     'reports': 'The system was unable to generate this report. Please try again.',
     'profile': 'The system was unable to update your profile. Please try again.',
     'checkout': 'Checkout could not be completed. Please try again.',
+    'reviews': 'The system was unable to save your review. Please try again.',
     'generic': DEFAULT_MESSAGE,
 }
 
@@ -82,6 +83,7 @@ def context_key_from_path(path):
         ('dashboard', '/dashboard'),
         ('profile', '/profile'),
         ('checkout', '/checkout'),
+        ('reviews', '/reviews'),
     )
     for key, fragment in rules:
         if fragment in path:
