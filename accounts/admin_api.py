@@ -1322,9 +1322,6 @@ def organizers_suspended_api(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
-@csrf_exempt
-@require_http_methods(["GET"])
-@admin_required_json
 def _pending_organizers_queryset():
     approved_ids = set(get_approved_organizer_ids())
     pending = []
@@ -1374,6 +1371,8 @@ def organizers_pending_api(request):
             'email': u.email,
             'phone': u.phone or 'N/A',
             'created_at': u.date_joined.isoformat(),
+            'submitted_at': u.date_joined.isoformat(),
+            'tax_id': 'N/A',
             'status': 'pending',
         } for u in orgs_slice]
         pagination = {
