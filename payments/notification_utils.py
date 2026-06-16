@@ -25,8 +25,16 @@ def paginate_notifications(queryset, request, *, default_page_size=10, max_page_
     return items, pagination, unread_count
 
 
+def _normalize_attendee_action_url(action_url):
+    if not action_url:
+        return ''
+    if action_url.startswith('/tickets/detail/?ticket='):
+        return '/tickets/'
+    return action_url
+
+
 def serialize_attendee_notification(notification):
-    action_url = notification.action_url or ''
+    action_url = _normalize_attendee_action_url(notification.action_url or '')
     if not action_url and notification.payment_order_id:
         action_url = '/tickets/'
     return {

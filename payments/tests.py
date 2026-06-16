@@ -138,6 +138,10 @@ class PaymentOrderTests(TestCase):
         ticket = Ticket.objects.get(attendee=self.attendee, ticket_type='VIP')
         self.assertEqual(ticket.ticket_number, data['ticket_number'])
         self.assertEqual(ticket.quantity, 1)
+        notif = AttendeeNotification.objects.filter(
+            attendee=self.attendee, payment_order=order
+        ).latest('created_at')
+        self.assertEqual(notif.action_url, '/tickets/')
 
     @patch('payments.order_views.analyze_payment_screenshot')
     def test_verify_screenshot_routes_to_organizer_on_ocr_pass(self, mock_analyze):
@@ -281,6 +285,8 @@ class PaymentOrderTests(TestCase):
             title='Test',
             message='Approve payment',
             requires_action=True,
+            action_type='payment_approval',
+            action_url='/organizer/dashboard/',
         )
         self.client.force_login(self.organizer)
         response = self.client.get('/api/organizer/notifications/')
@@ -288,6 +294,25 @@ class PaymentOrderTests(TestCase):
         data = response.json()
         self.assertTrue(data['success'])
         self.assertEqual(len(data['notifications']), 1)
+
+    def test_organizer_notifications_recent_api(self):
+        OrganizerNotification.objects.create(
+            organizer=self.organizer,
+            title='Payment review',
+            message='Attendee submitted M-Pesa screenshot.',
+            notification_type='info',
+            requires_action=True,
+            action_type='payment_approval',
+            action_url='/organizer/dashboard/',
+        )
+        self.client.force_login(self.organizer)
+        response = self.client.get('/api/organizer/notifications/recent/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['unread_count'], 1)
+        self.assertEqual(len(data['notifications']), 1)
+        self.assertEqual(data['notifications'][0]['action_url'], '/organizer/dashboard/')
 
     @patch.dict('os.environ', {
         'MPESA_ENVIRONMENT': 'sandbox',

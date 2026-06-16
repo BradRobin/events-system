@@ -49,13 +49,24 @@
         if (token) {
             headers.Authorization = 'Bearer ' + token;
         }
-        if (global.getCSRFToken) {
-            headers['X-CSRFToken'] = global.getCSRFToken();
+        var csrfFn = global.getCSRFToken;
+        if (!csrfFn) {
+            csrfFn = function () {
+                var match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+                return match ? decodeURIComponent(match[1]) : null;
+            };
+        }
+        var csrf = csrfFn();
+        if (csrf) {
+            headers['X-CSRFToken'] = csrf;
         }
         return headers;
     };
 
     PortalNotificationHub.prototype.isAuthenticated = function () {
+        if (this.config.useSessionAuth) {
+            return true;
+        }
         try {
             return !!localStorage.getItem(this.config.tokenKey);
         } catch (e) {
@@ -89,7 +100,7 @@
         container.innerHTML = notifications.map(function (notif) {
             var unreadClass = notif.is_read ? '' : ' unread';
             var actionUrl = notif.action_url || notif.redirect_url || self.config.actionUrl(notif);
-            var icon = self.config.iconForType(notif.notification_type || notif.type);
+            var icon = self.config.iconForType(notif);
             return (
                 '<div class="notification-item' + unreadClass + '" data-id="' + notif.id + '" data-url="' + escapeHtml(actionUrl) + '">' +
                     '<div class="notification-icon"><i class="fas ' + icon + '"></i></div>' +
@@ -283,6 +294,28 @@
         }
     }
 
+    function organizerIconForType(type) {
+        switch (type) {
+            case 'payment':
+                return 'fa-receipt';
+            case 'warning':
+                return 'fa-exclamation-triangle';
+            case 'success':
+                return 'fa-check-circle';
+            case 'info':
+                return 'fa-info-circle';
+            default:
+                return defaultIconForType(type);
+        }
+    }
+
+    function organizerIconForNotification(notif) {
+        if (notif.action_type === 'payment_approval') return 'fa-receipt';
+        if (notif.action_type === 'event_approved') return 'fa-calendar-check';
+        if (notif.action_type === 'event_rejected') return 'fa-calendar-times';
+        return organizerIconForType(notif.notification_type || notif.type);
+    }
+
     var attendeeHub = null;
     var organizerHub = null;
 
@@ -302,7 +335,12 @@
             markAllButtonId: null,
             tokenKey: 'attendee_access_token',
             actionUrl: function (n) {
-                if (n.action_url) return n.action_url;
+                if (n.action_url) {
+                    if (n.action_url.indexOf('/tickets/detail/?ticket=') === 0) {
+                        return '/tickets/';
+                    }
+                    return n.action_url;
+                }
                 if (n.payment_order_id || n.notification_type === 'payment') return '/tickets/';
                 return '/notifications/';
             },
@@ -328,14 +366,18 @@
             panelId: 'organizerNotificationsPanel',
             markAllButtonId: 'organizerMarkAllReadBtn',
             tokenKey: 'organizer_access_token',
+            useSessionAuth: true,
             actionUrl: function (n) {
                 if (n.action_url) return n.action_url;
                 if (n.requires_action || n.action_type === 'payment_approval') {
                     return '/organizer/dashboard/';
                 }
-                return '/organizer/settings/?tab=plan';
+                if (n.action_type === 'event_approved' || n.action_type === 'event_rejected') {
+                    return '/organizer/events/';
+                }
+                return '/organizer/dashboard/';
             },
-            iconForType: defaultIconForType,
+            iconForType: organizerIconForNotification,
         });
 
         organizerHub.bindDropdown();

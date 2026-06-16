@@ -54,6 +54,9 @@ function setupEventListeners() {
 function normalizeNotification(notif) {
     const type = notif.notification_type || notif.type || 'info';
     let actionUrl = notif.action_url || '#';
+    if (actionUrl.indexOf('/tickets/detail/?ticket=') === 0) {
+        actionUrl = '/tickets/';
+    }
     if (!notif.action_url && notif.payment_order_id) {
         actionUrl = '/tickets/';
     } else if (!notif.action_url && type === 'booking') {

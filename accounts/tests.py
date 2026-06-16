@@ -473,4 +473,28 @@ class AdminEventApprovalTests(TestCase):
         self.event.refresh_from_db()
         self.assertEqual(self.event.status, 'published')
 
+        from payments.models import OrganizerNotification
+        notification = OrganizerNotification.objects.filter(
+            organizer=self.organizer,
+            action_type='event_approved',
+        ).first()
+        self.assertIsNotNone(notification)
+        self.assertIn(self.event.title, notification.message)
+        self.assertFalse(notification.is_read)
+
+    def test_admin_approve_event_notifies_organizer_recent_api(self):
+        from payments.models import OrganizerNotification
+        self.client.force_login(self.admin_user)
+        self.client.post(f'/api/admin/events/{self.event.id}/approve/')
+
+        self.client.force_login(self.organizer)
+        response = self.client.get('/api/organizer/notifications/recent/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertGreaterEqual(data['unread_count'], 1)
+        self.assertTrue(
+            any(n.get('action_type') == 'event_approved' for n in data['notifications'])
+        )
+
 

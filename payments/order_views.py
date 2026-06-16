@@ -147,6 +147,7 @@ def _notify_organizer_payment_review(order, *, ocr_passed):
         notification_type=notification_type,
         requires_action=True,
         action_type='payment_approval',
+        action_url='/organizer/dashboard/',
     )
 
 
@@ -745,7 +746,7 @@ def organizer_approve_order(request, order_id):
         payment_order=order, organizer=request.user, requires_action=True
     ).update(is_read=True, requires_action=False)
 
-    ticket_url = f'/tickets/detail/?ticket={ticket.ticket_number}'
+    ticket_url = '/tickets/'
     AttendeeNotification.objects.create(
         attendee=order.attendee,
         payment_order=order,

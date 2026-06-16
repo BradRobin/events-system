@@ -478,6 +478,8 @@ def api_approve_event(request, event_id):
         e.status = 'published'
         e.save()
         expire_notifications_for_entity('event', e.id, ['event_pending_approval'])
+        from payments.organizer_notifications import notify_organizer_event_approved
+        notify_organizer_event_approved(e)
         return JsonResponse({'success': True, 'message': 'Event approved successfully'})
     except Exception as e:
         return safe_api_error_response(request, e)
@@ -499,6 +501,8 @@ def api_reject_event(request, event_id):
         msg = f"Approval for event '{e.title}' was revoked." if is_revocation else f"Event '{e.title}' was rejected. Reason: {reason}."
         
         expire_notifications_for_entity('event', e.id, ['event_pending_approval'])
+        from payments.organizer_notifications import notify_organizer_event_rejected
+        notify_organizer_event_rejected(e, reason=reason)
         return JsonResponse({'success': True, 'message': 'Event rejected successfully'})
     except Exception as e:
         return safe_api_error_response(request, e)
@@ -578,9 +582,13 @@ def api_bulk_approve(request):
     try:
         data = json.loads(request.body)
         ids = data.get('event_ids', [])
+        from payments.organizer_notifications import notify_organizer_event_approved
+        events = list(Event.objects.filter(id__in=ids).select_related('organizer'))
         Event.objects.filter(id__in=ids).update(status='published')
         for event_id in ids:
             expire_notifications_for_entity('event', event_id, ['event_pending_approval'])
+        for event in events:
+            notify_organizer_event_approved(event)
         return JsonResponse({'success': True, 'message': f'Successfully approved {len(ids)} events'})
     except Exception as e:
         return safe_api_error_response(request, e)
@@ -592,9 +600,13 @@ def api_bulk_reject(request):
     try:
         data = json.loads(request.body)
         ids = data.get('event_ids', [])
+        from payments.organizer_notifications import notify_organizer_event_rejected
+        events = list(Event.objects.filter(id__in=ids).select_related('organizer'))
         Event.objects.filter(id__in=ids).update(status='draft')
         for event_id in ids:
             expire_notifications_for_entity('event', event_id, ['event_pending_approval'])
+        for event in events:
+            notify_organizer_event_rejected(event)
         return JsonResponse({'success': True, 'message': f'Successfully rejected {len(ids)} events'})
     except Exception as e:
         return safe_api_error_response(request, e)
