@@ -52,3 +52,28 @@ def open_screenshot_stream(order) -> BytesIO | None:
 
 def order_has_screenshot(order) -> bool:
     return bool(getattr(order, 'screenshot_data', None) or getattr(order, 'screenshot', None))
+
+
+def get_screenshot_data_uri(order) -> str | None:
+    """Return a data-URI suitable for <img src> display."""
+    if getattr(order, 'screenshot_data', None):
+        return order.screenshot_data
+    screenshot_field = getattr(order, 'screenshot', None)
+    if not screenshot_field:
+        return None
+    try:
+        raw = open_screenshot_stream(order)
+        if raw is None:
+            return None
+        data = raw.read()
+        name = (getattr(screenshot_field, 'name', '') or '').lower()
+        if name.endswith('.png'):
+            mime = 'image/png'
+        elif name.endswith('.webp'):
+            mime = 'image/webp'
+        else:
+            mime = 'image/jpeg'
+        encoded = base64.b64encode(data).decode('ascii')
+        return f'data:{mime};base64,{encoded}'
+    except (OSError, ValueError, binascii.Error):
+        return None

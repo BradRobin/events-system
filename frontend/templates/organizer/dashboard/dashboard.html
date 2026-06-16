@@ -122,6 +122,21 @@
         </div>
     </div>
 </div>
+
+<!-- Payment screenshot preview -->
+<div class="modal fade" id="paymentScreenshotModal" tabindex="-1" aria-labelledby="paymentScreenshotModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentScreenshotModalLabel">M-Pesa Payment Screenshot</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <img id="paymentScreenshotImage" src="" alt="M-Pesa payment screenshot" class="img-fluid rounded" style="max-height: 75vh; width: auto;">
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

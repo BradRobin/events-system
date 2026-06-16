@@ -31,7 +31,7 @@ async function adminLogout(event) {
         // proceed with local cleanup even if API logout fails
     }
     clearAdminAuthStorage();
-    window.location.href = '/admin/login/';
+    window.location.href = '/login/';
 }
 
 window.adminLogout = adminLogout;

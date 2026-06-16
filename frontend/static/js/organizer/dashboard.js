@@ -318,6 +318,32 @@ window.loadPerformance = async function() {
 window.loadPendingPayments = async function() {
     const container = document.getElementById('pendingPaymentsList');
     if (!container) return;
+
+    function formatVerificationMessage(msg) {
+        if (!msg) return '';
+        const lower = msg.toLowerCase();
+        if (
+            lower.includes('ocr failed') ||
+            lower.includes('tesseract') ||
+            lower.includes('pytesseract') ||
+            lower.startsWith('automatic verification error:')
+        ) {
+            return 'Automatic verification unavailable — please review the screenshot manually.';
+        }
+        return msg;
+    }
+
+    function showPaymentScreenshot(dataUri) {
+        const img = document.getElementById('paymentScreenshotImage');
+        const modalEl = document.getElementById('paymentScreenshotModal');
+        if (!img || !modalEl) {
+            showToast('Screenshot viewer is not available on this page.', 'error');
+            return;
+        }
+        img.src = dataUri;
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
     try {
         const data = await OrganizerAPI.paymentOrders.getPending();
         const orders = data.orders || [];
@@ -342,7 +368,7 @@ window.loadPendingPayments = async function() {
                         <small>Attendee: ${escapeHtml(o.attendee_name)}</small><br>
                         <small>M-Pesa name: <strong>${mpesaName}</strong></small><br>
                         <small>Amount: KES ${Number(o.total_amount).toLocaleString()} &middot; Qty: ${o.quantity}</small>
-                        ${o.verification_message ? `<br><small class="text-muted">${escapeHtml(o.verification_message)}</small>` : ''}
+                        ${o.verification_message ? `<br><small class="text-muted">${escapeHtml(formatVerificationMessage(o.verification_message))}</small>` : ''}
                         ${o.has_screenshot ? `<br><button type="button" class="btn btn-sm btn-link p-0 view-screenshot-btn" data-id="${o.id}">View screenshot</button>` : ''}
                     </div>
                     <div class="d-flex gap-2">
@@ -358,7 +384,7 @@ window.loadPendingPayments = async function() {
                 try {
                     const data = await OrganizerAPI.paymentOrders.getScreenshot(btn.dataset.id);
                     if (data.screenshot_data) {
-                        window.open(data.screenshot_data, '_blank', 'noopener');
+                        showPaymentScreenshot(data.screenshot_data);
                     } else {
                         showToast('Screenshot not available', 'error');
                     }

@@ -28,7 +28,30 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     updateNavBadgesFromCart();
     clearCartBadgeOnView();
+    maybeAutoStartCheckout();
 });
+
+function maybeAutoStartCheckout() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') !== '1') return;
+    if (!cartData?.items?.length) return;
+
+    if (!selectedOrganizer) {
+        const firstOrg = cartData.items[0].organizer || cartData.items[0].organizer_name || 'Event Organizer';
+        updateSummaryForOrganizer(firstOrg);
+        const radios = document.querySelectorAll('.organizer-radio');
+        for (let i = 0; i < radios.length; i++) {
+            radios[i].checked = (radios[i].value === firstOrg);
+        }
+    }
+
+    if (selectedOrganizer) {
+        proceedToCheckout();
+        const url = new URL(window.location.href);
+        url.searchParams.delete('checkout');
+        window.history.replaceState({}, '', url.pathname + url.search);
+    }
+}
 
 function clearCartBadgeOnView() {
     const cartBadge = document.getElementById('cartBadgeDropdown');

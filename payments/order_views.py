@@ -18,7 +18,7 @@ from events.models import Event
 from .models import PaymentOrder, OrganizerNotification, AttendeeNotification
 from .mpesa import MpesaClient
 from .screenshot_verifier import verify_screenshot as analyze_payment_screenshot
-from .screenshot_storage import encode_upload_to_data_uri, open_screenshot_stream, order_has_screenshot
+from .screenshot_storage import encode_upload_to_data_uri, open_screenshot_stream, order_has_screenshot, get_screenshot_data_uri
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +84,21 @@ def _serialize_order(order, include_payment=False):
         data['stk_available'] = _stk_checkout_enabled()
         data['requires_organizer_approval'] = True
     return data
+
+
+def _organizer_facing_verification_message(message: str) -> str:
+    """Hide internal OCR / infrastructure errors from organizers."""
+    if not message:
+        return ''
+    lower = message.lower()
+    if (
+        'ocr failed' in lower
+        or 'tesseract' in lower
+        or 'pytesseract' in lower
+        or lower.startswith('automatic verification error:')
+    ):
+        return 'Automatic verification unavailable — please review the screenshot manually.'
+    return message
 
 
 def _notify_organizer_payment_review(order, *, ocr_passed):
@@ -331,7 +346,24 @@ def verify_screenshot(request, order_id):
             _escalate_to_organizer_review(
                 order,
                 ocr_passed=False,
-                verification_message=f'Automatic verification error: {exc}',
+                verification_message='Payment submitted for manual review.',
+            )
+            yield _sse_event(
+                'pending_approval',
+                'Your payment has been sent to the organizer for approval.',
+                ocr_passed=False,
+                order_id=order.id,
+                event_id=order.event_id,
+            )
+            return
+
+        if result.get('ocr_unavailable'):
+            order.ocr_raw_text = ''
+            order.save(update_fields=['ocr_raw_text', 'updated_at'])
+            _escalate_to_organizer_review(
+                order,
+                ocr_passed=False,
+                verification_message='Payment submitted for manual review.',
             )
             yield _sse_event(
                 'pending_approval',
@@ -350,10 +382,13 @@ def verify_screenshot(request, order_id):
         yield _sse_event('checking_recipient', 'Verifying recipient name')
 
         ocr_passed = bool(result.get('success'))
+        verification_notes = result.get('notes', '') or ''
+        if not ocr_passed and not verification_notes:
+            verification_notes = 'Payment submitted for manual review.'
         _escalate_to_organizer_review(
             order,
             ocr_passed=ocr_passed,
-            verification_message=result.get('notes', ''),
+            verification_message=verification_notes,
         )
         order.refresh_from_db()
 
@@ -624,7 +659,7 @@ def organizer_pending_orders(request):
             'total_amount': float(order.total_amount),
             'submitted_mpesa_name': order.submitted_mpesa_name,
             'screenshot_verified': order.screenshot_verified,
-            'verification_message': order.verification_message,
+            'verification_message': _organizer_facing_verification_message(order.verification_message),
             'has_screenshot': order_has_screenshot(order),
             'attendee_name': attendee.get_full_name() or attendee.username,
             'attendee_email': attendee.email,
@@ -701,12 +736,16 @@ def organizer_payment_order_screenshot(request, order_id):
     except PaymentOrder.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Order not found.'}, status=404)
 
-    if not order.screenshot_data:
+    if not order_has_screenshot(order):
         return JsonResponse({'success': False, 'message': 'No screenshot on file.'}, status=404)
+
+    data_uri = get_screenshot_data_uri(order)
+    if not data_uri:
+        return JsonResponse({'success': False, 'message': 'Screenshot could not be loaded.'}, status=404)
 
     return JsonResponse({
         'success': True,
-        'screenshot_data': order.screenshot_data,
+        'screenshot_data': data_uri,
         'order_id': order.id,
     })
 

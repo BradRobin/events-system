@@ -1,6 +1,6 @@
 // EVENTS MODULE - Live API Integration (Optimized with Infinite Scroll)
 // FIXED: Storage quota exceeded error, auth issues
-// FIXED: Book ticket shows toast without redirect, prevents duplicate cart items
+// FIXED: Book ticket redirects to cart/checkout, prevents duplicate cart items
 // FIXED: Wishlist buttons update automatically across all cards
 // FIXED: Only buttons are clickable, not the card area
 // FIXED: Cross-tab synchronization via storage events
@@ -652,10 +652,12 @@ function handleBookClick(e) {
 }
 
 function bookTicket(id, title, price) {
+    const checkoutUrl = '/cart/?checkout=1';
     const token = getAuthToken();
     if (!token) {
+        localStorage.setItem('redirect_after_login', checkoutUrl);
         showToast('🔐 Please login to book tickets', 'info');
-        setTimeout(() => window.location.href = '/login/', 1500);
+        setTimeout(() => { window.location.href = '/login/'; }, 1500);
         return;
     }
     
@@ -674,7 +676,7 @@ function bookTicket(id, title, price) {
     const existingItem = cart.items.find(i => i.id == id);
     
     if (existingItem) {
-        showToast(`⚠️ "${title}" is already in your cart. Proceed to checkout to complete your booking.`, 'info');
+        window.location.href = checkoutUrl;
         return;
     }
     
@@ -692,12 +694,14 @@ function bookTicket(id, title, price) {
     cart.subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     cart.total = cart.subtotal;
     
-    safeStorage.setItem('eventhub_cart', cart);
+    if (!safeStorage.setItem('eventhub_cart', cart)) {
+        showToast('❌ Could not save cart. Please try again.', 'error');
+        return;
+    }
     window.dispatchEvent(new Event('cart-updated'));
     window.dispatchEvent(new Event('storage'));
     
-    const formattedPrice = `KES ${event.price.toLocaleString()}`;
-    showToast(`✅ "${title}" has been added to your cart. Total: ${formattedPrice}`, 'success');
+    window.location.href = checkoutUrl;
 }
 
 function resetFilters() {

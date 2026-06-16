@@ -16,6 +16,23 @@ if pytesseract and TESSERACT_CMD:
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
 
+class OcrUnavailableError(RuntimeError):
+    """Raised when OCR cannot run in the current environment."""
+
+
+def ocr_is_available() -> bool:
+    """Return True when Tesseract OCR can run (not available on typical serverless hosts)."""
+    if pytesseract is None:
+        return False
+    if not TESSERACT_CMD:
+        return False
+    try:
+        pytesseract.get_tesseract_version()
+        return True
+    except Exception:
+        return False
+
+
 def _normalize_text(text):
     return re.sub(r'\s+', ' ', (text or '').upper().strip())
 
@@ -83,8 +100,8 @@ def preprocess_image(image):
 
 
 def extract_text_from_image(image):
-    if pytesseract is None:
-        raise RuntimeError('pytesseract is not installed.')
+    if not ocr_is_available():
+        raise OcrUnavailableError('OCR is not available in this environment.')
     processed = preprocess_image(image)
     return pytesseract.image_to_string(processed)
 
@@ -103,6 +120,10 @@ def verify_screenshot(image, expected_name, expected_amount, organizer_numbers=N
 
     try:
         ocr_text = extract_text_from_image(image)
+    except OcrUnavailableError:
+        result['notes'] = ''
+        result['ocr_unavailable'] = True
+        return result
     except Exception as exc:
         result['notes'] = f'OCR failed: {exc}'
         return result
