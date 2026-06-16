@@ -44,7 +44,8 @@ async function sendBroadcast() {
         await apiRequest('/api/admin/broadcast/', 'POST', {
             subject: title,
             message: message,
-            audience: audience
+            audience: audience,
+            send_method: method,
         });
         
         showToast('Broadcast sent successfully', 'success');

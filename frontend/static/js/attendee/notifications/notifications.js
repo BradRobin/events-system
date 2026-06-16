@@ -21,6 +21,18 @@ document.addEventListener('DOMContentLoaded', function() {
     loadNotifications();
     loadPreferences();
     setupEventListeners();
+
+    setInterval(function () {
+        if (currentTab === 'notifications') {
+            loadNotifications(currentPage);
+        }
+    }, 30000);
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible' && currentTab === 'notifications') {
+            loadNotifications(currentPage);
+        }
+    });
 });
 
 function setupEventListeners() {
@@ -97,10 +109,11 @@ async function loadNotifications(page = 1) {
 
         displayNotifications(notifications);
         renderPagination({
-            count: data.count || notifications.length,
-            total_pages: data.total_pages || 1,
-            current_page: page,
+            count: data.count || data.pagination?.count || notifications.length,
+            total_pages: data.total_pages || data.pagination?.total_pages || 1,
+            current_page: data.pagination?.page || page,
         });
+        updateUnreadBadge(data.unread_count);
     } catch (error) {
         console.error('Error loading notifications:', error);
         container.innerHTML = `
@@ -289,6 +302,23 @@ async function savePreferences() {
     } finally {
         hideLoader();
     }
+}
+
+function updateUnreadBadge(count) {
+    const badge = document.getElementById('notificationBadge');
+    if (!badge) return;
+
+    if (typeof count === 'number') {
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+        return;
+    }
+
+    updateNotificationCount();
 }
 
 function updateNotificationCount() {

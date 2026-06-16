@@ -17,6 +17,7 @@ from events.models import Event
 from events.checkout import get_event_checkout_status, normalize_ticket_type
 
 from .models import PaymentOrder, OrganizerNotification, AttendeeNotification
+from .notification_utils import paginate_notifications, serialize_attendee_notification
 from .mpesa import MpesaClient
 from .screenshot_verifier import verify_screenshot as analyze_payment_screenshot
 from .screenshot_storage import encode_upload_to_data_uri, open_screenshot_stream, order_has_screenshot, get_screenshot_data_uri
@@ -840,11 +841,42 @@ def _serialize_organizer_notification(notification):
 @organizer_required
 @require_http_methods(["GET"])
 def organizer_notifications_list(request):
-    notifications = OrganizerNotification.objects.filter(
-        organizer=request.user,
-    ).order_by('-created_at')[:50]
+    qs = OrganizerNotification.objects.filter(organizer=request.user).order_by('-created_at')
+    if request.GET.get('page') or request.GET.get('page_size'):
+        items, pagination, unread_count = paginate_notifications(qs, request)
+        results = [_serialize_organizer_notification(n) for n in items]
+        return JsonResponse({
+            'success': True,
+            'notifications': results,
+            'results': results,
+            'pagination': pagination,
+            'unread_count': unread_count,
+            'count': pagination['count'],
+            'total_pages': pagination['total_pages'],
+        })
+
+    notifications = qs[:50]
     results = [_serialize_organizer_notification(n) for n in notifications]
-    return JsonResponse({'success': True, 'notifications': results})
+    unread_count = qs.filter(is_read=False).count()
+    return JsonResponse({
+        'success': True,
+        'notifications': results,
+        'unread_count': unread_count,
+    })
+
+
+@csrf_exempt
+@organizer_required
+@require_http_methods(["GET"])
+def organizer_notifications_recent(request):
+    qs = OrganizerNotification.objects.filter(organizer=request.user).order_by('-created_at')
+    unread_count = qs.filter(is_read=False).count()
+    results = [_serialize_organizer_notification(n) for n in qs[:10]]
+    return JsonResponse({
+        'success': True,
+        'notifications': results,
+        'unread_count': unread_count,
+    })
 
 
 @csrf_exempt
@@ -886,18 +918,56 @@ def attendee_notifications_list(request):
     if not user:
         return JsonResponse({'success': False, 'message': 'Please login.'}, status=401)
 
-    notifications = AttendeeNotification.objects.filter(attendee=user).order_by('-created_at')[:50]
-    results = [{
-        'id': n.id,
-        'title': n.title,
-        'message': n.message,
-        'notification_type': n.notification_type,
-        'is_read': n.is_read,
-        'payment_order_id': n.payment_order_id,
-        'created_at': n.created_at.isoformat(),
-    } for n in notifications]
+    qs = AttendeeNotification.objects.filter(attendee=user).order_by('-created_at')
+    if request.GET.get('page') or request.GET.get('page_size'):
+        items, pagination, unread_count = paginate_notifications(qs, request)
+        results = [serialize_attendee_notification(n) for n in items]
+        return JsonResponse({
+            'success': True,
+            'notifications': results,
+            'results': results,
+            'pagination': pagination,
+            'unread_count': unread_count,
+            'count': pagination['count'],
+            'total_pages': pagination['total_pages'],
+        })
 
-    return JsonResponse({'success': True, 'notifications': results})
+    notifications = qs[:50]
+    results = [serialize_attendee_notification(n) for n in notifications]
+    unread_count = qs.filter(is_read=False).count()
+    return JsonResponse({
+        'success': True,
+        'notifications': results,
+        'unread_count': unread_count,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def attendee_notifications_recent(request):
+    user = get_authenticated_user(request)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Please login.'}, status=401)
+
+    qs = AttendeeNotification.objects.filter(attendee=user).order_by('-created_at')
+    unread_count = qs.filter(is_read=False).count()
+    results = [serialize_attendee_notification(n) for n in qs[:10]]
+    return JsonResponse({
+        'success': True,
+        'notifications': results,
+        'unread_count': unread_count,
+    })
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def attendee_notifications_unread(request):
+    user = get_authenticated_user(request)
+    if not user:
+        return JsonResponse({'success': False, 'message': 'Please login.'}, status=401)
+
+    count = AttendeeNotification.objects.filter(attendee=user, is_read=False).count()
+    return JsonResponse({'success': True, 'unread_count': count})
 
 
 @csrf_exempt

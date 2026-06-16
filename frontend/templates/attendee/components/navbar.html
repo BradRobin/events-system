@@ -165,7 +165,10 @@
                 <div class="notifications-panel" id="notificationsPanel">
                     <div class="notifications-header">
                         <h4>Notifications</h4>
-                        <button onclick="markAllNotificationsRead()">Mark all as read</button>
+                        <div class="notifications-header-actions">
+                            <a href="/notifications/" class="view-all-link">View all</a>
+                            <button type="button" onclick="markAllNotificationsRead()">Mark all as read</button>
+                        </div>
                     </div>
                     <div class="notifications-list" id="notificationsList">
                         <div class="loading-state">No notifications</div>
@@ -215,6 +218,10 @@
                             <i class="fas fa-cog"></i>
                             <span>Settings</span>
                         </a>
+                        <a href="/notifications/" class="dropdown-item">
+                            <i class="fas fa-bell"></i>
+                            <span>Notifications</span>
+                        </a>
                         <div class="dropdown-divider"></div>
                         <a href="#" onclick="logout()" class="dropdown-item logout-link">
                             <i class="fas fa-sign-out-alt"></i>
@@ -228,6 +235,7 @@
     <div class="mobile-overlay" id="mobileOverlay"></div>
 </header>
 
+<script src="{% static 'js/shared/portal-notifications.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const accessToken = localStorage.getItem('attendee_access_token');
@@ -634,32 +642,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function loadNotifications() {
-        const notificationsList = document.getElementById('notificationsList');
-        if (!notificationsList) return;
-        const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-        if (notifications.length === 0) {
-            notificationsList.innerHTML = '<div class="empty-state">No notifications</div>';
-            return;
+        if (typeof window.loadNotifications === 'function' && window.PortalNotifications) {
+            window.loadNotifications();
         }
-        notificationsList.innerHTML = notifications.map(notif => `
-            <div class="notification-item ${notif.read ? '' : 'unread'}" data-id="${notif.id}">
-                <div class="notification-icon"><i class="fas ${notif.icon || 'fa-bell'}"></i></div>
-                <div class="notification-content">
-                    <div class="notification-title">${escapeHtml(notif.title)}</div>
-                    <div class="notification-message">${escapeHtml(notif.message)}</div>
-                    <div class="notification-time">${escapeHtml(notif.time)}</div>
-                </div>
-            </div>
-        `).join('');
     }
     
     function loadNotificationCount() {
-        const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-        const unreadCount = notifications.filter(n => !n.read).length;
-        const badge = document.getElementById('notificationBadge');
-        if (badge) {
-            badge.textContent = unreadCount;
-            badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+        if (typeof window.loadNotificationCount === 'function' && window.PortalNotifications) {
+            window.loadNotificationCount();
         }
     }
     
@@ -835,16 +825,5 @@ function logout() {
     window.location.href = '/';
 }
 
-function markAllNotificationsRead() {
-    const notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-    notifications.forEach(n => n.read = true);
-    localStorage.setItem('notifications', JSON.stringify(notifications));
-    const badge = document.getElementById('notificationBadge');
-    if (badge) badge.style.display = 'none';
-    const panel = document.getElementById('notificationsPanel');
-    if (panel) panel.classList.remove('show');
-}
-
 window.logout = logout;
-window.markAllNotificationsRead = markAllNotificationsRead;
 </script>

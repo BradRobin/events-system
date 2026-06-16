@@ -1,0 +1,154 @@
+/* Shared portal notification dropdown styles (organizer topbar) */
+.organizer-notifications-dropdown {
+    position: relative;
+}
+
+.organizer-notifications-dropdown .notification-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--border, #222);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.organizer-notifications-dropdown .notification-btn:hover {
+    background: rgba(255, 107, 0, 0.12);
+    border-color: rgba(255, 107, 0, 0.35);
+}
+
+.organizer-notifications-dropdown .notification-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+
+.organizer-notifications-dropdown .notifications-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(360px, 92vw);
+    max-height: 420px;
+    overflow: hidden;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    z-index: 1200;
+}
+
+.organizer-notifications-dropdown .notifications-panel.show {
+    display: block;
+}
+
+.organizer-notifications-dropdown .notifications-header,
+.organizer-notifications-dropdown .notifications-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #222;
+}
+
+.organizer-notifications-dropdown .notifications-footer {
+    border-bottom: 0;
+    border-top: 1px solid #222;
+}
+
+.organizer-notifications-dropdown .notifications-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.organizer-notifications-dropdown .notifications-header button,
+.organizer-notifications-dropdown .notifications-footer a {
+    background: none;
+    border: none;
+    color: #ff6b00;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.organizer-notifications-dropdown .notifications-list {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.organizer-notifications-dropdown .notification-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.organizer-notifications-dropdown .notification-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.organizer-notifications-dropdown .notification-item.unread {
+    background: rgba(255, 107, 0, 0.08);
+}
+
+.organizer-notifications-dropdown .notification-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 107, 0, 0.15);
+    color: #ff6b00;
+    flex-shrink: 0;
+}
+
+.organizer-notifications-dropdown .notification-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 2px;
+}
+
+.organizer-notifications-dropdown .notification-message {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+.organizer-notifications-dropdown .notification-time {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.organizer-notifications-dropdown .empty-state,
+.organizer-notifications-dropdown .loading-state {
+    padding: 28px 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}

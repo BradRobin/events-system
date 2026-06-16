@@ -2720,51 +2720,96 @@ def user_profile_upload_avatar(request):
 
 # ============ 12. BRANDS MARKETING BROADCAST EMAIL API ============
 from bookings.email_service import send_admin_broadcast_email
+from payments.models import AttendeeNotification, OrganizerNotification
+
+
+def _broadcast_inapp_notifications(users, role, subject, message):
+    created = 0
+    for user in users:
+        if role == 'attendee':
+            AttendeeNotification.objects.create(
+                attendee=user,
+                title=subject,
+                message=message,
+                notification_type='announcement',
+            )
+            created += 1
+        elif role == 'organizer':
+            OrganizerNotification.objects.create(
+                organizer=user,
+                title=subject,
+                message=message,
+                notification_type='announcement',
+            )
+            created += 1
+    return created
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
 @admin_required_json
 def api_admin_broadcast(request):
     """
-    Broadcasts custom marketing emails to registered attendees or organizers.
-    Only accessible by staff/admin accounts.
+    Broadcast marketing messages to attendees and/or organizers.
+    Supports in-app notifications, email, or both.
     """
     try:
         data = json.loads(request.body)
-        audience = data.get('audience') # 'attendees' or 'organizers'
+        audience = data.get('audience')  # all, attendees, organizers
         subject = data.get('subject', '').strip()
         message = data.get('message', '').strip()
-        
+        send_method = (data.get('send_method') or data.get('method') or 'inapp').strip().lower()
+
         if not audience or not subject or not message:
             return JsonResponse({'success': False, 'message': 'Audience, subject, and message are required.'}, status=400)
-            
-        if audience == 'attendees':
-            users = User.objects.filter(role='attendee')
-            role_label = 'Attendee'
+
+        if send_method not in ('inapp', 'email', 'both'):
+            return JsonResponse({'success': False, 'message': 'Invalid send method.'}, status=400)
+
+        audience_targets = []
+        if audience == 'all':
+            audience_targets = [('attendee', 'Attendee'), ('organizer', 'Organizer')]
+        elif audience == 'attendees':
+            audience_targets = [('attendee', 'Attendee')]
         elif audience == 'organizers':
-            users = User.objects.filter(role='organizer')
-            role_label = 'Organizer'
+            audience_targets = [('organizer', 'Organizer')]
         else:
             return JsonResponse({'success': False, 'message': 'Invalid audience target.'}, status=400)
-            
-        sent_count = 0
-        for u in users:
-            if u.email:
-                send_admin_broadcast_email(
-                    recipient_email=u.email,
-                    subject=subject,
-                    message=message,
-                    recipient_role=role_label
-                )
-                sent_count += 1
-                
+
+        email_sent = 0
+        inapp_sent = 0
+
+        for role, role_label in audience_targets:
+            users = User.objects.filter(role=role, is_active=True)
+            if send_method in ('email', 'both'):
+                for user in users:
+                    if user.email:
+                        send_admin_broadcast_email(
+                            recipient_email=user.email,
+                            subject=subject,
+                            message=message,
+                            recipient_role=role_label,
+                        )
+                        email_sent += 1
+            if send_method in ('inapp', 'both'):
+                inapp_sent += _broadcast_inapp_notifications(users, role, subject, message)
+
+        method_bits = []
+        if send_method in ('email', 'both'):
+            method_bits.append(f'{email_sent} email{"s" if email_sent != 1 else ""}')
+        if send_method in ('inapp', 'both'):
+            method_bits.append(f'{inapp_sent} in-app notification{"s" if inapp_sent != 1 else ""}')
+
+        summary = ' and '.join(method_bits) if method_bits else 'no deliveries'
         return JsonResponse({
-            'success': True, 
-            'message': f"Successfully broadcasted '{subject}' campaign to {sent_count} {audience}!"
+            'success': True,
+            'message': f"Broadcast '{subject}' sent: {summary}.",
+            'email_sent': email_sent,
+            'inapp_sent': inapp_sent,
         })
-        
+
     except Exception as e:
-        return safe_api_error_response(request, e)
+        return safe_api_error_response(request, e, context_key='notifications')
 
 
 # ============ 9. CHECK-IN HISTORY & STATS APIS ============

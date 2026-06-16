@@ -18,13 +18,43 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-<nav class="top-navbar">
-    <div class="navbar-brand">
-        <h2>EventHub</h2>
+<aside class="organizer-sidebar" id="organizerSidebar" aria-hidden="true">
+    <div class="organizer-sidebar-header">
+        <div class="organizer-sidebar-brand">
+            <h2>EventHub</h2>
+            <span class="organizer-sidebar-badge">Organizer</span>
+        </div>
+        <button type="button" class="organizer-sidebar-close" id="organizerSidebarClose" aria-label="Close navigation">
+            <i class="fas fa-times"></i>
+        </button>
     </div>
-    <button class="navbar-toggle" id="navbarToggleBtn" aria-expanded="false" aria-label="Toggle Navigation">
-        <i class="fas fa-bars"></i>
-    </button>
+    <nav class="organizer-sidebar-nav" id="organizerSidebarNav">
+        <a href="/organizer/dashboard/" class="menu-item"><i class="fas fa-chart-line"></i><span>Dashboard</span></a>
+        <a href="/organizer/events/" class="menu-item"><i class="fas fa-calendar-alt"></i><span>Events</span></a>
+        <a href="/organizer/attendees/" class="menu-item"><i class="fas fa-users"></i><span>Attendees</span></a>
+        <a href="/organizer/bookings/" class="menu-item"><i class="fas fa-ticket-alt"></i><span>Bookings</span></a>
+        <a href="/organizer/promotions/" class="menu-item"><i class="fas fa-tags"></i><span>Promotions</span></a>
+        <a href="/organizer/billing/" class="menu-item"><i class="fas fa-credit-card"></i><span>Plans &amp; Billing</span></a>
+        <a href="/organizer/reviews/" class="menu-item"><i class="fas fa-star"></i><span>Reviews</span></a>
+        <a href="/organizer/settings/" class="menu-item"><i class="fas fa-cog"></i><span>Settings</span></a>
+        <a href="/organizer/faq/" class="menu-item"><i class="fas fa-circle-question"></i><span>FAQs</span></a>
+    </nav>
+    <div class="organizer-sidebar-footer">
+        <span id="organizerSidebarEmail" class="organizer-sidebar-email">{{ user.email|default:"Organizer" }}</span>
+        <a href="/" class="menu-item organizer-sidebar-home"><i class="fas fa-home"></i><span>Back to Home</span></a>
+    </div>
+</aside>
+<div class="organizer-sidebar-overlay" id="organizerSidebarOverlay" aria-hidden="true"></div>
+
+<nav class="top-navbar">
+    <div class="navbar-left">
+        <button type="button" class="navbar-toggle" id="navbarToggleBtn" aria-expanded="false" aria-controls="organizerSidebar" aria-label="Open navigation">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="navbar-brand">
+            <h2>EventHub</h2>
+        </div>
+    </div>
     <div class="navbar-menu" id="navbarMenu">
         <a href="/organizer/dashboard/" class="menu-item">Dashboard</a>
         <a href="/organizer/events/" class="menu-item">Events</a>
@@ -65,19 +95,19 @@
 <script>
     (function syncOrganizerProfileEmail() {
         const el = document.getElementById('organizerProfileEmail');
-        if (!el) return;
+        const sidebarEl = document.getElementById('organizerSidebarEmail');
+        if (!el && !sidebarEl) return;
 
-        // Session-rendered email if available.
-        const serverEmail = (el.textContent || '').trim();
+        const serverEmail = (el?.textContent || sidebarEl?.textContent || '').trim();
         if (serverEmail && serverEmail !== 'Organizer') return;
 
-        // Token-based login fallback used by current organizer auth flow.
         try {
             const raw = localStorage.getItem('organizer_user');
             if (!raw) return;
             const user = JSON.parse(raw);
             if (user && user.email) {
-                el.textContent = user.email;
+                if (el) el.textContent = user.email;
+                if (sidebarEl) sidebarEl.textContent = user.email;
             }
         } catch (e) {
             // Keep default label when storage is unavailable.
@@ -86,16 +116,15 @@
 
     (function highlightActiveMenuItem() {
         const currentPath = window.location.pathname;
-        const menuItems = document.querySelectorAll('.navbar-menu .menu-item');
-        
+        const menuItems = document.querySelectorAll('.navbar-menu .menu-item, .organizer-sidebar-nav .menu-item');
+
         menuItems.forEach(item => {
             const href = item.getAttribute('href');
-            if (!href) return;
-            
-            // Highlight if exact match or if it is a sub-path of the current item (excluding dashboard/root path)
+            if (!href || href === '/') return;
+
             const isExactMatch = currentPath === href || currentPath === href + '/';
-            const isSubPathMatch = href !== '/organizer/dashboard/' && href !== '/' && currentPath.startsWith(href);
-            
+            const isSubPathMatch = href !== '/organizer/dashboard/' && currentPath.startsWith(href);
+
             if (isExactMatch || isSubPathMatch) {
                 item.classList.add('active');
             } else {
@@ -104,21 +133,62 @@
         });
     })();
 
-    (function initNavbarToggle() {
+    (function initOrganizerSidebar() {
+        const sidebar = document.getElementById('organizerSidebar');
+        const overlay = document.getElementById('organizerSidebarOverlay');
         const toggleBtn = document.getElementById('navbarToggleBtn');
-        const menu = document.getElementById('navbarMenu');
-        if (!toggleBtn || !menu) return;
-        toggleBtn.addEventListener('click', function(e) {
+        const closeBtn = document.getElementById('organizerSidebarClose');
+        const navLinks = document.querySelectorAll('.organizer-sidebar-nav .menu-item, .organizer-sidebar-home');
+        const mobileBreakpoint = 992;
+
+        function isMobileNav() {
+            return window.innerWidth <= mobileBreakpoint;
+        }
+
+        function openSidebar() {
+            if (!sidebar || !isMobileNav()) return;
+            sidebar.classList.add('open');
+            sidebar.setAttribute('aria-hidden', 'false');
+            overlay?.classList.add('active');
+            overlay?.setAttribute('aria-hidden', 'false');
+            toggleBtn?.setAttribute('aria-expanded', 'true');
+            document.body.classList.add('organizer-sidebar-open');
+        }
+
+        function closeSidebar() {
+            if (!sidebar) return;
+            sidebar.classList.remove('open');
+            sidebar.setAttribute('aria-hidden', 'true');
+            overlay?.classList.remove('active');
+            overlay?.setAttribute('aria-hidden', 'true');
+            toggleBtn?.setAttribute('aria-expanded', 'false');
+            document.body.classList.remove('organizer-sidebar-open');
+        }
+
+        toggleBtn?.addEventListener('click', function(e) {
             e.stopPropagation();
-            const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-            toggleBtn.setAttribute('aria-expanded', !expanded);
-            menu.classList.toggle('show');
-        });
-        document.addEventListener('click', function(e) {
-            if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== toggleBtn) {
-                toggleBtn.setAttribute('aria-expanded', 'false');
-                menu.classList.remove('show');
+            if (sidebar?.classList.contains('open')) {
+                closeSidebar();
+            } else {
+                openSidebar();
             }
+        });
+
+        closeBtn?.addEventListener('click', closeSidebar);
+        overlay?.addEventListener('click', closeSidebar);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (isMobileNav()) closeSidebar();
+            });
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeSidebar();
+        });
+
+        window.addEventListener('resize', function() {
+            if (!isMobileNav()) closeSidebar();
         });
     })();
 </script>

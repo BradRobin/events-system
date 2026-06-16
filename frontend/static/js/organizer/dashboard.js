@@ -482,4 +482,15 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch(e) {}
         });
     }
+
+    if (document.getElementById('notificationsList')) {
+        loadNotifications();
+        setInterval(loadNotifications, 30000);
+        window.addEventListener('notifications-updated', loadNotifications);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') {
+                loadNotifications();
+            }
+        });
+    }
 });
