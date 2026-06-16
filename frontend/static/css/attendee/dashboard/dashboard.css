@@ -336,8 +336,37 @@
 }
 
 .dashboard-search-form {
-    max-width: 600px;
+    max-width: 720px;
     margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.dashboard-search-btn {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.dashboard-search-btn:hover:not(:disabled) {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+}
+
+.dashboard-search-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
 }
 
 .search-input-wrapper {
@@ -394,7 +423,27 @@
     pointer-events: none;
 }
 
-/* ========== DISCOVERY RESULTS ========== */
+.discovery-platforms-row,
+.disc-sources-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin: 0.75rem 0 1.25rem;
+}
+
+.disc-src-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: color-mix(in srgb, var(--chip-color, #64748b) 12%, white);
+    color: var(--chip-color, #64748b);
+    border: 1px solid color-mix(in srgb, var(--chip-color, #64748b) 25%, white);
+}
 #discoveryResultsSection {
     margin-bottom: 2rem;
     animation: fadeInUp 0.3s ease;

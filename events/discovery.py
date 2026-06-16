@@ -3,13 +3,9 @@ events/discovery.py
 ===================
 Location-based event discovery engine for EventHub.
 
-Responsibilities:
-  - Resolve a Kenyan county from browser GPS coords (Nominatim/OSM) or IP address (ip-api.com)
-  - Scrape Ticketsasa, AllEvents.in, and Eventbrite for events in that county
-  - Run all scrapers in parallel via ThreadPoolExecutor
-  - Deduplicate and return a clean list of external-event dicts
-
-All sources are free public websites — zero paid API keys required.
+Aggregates listings from Kenya's top 10 event platforms:
+EventHub, Ticketsasa, Mookh, Pata Ticket, LipaTix, TykoPass, Karibisha,
+Pesapal Events, Eventbrite, and AllEvents.in.
 """
 
 import logging
@@ -123,7 +119,37 @@ def _regex_extract_events(html_content: str, county: str, base_url: str, source_
 # ---------------------------------------------------------------------------
 
 REQUEST_TIMEOUT = 4  # seconds per scraper HTTP call
-SCRAPER_TIMEOUT = 5  # seconds for the whole ThreadPoolExecutor round-trip
+SCRAPER_TIMEOUT = 10  # seconds for the whole ThreadPoolExecutor round-trip
+MAX_WORKERS = 8
+
+# Top Kenyan event platforms (priority order for unified search UI)
+KENYA_EVENT_PLATFORMS = [
+    {"id": "eventhub", "name": "EventHub", "bookable": True, "priority": 0},
+    {"id": "ticketsasa", "name": "Ticketsasa", "bookable": False, "priority": 1},
+    {"id": "mookh", "name": "Mookh", "bookable": False, "priority": 2},
+    {"id": "pataticket", "name": "Pata Ticket", "bookable": False, "priority": 3},
+    {"id": "lipatix", "name": "LipaTix", "bookable": False, "priority": 4},
+    {"id": "tykopass", "name": "TykoPass", "bookable": False, "priority": 5},
+    {"id": "karibisha", "name": "Karibisha", "bookable": False, "priority": 6},
+    {"id": "pesapal", "name": "Pesapal Events", "bookable": False, "priority": 7},
+    {"id": "eventbrite", "name": "Eventbrite", "bookable": False, "priority": 8},
+    {"id": "allevents", "name": "AllEvents.in", "bookable": False, "priority": 9},
+]
+
+PLATFORM_PRIORITY = {p["name"]: p["priority"] for p in KENYA_EVENT_PLATFORMS}
+
+CARD_SELECTORS = (
+    ".event-card",
+    ".event-item",
+    "article[class*='event']",
+    "[class*='event-card']",
+    ".card[class*='event']",
+    "li.item",
+    ".col-md-4 .card",
+    ".col-sm-6 .card",
+    ".product-item",
+    ".listing-card",
+)
 
 SCRAPER_HEADERS = {
     "User-Agent": (
@@ -281,190 +307,275 @@ def _get_image(el) -> str:
     return src
 
 
+def _search_terms(county: str, query: str) -> str:
+    parts = [p for p in (query.strip(), county.strip()) if p]
+    return " ".join(parts)
+
+
+def _build_external_event(
+    *,
+    title: str,
+    source_name: str,
+    source_url: str,
+    county: str,
+    date_text: str = "Check website",
+    venue: str = "",
+    price_text: str = "Check website",
+    image_url: str = "",
+    description: str = "",
+) -> dict | None:
+    title = (title or "").strip()[:120]
+    if len(title) < 3:
+        return None
+    venue = (venue or county or "Kenya").strip()
+    desc = description or f"{title} — found on {source_name}"
+    return {
+        "type": "external",
+        "title": title,
+        "date_text": date_text or "Check website",
+        "venue": venue,
+        "price_text": price_text or "Check website",
+        "source": source_name,
+        "source_url": source_url or "",
+        "image_url": image_url or "",
+        "description": desc[:240],
+        "can_purchase": False,
+    }
+
+
+def _scrape_listing_page(
+    *,
+    county: str,
+    source_name: str,
+    url: str,
+    base_url: str,
+    limit: int = 10,
+) -> list[dict]:
+    """Generic HTML listing scraper used across Kenyan event platforms."""
+    results: list[dict] = []
+    try:
+        resp = urllib_request("GET", url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
+        if resp.status_code >= 400:
+            return results
+        html = resp.text
+        if not HAS_BS4:
+            return _regex_extract_events(html, county, base_url, source_name)[:limit]
+
+        soup = BeautifulSoup(html, "html.parser")
+        cards = []
+        for selector in CARD_SELECTORS:
+            found = soup.select(selector)
+            if found:
+                cards = found
+                break
+        if not cards:
+            cards = soup.select("a[href*='event']")[:limit]
+
+        for card in cards[:limit]:
+            if card.name == "a":
+                title = _safe_text(card) or card.get("title", "")
+                link = _resolve_url(card.get("href", ""), base_url)
+                payload = _build_external_event(
+                    title=title,
+                    source_name=source_name,
+                    source_url=link,
+                    county=county,
+                )
+            else:
+                title_el = card.select_one(
+                    "h1, h2, h3, h4, .event-title, [class*='title'], [itemprop='name']"
+                )
+                title = _safe_text(title_el)
+                date_el = card.select_one(
+                    ".date, .event-date, time, [class*='date'], [itemprop='startDate']"
+                )
+                venue_el = card.select_one(
+                    ".venue, .location, [class*='venue'], [class*='location'], [itemprop='location']"
+                )
+                price_el = card.select_one(".price, [class*='price'], .ticket-price")
+                link_el = card.select_one("a[href]")
+                img_el = card.select_one("img")
+                link = _resolve_url(link_el.get("href", "") if link_el else "", base_url)
+                image = _get_image(img_el)
+                if image and not image.startswith("http"):
+                    image = _resolve_url(image, base_url)
+                date_text = _safe_text(date_el) or "Check website"
+                if date_el and date_el.get("datetime"):
+                    date_text = date_el["datetime"]
+                payload = _build_external_event(
+                    title=title,
+                    source_name=source_name,
+                    source_url=link,
+                    county=county,
+                    date_text=date_text,
+                    venue=_safe_text(venue_el),
+                    price_text=_safe_text(price_el),
+                    image_url=image,
+                )
+            if payload:
+                results.append(payload)
+    except Exception as exc:
+        logger.warning("%s scrape failed (%s): %s", source_name, url, exc)
+    return results
+
+
+def extract_event_terms(search_text: str, county: str) -> str:
+    """Strip county tokens from free-text search to isolate event keywords."""
+    if not search_text:
+        return ""
+    text = search_text.strip()
+    if county:
+        text = re.sub(re.escape(county), "", text, flags=re.IGNORECASE).strip()
+        text = re.sub(r"\bcounty\b", "", text, flags=re.IGNORECASE).strip()
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def filter_events_by_search(events: list[dict], search_text: str) -> list[dict]:
+    if not search_text:
+        return events
+    terms = [t for t in re.split(r"\s+", search_text.lower()) if len(t) > 2]
+    if not terms:
+        return events
+    filtered = []
+    for event in events:
+        haystack = " ".join(
+            [
+                event.get("title", ""),
+                event.get("description", ""),
+                event.get("venue", ""),
+                event.get("date_text", ""),
+            ]
+        ).lower()
+        if any(term in haystack for term in terms):
+            filtered.append(event)
+    return filtered or events
+
+
+def sort_events_by_platform(events: list[dict]) -> list[dict]:
+    return sorted(
+        events,
+        key=lambda e: (
+            PLATFORM_PRIORITY.get(e.get("source", ""), 99),
+            e.get("title", "").lower(),
+        ),
+    )
+
+
 # ---- Ticketsasa ----
 
-def scrape_ticketsasa(county: str) -> list[dict]:
-    """Scrape ticketsasa.com for events in *county*."""
-    results = []
+def scrape_ticketsasa(county: str, query: str = "") -> list[dict]:
     base = "https://www.ticketsasa.com"
-    try:
-        url = f"{base}/events?q={county}"
-        resp = urllib_request("GET", url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
-        if not HAS_BS4:
-            return _regex_extract_events(resp.text, county, base, "Ticketsasa")
-        soup = BeautifulSoup(resp.text, "html.parser")
+    term = urllib.parse.quote_plus(_search_terms(county, query))
+    return _scrape_listing_page(
+        county=county,
+        source_name="Ticketsasa",
+        url=f"{base}/events?q={term}",
+        base_url=base,
+    )
 
-        # Ticketsasa uses various card structures depending on the version
-        cards = (
-            soup.select(".event-card")
-            or soup.select(".event-item")
-            or soup.select("article[class*='event']")
-            or soup.select(".col-md-4 .card, .col-sm-6 .card")
-        )
 
-        for card in cards[:12]:
-            title_el = card.select_one("h2, h3, h4, .event-title, [class*='title']")
-            title = _safe_text(title_el)
-            if not title or len(title) < 3:
-                continue
+def scrape_mookh(county: str, query: str = "") -> list[dict]:
+    base = "https://mookh.com"
+    term = urllib.parse.quote_plus(_search_terms(county, query))
+    for url in (f"{base}/events?search={term}", f"{base}/events?q={term}", f"{base}/events"):
+        batch = _scrape_listing_page(county=county, source_name="Mookh", url=url, base_url=base)
+        if batch:
+            return batch
+    return []
 
-            date_el = card.select_one(".date, .event-date, time, [class*='date']")
-            venue_el = card.select_one(".venue, .location, [class*='venue'], [class*='location']")
-            price_el = card.select_one(".price, [class*='price'], .ticket-price")
-            link_el = card.select_one("a[href]")
-            img_el = card.select_one("img")
 
-            link = _resolve_url(link_el.get("href", "") if link_el else "", base)
-            image = _get_image(img_el)
-            if image and not image.startswith("http"):
-                image = _resolve_url(image, base)
+def scrape_pataticket(county: str, query: str = "") -> list[dict]:
+    base = "https://pataticket.co.ke"
+    term = urllib.parse.quote_plus(_search_terms(county, query))
+    return _scrape_listing_page(
+        county=county,
+        source_name="Pata Ticket",
+        url=f"{base}/events?search={term}",
+        base_url=base,
+    )
 
-            results.append({
-                "type": "external",
-                "title": title[:120],
-                "date_text": _safe_text(date_el) or "Check website",
-                "venue": _safe_text(venue_el) or county,
-                "price_text": _safe_text(price_el) or "Check website",
-                "source": "Ticketsasa",
-                "source_url": link,
-                "image_url": image,
-                "description": f"{title} — {county}",
-                "can_purchase": False,
-            })
-    except Exception as exc:
-        logger.warning("Ticketsasa scrape failed for %s: %s", county, exc)
-    return results
+
+def scrape_lipatix(county: str, query: str = "") -> list[dict]:
+    base = "https://lipatix.com"
+    term = urllib.parse.quote_plus(_search_terms(county, query))
+    for url in (f"{base}/events?search={term}", f"{base}/events", base):
+        batch = _scrape_listing_page(county=county, source_name="LipaTix", url=url, base_url=base)
+        if batch:
+            return batch
+    return []
+
+
+def scrape_tykopass(county: str, query: str = "") -> list[dict]:
+    base = "https://tykopass.com"
+    term = urllib.parse.quote_plus(_search_terms(county, query))
+    return _scrape_listing_page(
+        county=county,
+        source_name="TykoPass",
+        url=f"{base}/events?search={term}",
+        base_url=base,
+    )
+
+
+def scrape_karibisha(county: str, query: str = "") -> list[dict]:
+    base = "https://www.karibisha.com"
+    term = urllib.parse.quote_plus(_search_terms(county, query))
+    for url in (f"{base}/events?search={term}", f"{base}/discover", f"{base}/events"):
+        batch = _scrape_listing_page(county=county, source_name="Karibisha", url=url, base_url=base)
+        if batch:
+            return batch
+    return []
+
+
+def scrape_pesapal_events(county: str, query: str = "") -> list[dict]:
+    term = urllib.parse.quote_plus(_search_terms(county, query))
+    batch = _scrape_listing_page(
+        county=county,
+        source_name="Pesapal Events",
+        url=f"https://www.ticketsasa.com/events?q={term}",
+        base_url="https://www.ticketsasa.com",
+    )
+    for item in batch:
+        item["source"] = "Pesapal Events"
+    return batch
 
 
 # ---- AllEvents.in ----
 
-def scrape_allevents(county: str) -> list[dict]:
-    """Scrape allevents.in for events in *county*."""
-    results = []
+def scrape_allevents(county: str, query: str = "") -> list[dict]:
     base = "https://allevents.in"
     city_slug = county.lower().replace(" ", "-")
-    try:
+    if query:
+        url = f"{base}/search?q={urllib.parse.quote_plus(query)}&loc={urllib.parse.quote_plus(county)}"
+    else:
         url = f"{base}/{city_slug}/all"
-        resp = urllib_request("GET", url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
-        if not HAS_BS4:
-            return _regex_extract_events(resp.text, county, base, "AllEvents.in")
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        cards = (
-            soup.select(".event-item")
-            or soup.select(".eventlist-box")
-            or soup.select("[class*='event-card']")
-            or soup.select("li.item")
-            or soup.select(".card[class*='event']")
-        )
-
-        for card in cards[:12]:
-            title_el = card.select_one(
-                "h3, h4, .event-name, [class*='title'], [itemprop='name']"
-            )
-            title = _safe_text(title_el)
-            if not title or len(title) < 3:
-                continue
-
-            date_el = card.select_one("[class*='date'], time, [itemprop='startDate']")
-            venue_el = card.select_one(
-                "[class*='venue'], [class*='location'], [itemprop='location']"
-            )
-            link_el = card.select_one("a[href]")
-            img_el = card.select_one("img")
-
-            date_text = _safe_text(date_el) or "Check website"
-            if date_el and date_el.get("datetime"):
-                date_text = date_el["datetime"]
-
-            link = _resolve_url(link_el.get("href", "") if link_el else "", base)
-            image = _get_image(img_el)
-
-            results.append({
-                "type": "external",
-                "title": title[:120],
-                "date_text": date_text,
-                "venue": _safe_text(venue_el) or county,
-                "price_text": "Check website",
-                "source": "AllEvents.in",
-                "source_url": link or f"{base}/{city_slug}/all",
-                "image_url": image,
-                "description": f"{title} in {county}",
-                "can_purchase": False,
-            })
-    except Exception as exc:
-        logger.warning("AllEvents scrape failed for %s: %s", county, exc)
-    return results
+    return _scrape_listing_page(
+        county=county,
+        source_name="AllEvents.in",
+        url=url,
+        base_url=base,
+    )
 
 
 # ---- Eventbrite ----
 
-def scrape_eventbrite(county: str) -> list[dict]:
-    """Scrape Eventbrite Kenya events for *county*."""
-    results = []
+def scrape_eventbrite(county: str, query: str = "") -> list[dict]:
     base = "https://www.eventbrite.com"
     city_slug = county.lower().replace(" ", "-")
-    try:
+    if query:
+        url = f"{base}/d/kenya--{city_slug}/--{urllib.parse.quote_plus(query)}/"
+    else:
         url = f"{base}/d/kenya--{city_slug}/events/"
-        resp = urllib_request("GET", url, headers=SCRAPER_HEADERS, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
-        if not HAS_BS4:
-            return _regex_extract_events(resp.text, county, base, "Eventbrite")
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        # Eventbrite renders multiple card shapes depending on A/B tests
-        cards = (
-            soup.select("[data-testid='event-card']")
-            or soup.select(".eds-event-card")
-            or soup.select(".search-event-card")
-            or soup.select("article[class*='card']")
-        )
-
-        for card in cards[:12]:
-            title_el = card.select_one(
-                "[data-testid='event-title'], h3, h2, "
-                ".eds-event-card__formatted-name, [class*='title']"
-            )
-            title = _safe_text(title_el)
-            if not title or len(title) < 3:
-                continue
-
-            date_el = card.select_one(
-                "[data-testid='event-card-date'], .eds-event-card__sub-title, "
-                "p[class*='date'], time"
-            )
-            venue_el = card.select_one(
-                "[data-testid='event-card-venue'], .card-text--truncated, "
-                "[class*='location']"
-            )
-            link_el = card.select_one("a[href]")
-            img_el = card.select_one("img")
-
-            link = _resolve_url(link_el.get("href", "") if link_el else "", base)
-            image = _get_image(img_el)
-
-            results.append({
-                "type": "external",
-                "title": title[:120],
-                "date_text": _safe_text(date_el) or "Check website",
-                "venue": _safe_text(venue_el) or county,
-                "price_text": "Check website",
-                "source": "Eventbrite",
-                "source_url": link or f"{base}/d/kenya--{city_slug}/events/",
-                "image_url": image,
-                "description": f"{title} in {county}",
-                "can_purchase": False,
-            })
-    except Exception as exc:
-        logger.warning("Eventbrite scrape failed for %s: %s", county, exc)
-    return results
+    return _scrape_listing_page(
+        county=county,
+        source_name="Eventbrite",
+        url=url,
+        base_url=base,
+    )
 
 
 # ---- DuckDuckGo broad search (fallback) ----
 
-def scrape_duckduckgo_events(county: str) -> list[dict]:
+def scrape_duckduckgo_events(county: str, search_text: str = "") -> list[dict]:
     """
     Broad fallback: POST to DuckDuckGo HTML endpoint and extract result links
     that reference known event platforms or contain 'event' keywords.
@@ -474,7 +585,14 @@ def scrape_duckduckgo_events(county: str) -> list[dict]:
     try:
         from datetime import datetime
         year = datetime.now().year
-        query = f'upcoming events in {county} Kenya {year} site:ticketsasa.com OR site:eventbrite.com OR site:allevents.in'
+        query = (
+            f'upcoming events in {county} Kenya {year} '
+            f'site:ticketsasa.com OR site:mookh.com OR site:pataticket.co.ke '
+            f'OR site:lipatix.com OR site:tykopass.com OR site:karibisha.com '
+            f'OR site:eventbrite.com OR site:allevents.in'
+        )
+        if search_text:
+            query = f'{search_text} {query}'
         resp = urllib_request(
             "POST",
             "https://html.duckduckgo.com/html/",
@@ -506,6 +624,16 @@ def scrape_duckduckgo_events(county: str) -> list[dict]:
             source = "Web"
             if "ticketsasa" in link:
                 source = "Ticketsasa"
+            elif "mookh" in link:
+                source = "Mookh"
+            elif "pataticket" in link:
+                source = "Pata Ticket"
+            elif "lipatix" in link:
+                source = "LipaTix"
+            elif "tykopass" in link:
+                source = "TykoPass"
+            elif "karibisha" in link:
+                source = "Karibisha"
             elif "eventbrite" in link:
                 source = "Eventbrite"
             elif "allevents" in link:
@@ -535,7 +663,17 @@ def scrape_duckduckgo_events(county: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def discover_events_for_county(county: str) -> list[dict]:
+def discover_external_events(county: str, search_text: str = "") -> list[dict]:
+    """
+    Query Kenya's top event platforms in parallel and return deduplicated results.
+
+    Platforms: Ticketsasa, Mookh, Pata Ticket, LipaTix, TykoPass, Karibisha,
+    Pesapal Events, Eventbrite, AllEvents.in (+ DuckDuckGo fallback).
+    """
+    return discover_events_for_county(county, search_text=search_text)
+
+
+def discover_events_for_county(county: str, search_text: str = "") -> list[dict]:
     """
     Run all three scrapers in parallel (ThreadPoolExecutor, max 3 workers).
     Falls back to DuckDuckGo broad search if the primary scrapers return < 3 results.
@@ -553,7 +691,8 @@ def discover_events_for_county(county: str) -> list[dict]:
 
     # Normalize county to construct a safe cache key
     county_clean = county.lower().strip().replace(' ', '_')
-    cache_key = f"discover_events_{county_clean}"
+    query_key = re.sub(r'[^a-z0-9]+', '_', (search_text or '').lower())[:40]
+    cache_key = f"discover_events_{county_clean}_{query_key}"
 
     # Try cache lookup first, handling potential DatabaseErrors (e.g. before migrations or in tests)
     cached_results = None
@@ -570,16 +709,24 @@ def discover_events_for_county(county: str) -> list[dict]:
 
     all_results: list[dict] = []
 
+    event_terms = extract_event_terms(search_text, county)
+
     primary_scrapers = [
         ("ticketsasa", scrape_ticketsasa),
-        ("allevents", scrape_allevents),
+        ("mookh", scrape_mookh),
+        ("pataticket", scrape_pataticket),
+        ("lipatix", scrape_lipatix),
+        ("tykopass", scrape_tykopass),
+        ("karibisha", scrape_karibisha),
+        ("pesapal", scrape_pesapal_events),
         ("eventbrite", scrape_eventbrite),
+        ("allevents", scrape_allevents),
     ]
 
     try:
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             future_map = {
-                executor.submit(fn, county): name
+                executor.submit(fn, county, event_terms): name
                 for name, fn in primary_scrapers
             }
             for future in as_completed(future_map, timeout=SCRAPER_TIMEOUT):
@@ -593,10 +740,11 @@ def discover_events_for_county(county: str) -> list[dict]:
     except Exception as exc:
         logger.warning("Scraping execution or as_completed loop timed out/failed for %s: %s", county, exc)
 
-    # Use DuckDuckGo as a wide-net fallback when primary scrapers find little
-    if len(all_results) < 3:
-        logger.info("Primary scrapers returned < 3 results; falling back to DuckDuckGo")
-        all_results.extend(scrape_duckduckgo_events(county))
+    if len(all_results) < 5:
+        logger.info("Primary scrapers returned < 5 results; falling back to DuckDuckGo")
+        all_results.extend(scrape_duckduckgo_events(county, event_terms))
+
+    all_results = filter_events_by_search(all_results, event_terms or search_text)
 
     # Deduplicate by normalised title
     seen: set[str] = set()
@@ -607,7 +755,7 @@ def discover_events_for_county(county: str) -> list[dict]:
             seen.add(key)
             unique.append(event)
 
-    # Cache the unique list (3600 seconds on success, 300 seconds if empty)
+    unique = sort_events_by_platform(unique)
     try:
         timeout = 3600 if unique else 300
         cache.set(cache_key, unique, timeout)

@@ -1,42 +1,41 @@
 /**
- * discovery.js — Location-Based Event Discovery
+ * discovery.js — Kenya-wide multi-source event search
  * EventHub Attendee Dashboard
  *
- * Flow:
- *  1. User submits the dashboard search form
- *  2. This module intercepts the submit, tries browser Geolocation
- *  3. Falls back to typed query → user profile location → IP detection
- *  4. POSTs to /api/events/discover/
- *  5. Renders two sections: EventHub events (bookable) + external events (view-only)
+ * Searches EventHub + top Kenyan platforms in parallel:
+ * Ticketsasa, Mookh, Pata Ticket, LipaTix, TykoPass, Karibisha,
+ * Pesapal Events, Eventbrite, AllEvents.in
  */
 
 (function () {
     'use strict';
 
-    // -------------------------------------------------------------------------
-    // Config
-    // -------------------------------------------------------------------------
-    const API_ENDPOINT  = '/api/events/discover/';
-    const GEO_TIMEOUT   = 10_000; // ms — browser geolocation timeout
-    const FALLBACK_LOC  = 'Nairobi';
+    const API_ENDPOINT = '/api/events/discover/';
+    const GEO_TIMEOUT = 10_000;
+    const FALLBACK_LOC = 'Nairobi';
 
-    // Source platform accent colours used for external badges
     const SOURCE_COLORS = {
+        'EventHub':         '#f59e0b',
         'Ticketsasa':       '#e11d48',
+        'Mookh':            '#7c3aed',
+        'Pata Ticket':      '#0ea5e9',
+        'LipaTix':          '#16a34a',
+        'TykoPass':         '#db2777',
+        'Karibisha':        '#2563eb',
+        'Pesapal Events':   '#059669',
         'Eventbrite':       '#f97316',
-        'AllEvents.in':     '#7c3aed',
+        'AllEvents.in':     '#6366f1',
         'Facebook Events':  '#1877f2',
         'Web':              '#64748b',
     };
 
-    // -------------------------------------------------------------------------
-    // DOM References (populated on DOMContentLoaded)
-    // -------------------------------------------------------------------------
+    const PLATFORM_CHIPS = [
+        'EventHub', 'Ticketsasa', 'Mookh', 'Pata Ticket', 'LipaTix',
+        'TykoPass', 'Karibisha', 'Pesapal Events', 'Eventbrite', 'AllEvents.in',
+    ];
+
     let searchForm, searchInput, searchBtn, resultsSection;
 
-    // -------------------------------------------------------------------------
-    // Init
-    // -------------------------------------------------------------------------
     document.addEventListener('DOMContentLoaded', function () {
         searchForm     = document.getElementById('dashboardSearchForm');
         searchInput    = document.getElementById('dashboardSearchInput');
@@ -47,51 +46,49 @@
             searchForm.addEventListener('submit', handleSearchSubmit);
         }
 
-        // Wire up a close button if it already exists in the template
         const closeBtn = document.getElementById('discoveryCloseBtn');
         if (closeBtn) {
             closeBtn.addEventListener('click', closeResults);
         }
-        
+
         updateDetectedLocationBadge();
         initDynamicPlaceholder();
+
+        const params = new URLSearchParams(window.location.search);
+        const q = params.get('q');
+        if (q && searchInput) {
+            searchInput.value = q;
+            handleSearchSubmit(new Event('submit'));
+        }
     });
 
-    // -------------------------------------------------------------------------
-    // Main Search Handler
-    // -------------------------------------------------------------------------
-    const KENYAN_COUNTIES = [
-        'nairobi', 'mombasa', 'kisumu', 'nakuru', 'eldoret', 'uasin gishu',
-        'kiambu', 'thika', 'machakos', 'meru', 'kisii', 'nyeri', 'kakamega',
-        'malindi', 'kilifi', 'garissa', 'lamu', 'naivasha', 'nanyuki',
-        'laikipia', 'embu', 'kitui', 'bungoma', 'kericho', 'migori',
-        'siaya', 'homabay', 'homa bay'
-    ];
-
     async function handleSearchSubmit(e) {
-        const userQuery = searchInput ? searchInput.value.trim() : '';
-        const queryLower = userQuery.toLowerCase();
-
-        // If it's a general search (not empty and not containing a county name),
-        // let the form submit normally, redirecting to the search page (/events/search/?q=...)
-        const isCountyQuery = userQuery === '' || KENYAN_COUNTIES.some(c => queryLower.includes(c));
-        if (!isCountyQuery) {
-            return;
+        if (e && e.preventDefault) {
+            e.preventDefault();
+            e.stopPropagation();
         }
 
-        e.preventDefault();
-        e.stopPropagation();
+        const userQuery = searchInput ? searchInput.value.trim() : '';
 
         setSearchLoading(true);
         showLoadingState();
 
         try {
             const locationPayload = await resolveLocation(userQuery);
-            const data = await fetchDiscovery(locationPayload);
+            const payload = {
+                ...locationPayload,
+                search_text: userQuery,
+                query: userQuery,
+            };
+            const parsedDate = extractDateHint(userQuery);
+            if (parsedDate) {
+                payload.date = parsedDate;
+            }
+            const data = await fetchDiscovery(payload);
             renderResults(data, userQuery);
         } catch (err) {
             console.error('[Discovery] error:', err);
-            showErrorState('Unable to find events right now. Please try again in a moment.');
+            showErrorState('Unable to search events right now. Please try again in a moment.');
         } finally {
             setSearchLoading(false);
             if (window.PageLoader && typeof window.PageLoader.hide === 'function') {
@@ -102,39 +99,37 @@
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Location Resolution (3-level fallback)
-    // -------------------------------------------------------------------------
+    function extractDateHint(text) {
+        if (!text) return '';
+        const monthYear = text.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+20\d{2}\b/i);
+        if (monthYear) return monthYear[0];
+        const iso = text.match(/\b20\d{2}-\d{2}(-\d{2})?\b/);
+        if (iso) return iso[0];
+        return '';
+    }
+
     function resolveLocation(userQuery) {
         return new Promise((resolve) => {
-
-            // Priority 1: User typed a specific location / query
             if (userQuery && userQuery.length > 1) {
                 resolve({ location_text: userQuery });
                 return;
             }
 
-            // Priority 2: Browser Geolocation API
             if ('geolocation' in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => resolve({
                         lat: pos.coords.latitude,
                         lng: pos.coords.longitude,
                     }),
-                    () => {
-                        // Denied or timed out — use profile location
-                        resolve({ location_text: getProfileLocation() });
-                    },
+                    () => resolve({ location_text: getProfileLocation() }),
                     { timeout: GEO_TIMEOUT, enableHighAccuracy: false }
                 );
             } else {
-                // No Geolocation API available
                 resolve({ location_text: getProfileLocation() });
             }
         });
     }
 
-    /** Read user.location from localStorage attendee profile */
     function getProfileLocation() {
         try {
             const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
@@ -144,9 +139,6 @@
         }
     }
 
-    // -------------------------------------------------------------------------
-    // API Call
-    // -------------------------------------------------------------------------
     async function fetchDiscovery(payload) {
         const headers = { 'Content-Type': 'application/json' };
         const token = localStorage.getItem('attendee_access_token');
@@ -162,15 +154,14 @@
         return resp.json();
     }
 
-    // -------------------------------------------------------------------------
-    // Render Results
-    // -------------------------------------------------------------------------
     function renderResults(data, userQuery) {
         if (!resultsSection) return;
 
         const {
-            county        = FALLBACK_LOC,
+            county = FALLBACK_LOC,
             location_source,
+            search_text = userQuery,
+            platforms_searched = PLATFORM_CHIPS,
             internal_events = [],
             external_events = [],
         } = data;
@@ -184,44 +175,59 @@
             return;
         }
 
+        const groupedExternal = groupExternalBySource(external_events, platforms_searched);
+        const externalSections = groupedExternal.map(([source, events]) =>
+            buildSection(
+                'external',
+                `<i class="fas fa-globe"></i> ${esc(source)}`,
+                `${events.length} event${events.length !== 1 ? 's' : ''} — book on ${esc(source)}`,
+                events.map(buildExternalCard).join(''),
+                SOURCE_COLORS[source] || SOURCE_COLORS.Web
+            )
+        ).join('');
+
+        const searchLabel = search_text
+            ? `Results for “${esc(search_text)}”`
+            : `Events in ${esc(county)}`;
+
         resultsSection.innerHTML = `
             <div class="discovery-header">
                 <div class="discovery-header-left">
                     <h2 class="discovery-title">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Events in ${esc(county)}
+                        <i class="fas fa-search"></i>
+                        ${searchLabel}
                     </h2>
-                    <span class="discovery-location-pill">${locationLabel(location_source)}</span>
+                    <span class="discovery-location-pill">${locationLabel(location_source)} · ${esc(county)}</span>
                 </div>
                 <div class="discovery-header-right">
-                    <span class="discovery-count">${total} event${total !== 1 ? 's' : ''} found</span>
+                    <span class="discovery-count">${total} event${total !== 1 ? 's' : ''} across ${platforms_searched.length} sources</span>
                     <button class="disc-close-btn" id="discoveryCloseBtn" title="Close results">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
 
+            <div class="discovery-platforms-row">
+                ${platforms_searched.map((name) => `
+                    <span class="disc-src-chip" style="--chip-color:${SOURCE_COLORS[name] || '#64748b'}">${esc(name)}</span>
+                `).join('')}
+            </div>
+
             ${internal_events.length ? buildSection(
                 'eventhub',
-                '<i class="fas fa-star"></i> EventHub Events',
-                'Tickets available to purchase directly here',
+                '<i class="fas fa-star"></i> EventHub',
+                'Book tickets directly on EventHub — best experience in Kenya',
                 internal_events.map(buildInternalCard).join('')
             ) : ''}
 
-            ${external_events.length ? buildSection(
-                'external',
-                '<i class="fas fa-globe"></i> Discovered Locally',
-                'View-only — purchase tickets via the event\'s platform',
-                external_events.map(buildExternalCard).join('')
-            ) : ''}
+            ${externalSections}
 
             <div class="discovery-disclaimer">
                 <i class="fas fa-info-circle"></i>
-                External events are gathered from public sources. EventHub does not sell tickets for them.
+                EventHub searches ${platforms_searched.length} sources across Kenya. External events open on their original platform.
             </div>
         `;
 
-        // Bind close button after render
         const closeBtn = document.getElementById('discoveryCloseBtn');
         if (closeBtn) closeBtn.addEventListener('click', closeResults);
 
@@ -229,9 +235,31 @@
         scrollToResults();
     }
 
-    function buildSection(type, heading, note, cardsHtml) {
+    function groupExternalBySource(events, platformOrder) {
+        const groups = new Map();
+        for (const ev of events) {
+            const src = ev.source || 'Web';
+            if (!groups.has(src)) groups.set(src, []);
+            groups.get(src).push(ev);
+        }
+        const ordered = [];
+        for (const name of platformOrder) {
+            if (name === 'EventHub') continue;
+            if (groups.has(name)) {
+                ordered.push([name, groups.get(name)]);
+                groups.delete(name);
+            }
+        }
+        for (const [name, list] of groups.entries()) {
+            ordered.push([name, list]);
+        }
+        return ordered;
+    }
+
+    function buildSection(type, heading, note, cardsHtml, accentColor) {
+        const style = accentColor ? ` style="--section-accent:${accentColor}"` : '';
         return `
-            <div class="discovery-section">
+            <div class="discovery-section discovery-section--${type}"${style}>
                 <div class="discovery-section-header">
                     <span class="discovery-section-badge badge-${type}">${heading}</span>
                     <span class="discovery-section-note">${note}</span>
@@ -241,7 +269,6 @@
         `;
     }
 
-    // ---- Internal (app) card ----
     function buildInternalCard(ev) {
         const imgStyle = ev.banner_image
             ? `background-image:url('${esc(ev.banner_image)}')`
@@ -272,16 +299,15 @@
                         ${seatsBadge}
                     </div>
                     <a href="${esc(ev.detail_url)}" class="disc-btn disc-btn--book">
-                        <i class="fas fa-ticket-alt"></i> Book Tickets
+                        <i class="fas fa-ticket-alt"></i> Book on EventHub
                     </a>
                 </div>
             </div>
         `;
     }
 
-    // ---- External (scraped) card ----
     function buildExternalCard(ev) {
-        const color    = SOURCE_COLORS[ev.source] || SOURCE_COLORS['Web'];
+        const color = SOURCE_COLORS[ev.source] || SOURCE_COLORS['Web'];
         const imgStyle = ev.image_url
             ? `background-image:url('${esc(ev.image_url)}')`
             : `background:linear-gradient(135deg,${color}22,${color}55)`;
@@ -306,7 +332,7 @@
                     ${desc}
                     <div class="disc-row">
                         <span class="disc-price-ext">${esc(ev.price_text || 'Check website')}</span>
-                        <span class="disc-ext-label"><i class="fas fa-lock"></i> External</span>
+                        <span class="disc-ext-label"><i class="fas fa-external-link-alt"></i> External</span>
                     </div>
                     <a href="${esc(ev.source_url)}" target="_blank" rel="noopener noreferrer"
                        class="disc-btn disc-btn--view" style="--src-color:${color}">
@@ -317,9 +343,6 @@
         `;
     }
 
-    // -------------------------------------------------------------------------
-    // Loading / Error / Empty States
-    // -------------------------------------------------------------------------
     function showLoadingState() {
         if (!resultsSection) return;
         resultsSection.innerHTML = `
@@ -327,12 +350,11 @@
                 <div class="disc-spinner-wrap">
                     <div class="disc-spinner"></div>
                 </div>
-                <p class="disc-loading-msg">Detecting your location and scanning for local events…</p>
-                <div class="disc-sources-row">
-                    <span class="disc-src-chip"><i class="fas fa-database"></i> EventHub</span>
-                    <span class="disc-src-chip"><i class="fas fa-ticket-alt"></i> Ticketsasa</span>
-                    <span class="disc-src-chip"><i class="fas fa-globe"></i> AllEvents.in</span>
-                    <span class="disc-src-chip"><i class="fas fa-calendar-check"></i> Eventbrite</span>
+                <p class="disc-loading-msg">Searching Kenya's top event platforms…</p>
+                <div class="disc-sources-row discovery-platforms-row">
+                    ${PLATFORM_CHIPS.map((name) => `
+                        <span class="disc-src-chip" style="--chip-color:${SOURCE_COLORS[name] || '#64748b'}">${esc(name)}</span>
+                    `).join('')}
                 </div>
             </div>
         `;
@@ -355,10 +377,10 @@
         resultsSection.innerHTML = `
             <div class="discovery-state-box">
                 <i class="fas fa-calendar-times"></i>
-                <h3>No events found${county ? ` in ${esc(county)}` : ''}</h3>
+                <h3>No events found${county ? ` near ${esc(county)}` : ''}</h3>
                 <p>${userQuery
-                    ? `We couldn't find events matching "<strong>${esc(userQuery)}</strong>".`
-                    : 'No upcoming events were found in your area right now.'
+                    ? `We searched 10 platforms but couldn't find events matching "<strong>${esc(userQuery)}</strong>".`
+                    : 'No upcoming events were found across Kenyan platforms right now.'
                 }</p>
                 <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin-top:1rem">
                     <a href="/events/" class="disc-btn disc-btn--book">Browse EventHub Events</a>
@@ -368,9 +390,6 @@
         `;
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
     function closeResults() {
         if (resultsSection) {
             resultsSection.style.display = 'none';
@@ -382,7 +401,9 @@
         if (!searchBtn) return;
         if (isLoading) {
             searchBtn.disabled = true;
-            searchBtn.dataset.originalText = searchBtn.innerHTML;
+            if (!searchBtn.dataset.originalText) {
+                searchBtn.dataset.originalText = searchBtn.innerHTML;
+            }
             searchBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Searching…';
         } else {
             searchBtn.disabled = false;
@@ -408,6 +429,7 @@
             browser_geolocation: '<i class="fas fa-location-arrow"></i> GPS',
             user_profile:        '<i class="fas fa-user"></i> Profile',
             ip_detection:        '<i class="fas fa-wifi"></i> Network',
+            search_text:         '<i class="fas fa-search"></i> Search',
         };
         return map[source] || '<i class="fas fa-map-pin"></i> Location';
     }
@@ -433,7 +455,7 @@
     function updateDetectedLocationBadge() {
         const textSpan = document.getElementById('detectedLocationText');
         if (!textSpan) return;
-        
+
         const city = window.AppLocation ? window.AppLocation.getCity() : 'Nairobi';
         const country = window.AppLocation ? window.AppLocation.getCountry() : 'Kenya';
         textSpan.textContent = `${city}, ${country}`;
@@ -442,28 +464,29 @@
     function initDynamicPlaceholder() {
         const input = document.getElementById('dashboardSearchInput');
         if (!input) return;
-        
-        const placeholders = ["Nairobi", "Solfest", "Mombasa", "Karaoke"];
+
+        const placeholders = [
+            'Nairobi jazz June 2026',
+            'Solfest',
+            'Mombasa concerts',
+            'Tech summit Nairobi',
+        ];
         let index = 0;
-        
+
         const setPlaceholder = (text) => {
-            input.placeholder = `e.g. Search for "${text}"`;
+            input.placeholder = `Try: ${text}`;
         };
 
-        // Cycle through placeholders every 3 seconds
         setInterval(() => {
             index = (index + 1) % placeholders.length;
             setPlaceholder(placeholders[index]);
-        }, 3000);
-        
-        // Initial setup
+        }, 3500);
+
         setPlaceholder(placeholders[0]);
     }
 
-    // Listen for GeoIP resolutions to update dynamically
     window.addEventListener('app-location-resolved', updateDetectedLocationBadge);
-
-    // ---- Public API (used by inline onclick handlers) ----
     window.closeDiscoveryResults = closeResults;
+    window.runDashboardDiscoverySearch = handleSearchSubmit;
 
 })();

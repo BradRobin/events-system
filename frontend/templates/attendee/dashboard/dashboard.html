@@ -32,15 +32,18 @@
     <!-- Dashboard Center Search Section -->
     <div class="dashboard-search-section">
         <h2 class="search-title">Sherehe iko wapi? Search it</h2>
-        <form class="dashboard-search-form" action="/events/search/" method="GET" id="dashboardSearchForm">
+        <form class="dashboard-search-form" action="#" method="GET" id="dashboardSearchForm">
             <div class="search-input-wrapper">
                 <i class="fas fa-search search-icon"></i>
-                <input type="text" name="q" id="dashboardSearchInput" placeholder="Search for events in your city, e.g. Nairobi..." autocomplete="off">
+                <input type="text" name="q" id="dashboardSearchInput" placeholder="Search events, locations, or dates — e.g. Nairobi, Solfest, June 2026..." autocomplete="off">
                 <div class="detected-location-badge" id="detectedLocationBadge">
                     <i class="fas fa-location-arrow"></i>
                     <span id="detectedLocationText">Detecting location...</span>
                 </div>
             </div>
+            <button type="submit" id="dashboardSearchBtn" class="dashboard-search-btn">
+                <i class="fas fa-search"></i> Search Kenya
+            </button>
         </form>
     </div>
 

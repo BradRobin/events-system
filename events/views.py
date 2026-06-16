@@ -929,8 +929,11 @@ def api_discover_local_events(request):
         resolve_county_from_coords,
         resolve_county_from_ip,
         normalize_county,
-        discover_events_for_county,
+        discover_external_events,
+        extract_event_terms,
+        KENYA_EVENT_PLATFORMS,
     )
+    from dateutil import parser as date_parser
 
     # ---- Parse body ----
     try:
@@ -945,6 +948,10 @@ def api_discover_local_events(request):
     lat = data.get("lat")
     lng = data.get("lng")
     location_text = str(data.get("location_text") or "").strip()
+    search_text = str(
+        data.get("search_text") or data.get("query") or data.get("q") or location_text or ""
+    ).strip()
+    date_filter = str(data.get("date") or data.get("date_from") or "").strip()
 
     if lat is not None and lng is not None:
         try:
@@ -958,6 +965,11 @@ def api_discover_local_events(request):
         county = normalize_county(location_text)
         location_source = "user_profile"
 
+    if not county and search_text:
+        county = normalize_county(search_text)
+        if county:
+            location_source = "search_text"
+
     if not county:
         # Last resort: IP-based detection
         x_fwd = request.META.get("HTTP_X_FORWARDED_FOR", "")
@@ -966,22 +978,51 @@ def api_discover_local_events(request):
         location_source = "ip_detection"
 
     county = county or "Nairobi"
+    event_terms = extract_event_terms(search_text, county)
 
     # ---- Query internal (app) events ----
     now = timezone.now()
-    internal_qs = (
-        Event.objects.filter(
-            status="published",
-            end_date__gte=now,
+    internal_qs = Event.objects.filter(
+        status="published",
+        end_date__gte=now,
+    ).select_related("category")
+
+    if event_terms:
+        internal_qs = internal_qs.filter(
+            Q(title__icontains=event_terms)
+            | Q(description__icontains=event_terms)
+            | Q(venue__icontains=event_terms)
+            | Q(address__icontains=event_terms)
+            | Q(category__name__icontains=event_terms)
         )
-        .filter(
+    elif search_text:
+        internal_qs = internal_qs.filter(
+            Q(title__icontains=search_text)
+            | Q(description__icontains=search_text)
+            | Q(venue__icontains=search_text)
+            | Q(address__icontains=search_text)
+            | Q(category__name__icontains=search_text)
+        )
+    else:
+        internal_qs = internal_qs.filter(
             Q(venue__icontains=county)
             | Q(address__icontains=county)
             | Q(title__icontains=county)
         )
-        .select_related("category")
-        .order_by("start_date")[:20]
-    )
+
+    if date_filter:
+        try:
+            parsed = date_parser.parse(date_filter, fuzzy=True, dayfirst=False)
+            internal_qs = internal_qs.filter(
+                start_date__year=parsed.year,
+                start_date__month=parsed.month,
+            )
+            if parsed.day:
+                internal_qs = internal_qs.filter(start_date__day=parsed.day)
+        except (ValueError, TypeError, OverflowError):
+            pass
+
+    internal_qs = internal_qs.order_by("start_date")[:24]
 
     internal_events = []
     for e in internal_qs:
@@ -1003,14 +1044,23 @@ def api_discover_local_events(request):
             "detail_url": f"/events/detail/?id={e.id}",
         })
 
-    # ---- Scrape external events in parallel ----
-    external_events = discover_events_for_county(county)
+    # ---- Scrape external events from Kenya's top platforms in parallel ----
+    external_events = discover_external_events(county, search_text=event_terms or search_text)
+
+    source_counts: dict[str, int] = {}
+    for event in external_events:
+        src = event.get("source") or "Web"
+        source_counts[src] = source_counts.get(src, 0) + 1
 
     return JsonResponse({
         "success": True,
         "location": county,
         "county": f"{county} County",
         "location_source": location_source,
+        "search_text": search_text,
+        "event_terms": event_terms,
+        "platforms_searched": [p["name"] for p in KENYA_EVENT_PLATFORMS],
+        "source_counts": source_counts,
         "internal_count": len(internal_events),
         "external_count": len(external_events),
         "internal_events": internal_events,
