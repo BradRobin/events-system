@@ -414,6 +414,9 @@ window.loadPendingPayments = async function() {
                     showToast('Payment approved. Ticket issued.', 'success');
                     loadPendingPayments();
                     loadDashboardStats();
+                    if (typeof window.refreshOrganizerNotifications === 'function') {
+                        window.refreshOrganizerNotifications();
+                    }
                 } catch (e) {
                     showToast(e.message || 'Approval failed', 'error');
                 }
@@ -426,6 +429,9 @@ window.loadPendingPayments = async function() {
                     await OrganizerAPI.paymentOrders.reject(btn.dataset.id);
                     showToast('Payment rejected.', 'info');
                     loadPendingPayments();
+                    if (typeof window.refreshOrganizerNotifications === 'function') {
+                        window.refreshOrganizerNotifications();
+                    }
                 } catch (e) {
                     showToast(e.message || 'Rejection failed', 'error');
                 }
@@ -436,35 +442,49 @@ window.loadPendingPayments = async function() {
     }
 };
 
-window.loadNotifications = async function() {
-    const container = document.getElementById('notificationsList');
+window.loadOrganizerDashboardNotifications = async function() {
+    const container = document.getElementById('organizerDashboardNotificationsList');
     if (!container) return;
     try {
-        const data = await OrganizerAPI.dashboard.getNotifications();
+        const data = await OrganizerAPI.notifications.getList(1, 10);
         const notifs = Array.isArray(data) ? data : (data.notifications || data.results || []);
         if (!notifs.length) {
             container.innerHTML = '<div class="text-muted text-center">No notifications</div>';
             return;
         }
         container.innerHTML = notifs.map(n => `
-            <div class="notification-item p-2 ${n.is_read ? '' : 'unread'}" data-id="${n.id}">
+            <div class="notification-item p-2 ${n.is_read ? '' : 'unread'}" data-id="${n.id}" data-url="${escapeHtml(n.action_url || '/organizer/dashboard/')}">
                 <strong>${escapeHtml(n.title)}</strong><br>
                 <small>${escapeHtml(n.message)}</small><br>
                 <small class="text-muted">${new Date(n.created_at).toLocaleString()}</small>
             </div>
         `).join('');
-        document.querySelectorAll('.notification-item.unread').forEach(el => {
+        container.querySelectorAll('.notification-item').forEach(el => {
             el.addEventListener('click', async () => {
-                try {
-                    await OrganizerAPI.notifications.markAsRead(el.dataset.id);
-                    el.classList.remove('unread');
-                } catch(e) {}
+                const id = el.dataset.id;
+                const url = el.dataset.url;
+                if (el.classList.contains('unread') && id) {
+                    try {
+                        await OrganizerAPI.notifications.markAsRead(id);
+                        el.classList.remove('unread');
+                        if (typeof window.refreshOrganizerNotifications === 'function') {
+                            window.refreshOrganizerNotifications();
+                        }
+                    } catch (e) {}
+                }
+                if (url && url !== '#') {
+                    window.location.href = url;
+                }
             });
         });
     } catch(e) {
         console.error(e);
+        container.innerHTML = '<div class="text-muted text-center">Could not load notifications</div>';
     }
 };
+
+// Backward-compatible alias for dashboard boot script
+window.loadNotifications = window.loadOrganizerDashboardNotifications;
 
 // Attach global listeners (period selector, mark all read)
 document.addEventListener('DOMContentLoaded', function() {
@@ -472,24 +492,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (periodSelect) {
         periodSelect.addEventListener('change', (e) => loadRevenueChart(e.target.value));
     }
-    const markAllBtn = document.getElementById('markAllReadBtn');
+    const markAllBtn = document.getElementById('organizerDashboardMarkAllReadBtn');
     if (markAllBtn) {
         markAllBtn.addEventListener('click', async () => {
             try {
                 await OrganizerAPI.notifications.markAllAsRead();
-                loadNotifications();
+                await loadOrganizerDashboardNotifications();
+                if (typeof window.refreshOrganizerNotifications === 'function') {
+                    window.refreshOrganizerNotifications();
+                }
                 showToast('All notifications marked as read', 'success');
             } catch(e) {}
         });
     }
 
-    if (document.getElementById('notificationsList')) {
-        loadNotifications();
-        setInterval(loadNotifications, 30000);
-        window.addEventListener('notifications-updated', loadNotifications);
+    if (document.getElementById('organizerDashboardNotificationsList')) {
+        loadOrganizerDashboardNotifications();
+        window.addEventListener('notifications-updated', loadOrganizerDashboardNotifications);
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'visible') {
-                loadNotifications();
+                loadOrganizerDashboardNotifications();
             }
         });
     }

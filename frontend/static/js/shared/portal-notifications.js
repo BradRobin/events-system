@@ -320,6 +320,8 @@
     var organizerHub = null;
 
     function initAttendee() {
+        if (document.querySelector('.organizer-portal, .organizer-wrapper')) return null;
+        if (!document.getElementById('notificationsBtn')) return null;
         if (!document.getElementById('notificationsList')) return null;
         if (attendeeHub) return attendeeHub;
 

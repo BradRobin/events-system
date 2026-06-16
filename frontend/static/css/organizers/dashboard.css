@@ -83,6 +83,11 @@ body {
     align-items: center;
     gap: 14px;
     flex-shrink: 0;
+    position: relative;
+    z-index: 110;
+}
+.organizer-topbar-right .organizer-notifications-dropdown {
+    flex-shrink: 0;
 }
 .organizer-page-title {
     font-family: 'Outfit', sans-serif;
