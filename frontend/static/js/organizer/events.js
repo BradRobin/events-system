@@ -19,6 +19,7 @@ async function loadEvents(page = 1) {
 
         container.innerHTML = events.map(event => {
             const title = escapeHtml(event.name || event.title || 'Untitled Event');
+            const titleAttr = escapeHtml(event.name || event.title || 'Untitled Event');
             const dateValue = event.date || event.start_date || '';
             const dateText = dateValue ? new Date(dateValue).toLocaleDateString() : '--';
             const ticketsSold = event.tickets_sold ?? event.sold ?? 0;
@@ -27,9 +28,21 @@ async function loadEvents(page = 1) {
             const badgeClass = status === 'published' || status === 'active' ? 'bg-success' : status === 'draft' ? 'bg-secondary' : status === 'approved' ? 'bg-info' : 'bg-danger';
             return `
             <div class="col-md-4 col-lg-3">
-                <div class="event-card" onclick="editEvent(${event.id})">
+                <div class="event-card" data-event-id="${event.id}" onclick="editEvent(${event.id})">
                     <div class="event-image" style="background-image: url('${event.image_url || '/static/images/placeholder.jpg'}')">
                         <div class="event-status"><span class="badge ${badgeClass}">${status}</span></div>
+                        <div class="event-card-menu dropdown">
+                            <button type="button" class="event-card-menu-btn" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Event options" onclick="event.stopPropagation()">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end event-card-dropdown">
+                                <li>
+                                    <button type="button" class="dropdown-item text-danger delete-event-btn" data-id="${event.id}" data-title="${titleAttr}">
+                                        <i class="fas fa-trash me-2"></i>Delete Event
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                     <div class="p-3">
                         <h6 class="mb-1">${title}</h6>
@@ -41,12 +54,41 @@ async function loadEvents(page = 1) {
         `;
         }).join('');
 
+        attachEventCardMenus();
+
         if (typeof renderPagination === 'function' && data && data.total_pages) {
             renderPagination(data, page, (newPage) => { currentPage = newPage; loadEvents(currentPage); }, 'eventsPagination');
         }
     } catch(e) {
         console.error(e);
         if(window.showToast) window.showToast('Failed to load events', 'error');
+    }
+}
+
+function attachEventCardMenus() {
+    document.querySelectorAll('.event-card-menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => e.stopPropagation());
+    });
+    document.querySelectorAll('.delete-event-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            deleteEvent(btn.dataset.id, btn.dataset.title);
+        });
+    });
+}
+
+async function deleteEvent(eventId, eventTitle = '') {
+    const label = eventTitle ? `"${eventTitle}"` : 'this event';
+    if (!confirm(`Are you sure you want to permanently delete ${label}? This action cannot be undone.`)) {
+        return;
+    }
+    try {
+        await OrganizerAPI.events.delete(eventId);
+        if (window.showToast) window.showToast('Event deleted successfully', 'success');
+        loadEvents(currentPage);
+    } catch (e) {
+        if (window.showToast) window.showToast(e.message || 'Failed to delete event', 'error');
     }
 }
 
