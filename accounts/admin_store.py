@@ -106,19 +106,42 @@ def seed_initial_data():
 
 
 def get_approved_organizer_ids():
+    User = get_user_model()
+    db_ids = list(
+        User.objects.filter(role='organizer', organizer_verification='approved')
+        .values_list('id', flat=True)
+    )
     store = load_store()
-    return store.get("approved_organizer_ids", [])
+    store_ids = [int(x) for x in store.get("approved_organizer_ids", [])]
+    return list(set(db_ids + store_ids))
 
 
 def approve_organizer(organizer_id):
-    store = load_store()
-    approved = store.get("approved_organizer_ids", [])
+    User = get_user_model()
     organizer_id = int(organizer_id)
-    if organizer_id not in approved:
-        approved.append(organizer_id)
-        store["approved_organizer_ids"] = approved
-        save_store(store)
-    return True
+    updated = User.objects.filter(id=organizer_id, role='organizer').update(
+        organizer_verification='approved',
+        is_active=True,
+    )
+    if updated:
+        store = load_store()
+        approved = store.get("approved_organizer_ids", [])
+        if organizer_id not in approved:
+            approved.append(organizer_id)
+            store["approved_organizer_ids"] = approved
+            save_store(store)
+    return bool(updated)
+
+
+def reject_organizer(organizer_id):
+    User = get_user_model()
+    organizer_id = int(organizer_id)
+    return bool(
+        User.objects.filter(id=organizer_id, role='organizer').update(
+            organizer_verification='rejected',
+            is_active=False,
+        )
+    )
 
 
 def _notification_state_map():

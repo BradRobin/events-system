@@ -74,7 +74,7 @@ function displayPendingOrganizers(organizers) {
     }
     
     container.innerHTML = organizers.map(org => `
-        <div class="organizer-card">
+        <div class="organizer-card" data-organizer-id="${org.id}">
             <div class="organizer-header">
                 <div class="organizer-avatar">
                     <i class="fas fa-building"></i>
@@ -152,12 +152,30 @@ async function approveOrganizer(organizerId) {
         await apiRequest(`/api/admin/organizers/${id}/approve/`, 'POST');
         showToast('Organizer approved successfully', 'success');
         closeReviewModal();
-        loadPendingOrganizers();
-        loadStats();
+        removePendingOrganizerCard(id);
+        await loadPendingOrganizers();
+        await loadStats();
     } catch (error) {
         showToast('Failed to approve organizer', 'error');
     } finally {
         if (typeof Loader !== 'undefined') Loader.hide();
+    }
+}
+
+function removePendingOrganizerCard(organizerId) {
+    const card = document.querySelector(
+        `#pendingOrganizersList .organizer-card[data-organizer-id="${organizerId}"]`
+    );
+    if (card) card.remove();
+    const container = document.getElementById('pendingOrganizersList');
+    if (container && !container.querySelector('.organizer-card')) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <h3>No Pending Applications</h3>
+                <p>All organizer applications have been processed.</p>
+            </div>
+        `;
     }
 }
 
@@ -176,8 +194,9 @@ async function rejectOrganizer(organizerId) {
         await apiRequest(`/api/admin/organizers/${id}/reject/`, 'POST', { reason: reason });
         showToast('Application rejected', 'success');
         closeReviewModal();
-        loadPendingOrganizers();
-        loadStats();
+        removePendingOrganizerCard(id);
+        await loadPendingOrganizers();
+        await loadStats();
     } catch (error) {
         showToast('Failed to reject application', 'error');
     } finally {

@@ -39,6 +39,18 @@ class User(AbstractUser):
     mpesa_pochi = models.CharField(max_length=20, blank=True)
     mpesa_send_money = models.CharField(max_length=20, blank=True)
 
+    ORGANIZER_VERIFICATION_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+    organizer_verification = models.CharField(
+        max_length=20,
+        choices=ORGANIZER_VERIFICATION_CHOICES,
+        default='pending',
+        blank=True,
+    )
+
     def has_mpesa_payment_config(self):
         return bool(
             self.mpesa_display_name.strip()
@@ -62,6 +74,13 @@ class User(AbstractUser):
             options.append({'type': 'send_money', 'label': 'Send Money', 'value': self.mpesa_send_money.strip()})
         return options
     
+    def is_organizer_approved(self):
+        if self.role != 'organizer':
+            return False
+        if self.organizer_verification == 'approved':
+            return True
+        return self.has_mpesa_payment_config()
+
     class Meta(AbstractUser.Meta):
         indexes = [
             models.Index(fields=['role']),

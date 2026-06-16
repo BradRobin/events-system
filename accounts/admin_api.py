@@ -19,7 +19,7 @@ from accounts.admin_store import (
     expire_notifications_for_entity,
     get_support_tickets, get_support_ticket_detail,
     add_support_ticket_reply, update_support_ticket_status,
-    get_approved_organizer_ids, approve_organizer,
+    get_approved_organizer_ids, approve_organizer, reject_organizer,
     load_store, save_store,
 )
 
@@ -1107,9 +1107,6 @@ def user_suspend(request, user_id):
         return safe_api_error_response(request, e)
 
 @csrf_exempt
-@require_http_methods(["POST"])
-@admin_required_json
-@csrf_exempt
 @require_http_methods(["GET"])
 @admin_required_json
 def user_detail_api(request, user_id):
@@ -1140,7 +1137,7 @@ def user_detail_api(request, user_id):
                 'business_name': u.organization_name or u.username,
                 'tax_id': 'N/A',
                 'business_address': u.location or 'N/A',
-                'is_verified': u.id in approved_ids or u.has_mpesa_payment_config(),
+                'is_verified': u.is_organizer_approved() or u.id in approved_ids,
                 'total_events': event_count,
                 'total_tickets': int(tickets_sold['total'] or 0),
                 'total_revenue': float(rev_agg['total'] or 0.0),
@@ -1218,12 +1215,7 @@ def organizers_stats_api(request):
         events_count = Event.objects.filter(organizer__role='organizer').count()
         tickets_sold = Ticket.objects.filter(event__organizer__role='organizer').exclude(status='cancelled').count()
         
-        approved_ids = set(get_approved_organizer_ids())
-        pending = 0
-        for org in User.objects.filter(role='organizer', is_active=True):
-            if org.id not in approved_ids and not org.has_mpesa_payment_config():
-                if Event.objects.filter(organizer=org).count() == 0:
-                    pending += 1
+        pending = len(_pending_organizers_queryset())
 
         stats = {
             'verified': verified,
@@ -1324,12 +1316,15 @@ def organizers_suspended_api(request):
         return safe_api_error_response(request, e)
 
 def _pending_organizers_queryset():
-    approved_ids = set(get_approved_organizer_ids())
     pending = []
-    for org in User.objects.filter(role='organizer', is_active=True).order_by('-date_joined'):
-        if org.id in approved_ids or org.has_mpesa_payment_config():
+    for org in User.objects.filter(
+        role='organizer',
+        is_active=True,
+        organizer_verification='pending',
+    ).order_by('-date_joined'):
+        if org.has_mpesa_payment_config():
             continue
-        if Event.objects.filter(organizer=org).count() > 0:
+        if Event.objects.filter(organizer=org).exists():
             continue
         pending.append(org)
     return pending
@@ -1345,7 +1340,10 @@ def organizers_pending_stats_api(request):
             'success': True,
             'stats': {
                 'pending': len(pending),
-                'approved_this_week': len(get_approved_organizer_ids()),
+                'approved_this_month': User.objects.filter(
+                    role='organizer',
+                    organizer_verification='approved',
+                ).count(),
             }
         })
     except Exception as e:
@@ -1479,8 +1477,7 @@ def organizer_reject_api(request, organizer_id):
         data = json.loads(request.body) if request.body else {}
         reason = data.get('reason', 'Application rejected by administrator')
         u = get_object_or_404(User, id=organizer_id, role='organizer')
-        u.is_active = False
-        u.save()
+        reject_organizer(u.id)
         return JsonResponse({'success': True, 'message': f'Organizer rejected. Reason: {reason}'})
     except Exception as e:
         return safe_api_error_response(request, e)
