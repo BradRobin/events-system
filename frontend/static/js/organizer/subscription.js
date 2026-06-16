@@ -4,6 +4,14 @@
     let currentOrder = null;
     let plansData = null;
 
+    const PLAN_ICONS = {
+        free: 'fa-seedling',
+        plus: 'fa-rocket',
+        premium: 'fa-crown',
+    };
+
+    const AWAITING_APPROVAL_STATUSES = new Set(['manual_review', 'verifying']);
+
     function getAuthHeaders(json = true) {
         const headers = {};
         const token = localStorage.getItem('organizer_access_token');
@@ -29,6 +37,76 @@
         return 'KES ' + Number(amount).toLocaleString('en-KE');
     }
 
+    function isAwaitingApproval(pendingOrder) {
+        return pendingOrder && AWAITING_APPROVAL_STATUSES.has(pendingOrder.status);
+    }
+
+    function getPlanButtonState(plan, usage, pendingOrder) {
+        const isCurrent = plan.slug === usage.plan;
+
+        if (isCurrent) {
+            return { label: 'Current plan', disabled: true, variant: 'current', action: null };
+        }
+
+        if (plan.slug === 'free') {
+            return { label: 'Free tier', disabled: true, variant: 'free', action: null };
+        }
+
+        if (!plan.upgradable) {
+            return { label: 'Not available', disabled: true, variant: 'disabled', action: null };
+        }
+
+        if (pendingOrder && pendingOrder.plan === plan.slug) {
+            if (pendingOrder.status === 'pending_payment') {
+                return {
+                    label: 'Continue upgrade',
+                    disabled: false,
+                    variant: 'continue',
+                    action: 'resume',
+                };
+            }
+            if (isAwaitingApproval(pendingOrder)) {
+                return {
+                    label: 'Waiting for Approval',
+                    disabled: true,
+                    variant: 'waiting',
+                    action: null,
+                };
+            }
+        }
+
+        if (pendingOrder) {
+            return {
+                label: `Upgrade to ${plan.name}`,
+                disabled: true,
+                variant: 'disabled',
+                action: null,
+            };
+        }
+
+        return {
+            label: `Upgrade to ${plan.name}`,
+            disabled: false,
+            variant: 'upgrade',
+            action: 'upgrade',
+        };
+    }
+
+    function renderPlanButton(plan, buttonState) {
+        const icon = buttonState.variant === 'waiting'
+            ? '<i class="fas fa-clock"></i> '
+            : (buttonState.variant === 'continue' ? '<i class="fas fa-arrow-right"></i> ' : '');
+        const onclick = (!buttonState.disabled && buttonState.action)
+            ? `onclick="handlePlanCardAction('${plan.slug}', '${buttonState.action}')"`
+            : '';
+        return (
+            `<button type="button" class="plan-upgrade-btn plan-upgrade-btn--${buttonState.variant}" ` +
+            `${buttonState.disabled ? 'disabled' : ''} ${onclick}>` +
+            `${icon}${escapeHtml(buttonState.label)}` +
+            `</button>`
+        );
+    }
+
     async function loadOcrHealth() {
         try {
             const res = await fetch('/api/health/ocr/');
@@ -42,16 +120,20 @@
     }
 
     async function loadSubscriptionStatus() {
-        const res = await fetch('/api/organizer/subscription/', { headers: getAuthHeaders(false) });
+        const res = await fetch('/api/organizer/subscription/', {
+            headers: getAuthHeaders(false),
+            credentials: 'same-origin',
+        });
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load subscription');
         plansData = data;
-        renderUsageBanner(data.usage);
-        renderPlanCards(data.plans, data.usage);
+        renderUsageBanner(data.usage, data.pending_order);
+        renderPendingBanner(data.pending_order);
+        renderPlanCards(data.plans, data.usage, data.pending_order);
         return data;
     }
 
-    function renderUsageBanner(usage) {
+    function renderUsageBanner(usage, pendingOrder) {
         const el = document.getElementById('subscriptionUsageBanner');
         if (!el || !usage) return;
         el.style.display = 'block';
@@ -63,32 +145,74 @@
         `;
     }
 
-    function renderPlanCards(plans, usage) {
+    function renderPendingBanner(pendingOrder) {
+        let el = document.getElementById('subscriptionPendingBanner');
+        if (!el) {
+            const anchor = document.getElementById('subscriptionUsageBanner')
+                || document.getElementById('ocrStatusBanner')
+                || document.getElementById('planCards');
+            if (!anchor || !anchor.parentNode) return;
+            el = document.createElement('div');
+            el.id = 'subscriptionPendingBanner';
+            el.className = 'subscription-pending-banner';
+            el.style.display = 'none';
+            anchor.parentNode.insertBefore(el, anchor.nextSibling);
+        }
+
+        if (!isAwaitingApproval(pendingOrder)) {
+            el.style.display = 'none';
+            el.innerHTML = '';
+            return;
+        }
+
+        const planName = pendingOrder.plan_name || pendingOrder.plan;
+        el.style.display = 'block';
+        el.innerHTML = (
+            `<i class="fas fa-hourglass-half"></i>` +
+            `<strong>${escapeHtml(planName)} upgrade pending.</strong> ` +
+            `EventHub is reviewing your M-Pesa payment. Your plan will activate once approved.`
+        );
+    }
+
+    function renderPlanCards(plans, usage, pendingOrder) {
         const container = document.getElementById('planCards');
         if (!container) return;
-        container.innerHTML = plans.map(plan => {
+
+        container.innerHTML = plans.map(function (plan) {
             const isCurrent = plan.slug === usage.plan;
+            const isPendingPlan = pendingOrder && pendingOrder.plan === plan.slug && isAwaitingApproval(pendingOrder);
             const priceLabel = plan.price_kes > 0 ? formatCurrency(plan.price_kes) : 'Free';
-            return `
-                <div class="plan-card ${isCurrent ? 'is-current' : ''} ${plan.slug === 'premium' ? 'is-featured' : ''}">
-                    <h3>${escapeHtml(plan.name)}${isCurrent ? ' <small>(Current)</small>' : ''}</h3>
-                    <div class="plan-price">${priceLabel}${plan.price_kes > 0 ? '<span> / month</span>' : ''}</div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> ${plan.events_per_month} event${plan.events_per_month > 1 ? 's' : ''} per month</li>
-                        <li><i class="fas fa-check"></i> ${escapeHtml(plan.description)}</li>
-                    </ul>
-                    <button type="button" class="plan-upgrade-btn"
-                        ${!plan.upgradable || isCurrent ? 'disabled' : ''}
-                        onclick="startPlanUpgrade('${plan.slug}')">
-                        ${isCurrent ? 'Current plan' : (plan.slug === 'free' ? 'Free tier' : `Upgrade to ${escapeHtml(plan.name)}`)}
-                    </button>
-                </div>
-            `;
+            const buttonState = getPlanButtonState(plan, usage, pendingOrder);
+            const icon = PLAN_ICONS[plan.slug] || 'fa-layer-group';
+            const ribbon = plan.slug === 'plus'
+                ? '<span class="plan-card__ribbon">Popular</span>'
+                : (plan.slug === 'premium' ? '<span class="plan-card__ribbon plan-card__ribbon--premium">Best value</span>' : '');
+
+            return (
+                `<div class="plan-card plan-card--${plan.slug}` +
+                `${isCurrent ? ' is-current' : ''}` +
+                `${plan.slug === 'premium' ? ' is-featured' : ''}` +
+                `${isPendingPlan ? ' is-pending' : ''}">` +
+                ribbon +
+                `<div class="plan-card__header">` +
+                    `<div class="plan-card__icon"><i class="fas ${icon}"></i></div>` +
+                    `<h3>${escapeHtml(plan.name)}${isCurrent ? ' <small>Current</small>' : ''}</h3>` +
+                    `<p class="plan-card__tagline">${escapeHtml(plan.description)}</p>` +
+                `</div>` +
+                `<div class="plan-price">${priceLabel}${plan.price_kes > 0 ? '<span>per month</span>' : '<span>forever</span>'}</div>` +
+                `<ul class="plan-features">` +
+                    `<li><i class="fas fa-check"></i><span><strong>${plan.events_per_month}</strong> event${plan.events_per_month > 1 ? 's' : ''} per month</span></li>` +
+                    `<li><i class="fas fa-check"></i><span>Search rank tier <strong>${plan.search_rank}</strong></span></li>` +
+                    `<li><i class="fas fa-check"></i><span>${escapeHtml(plan.description)}</span></li>` +
+                `</ul>` +
+                renderPlanButton(plan, buttonState) +
+                `</div>`
+            );
         }).join('');
     }
 
     function showSubStep(step) {
-        ['subStep1', 'subStep2', 'subStep3', 'subStepPending', 'subStepFail'].forEach(id => {
+        ['subStep1', 'subStep2', 'subStep3', 'subStepPending', 'subStepFail'].forEach(function (id) {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
@@ -100,20 +224,22 @@
     function renderPaymentOptions(options) {
         const container = document.getElementById('subPaymentOptions');
         if (!container) return;
-        container.innerHTML = (options || []).map(opt => `
-            <div class="checkout-payment-option">
-                <div class="payment-option-details">
-                    <strong>${escapeHtml(opt.label)}</strong>
-                    <div class="checkout-payment-value">${escapeHtml(opt.value)}</div>
-                    <div class="payment-option-instruction">${escapeHtml(opt.instruction || '')}</div>
+        container.innerHTML = (options || []).map(function (opt) {
+            return `
+                <div class="checkout-payment-option">
+                    <div class="payment-option-details">
+                        <strong>${escapeHtml(opt.label)}</strong>
+                        <div class="checkout-payment-value">${escapeHtml(opt.value)}</div>
+                        <div class="payment-option-instruction">${escapeHtml(opt.instruction || '')}</div>
+                    </div>
+                    <button type="button" class="checkout-copy-btn" data-copy="${escapeHtml(opt.value)}">
+                        <span class="checkout-copy-btn-inner"><i class="fas fa-copy"></i> Copy</span>
+                    </button>
                 </div>
-                <button type="button" class="checkout-copy-btn" data-copy="${escapeHtml(opt.value)}">
-                    <span class="checkout-copy-btn-inner"><i class="fas fa-copy"></i> Copy</span>
-                </button>
-            </div>
-        `).join('');
-        container.querySelectorAll('.checkout-copy-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
+            `;
+        }).join('');
+        container.querySelectorAll('.checkout-copy-btn').forEach(function (btn) {
+            btn.addEventListener('click', async function () {
                 await navigator.clipboard.writeText(btn.getAttribute('data-copy'));
                 showToast('Copied!', 'success');
             });
@@ -147,6 +273,7 @@
         const res = await fetch('/api/organizer/subscription/orders/create/', {
             method: 'POST',
             headers: getAuthHeaders(),
+            credentials: 'same-origin',
             body: JSON.stringify({ plan: planSlug, billing_months: 1 }),
         });
         const data = await res.json();
@@ -171,6 +298,7 @@
         const response = await fetch(`/api/organizer/subscription/orders/${orderId}/verify-screenshot/`, {
             method: 'POST',
             headers,
+            credentials: 'same-origin',
             body: formData,
         });
 
@@ -198,8 +326,12 @@
         return data;
     }
 
-    window.startPlanUpgrade = async function(planSlug) {
+    window.handlePlanCardAction = async function(planSlug, action) {
         try {
+            if (action === 'resume' && plansData?.pending_order) {
+                openCheckoutModal(plansData.pending_order);
+                return;
+            }
             const order = await createSubscriptionOrder(planSlug);
             openCheckoutModal(order);
         } catch (e) {
@@ -207,28 +339,32 @@
         }
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
+    window.startPlanUpgrade = function(planSlug) {
+        handlePlanCardAction(planSlug, 'upgrade');
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
         loadOcrHealth();
-        loadSubscriptionStatus().catch(e => showToast(e.message, 'error'));
+        loadSubscriptionStatus().catch(function (e) { showToast(e.message, 'error'); });
 
         document.getElementById('subCheckoutClose')?.addEventListener('click', closeCheckoutModal);
-        document.getElementById('subPaidBtn')?.addEventListener('click', () => showSubStep(2));
-        document.getElementById('subPendingCloseBtn')?.addEventListener('click', () => {
+        document.getElementById('subPaidBtn')?.addEventListener('click', function () { showSubStep(2); });
+        document.getElementById('subPendingCloseBtn')?.addEventListener('click', function () {
             closeCheckoutModal();
             loadSubscriptionStatus();
         });
-        document.getElementById('subRetryBtn')?.addEventListener('click', () => showSubStep(2));
+        document.getElementById('subRetryBtn')?.addEventListener('click', function () { showSubStep(2); });
 
-        document.getElementById('subScreenshot')?.addEventListener('change', (e) => {
+        document.getElementById('subScreenshot')?.addEventListener('change', function (e) {
             const file = e.target.files[0];
             const preview = document.getElementById('subScreenshotPreview');
             if (!file || !preview) return;
             const reader = new FileReader();
-            reader.onload = () => { preview.innerHTML = `<img src="${reader.result}" alt="Preview">`; };
+            reader.onload = function () { preview.innerHTML = `<img src="${reader.result}" alt="Preview">`; };
             reader.readAsDataURL(file);
         });
 
-        document.getElementById('subVerifyBtn')?.addEventListener('click', async () => {
+        document.getElementById('subVerifyBtn')?.addEventListener('click', async function () {
             if (!currentOrder) return;
             const file = document.getElementById('subScreenshot')?.files[0];
             if (!file) { showToast('Upload screenshot first', 'error'); return; }
@@ -239,6 +375,7 @@
                 if (result.step === 'pending_approval') {
                     document.getElementById('subPendingMessage').textContent = result.message || 'Your upgrade request has been submitted for approval.';
                     showSubStep(4);
+                    await loadSubscriptionStatus();
                 }
             } catch (e) {
                 document.getElementById('subFailMessage').textContent = e.message;
@@ -248,10 +385,16 @@
 
         const params = new URLSearchParams(window.location.search);
         if (params.get('upgrade') === '1') {
-            loadSubscriptionStatus().then(() => {
+            loadSubscriptionStatus().then(function () {
                 const plan = params.get('plan') || 'plus';
                 startPlanUpgrade(plan);
             });
         }
+
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && document.getElementById('planCards')) {
+                loadSubscriptionStatus().catch(function () {});
+            }
+        });
     });
 })();

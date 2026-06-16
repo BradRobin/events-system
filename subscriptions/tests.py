@@ -139,3 +139,19 @@ class SubscriptionPlanTests(TestCase):
         res = self.client.get('/api/health/ocr/')
         self.assertEqual(res.status_code, 200)
         self.assertIn('ocr_available', res.json())
+
+    def test_subscription_status_includes_pending_order(self):
+        order = SubscriptionOrder.objects.create(
+            organizer=self.organizer,
+            plan='plus',
+            amount=Decimal('500'),
+            status='manual_review',
+        )
+        self.client.force_login(self.organizer)
+        res = self.client.get('/api/organizer/subscription/')
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data['success'])
+        self.assertIsNotNone(data['pending_order'])
+        self.assertEqual(data['pending_order']['plan'], 'plus')
+        self.assertEqual(data['pending_order']['status'], 'manual_review')
