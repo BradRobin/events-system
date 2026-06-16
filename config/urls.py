@@ -77,6 +77,10 @@ from reviews.views import (
     api_update_review,
     api_delete_review,
     api_public_reviews,
+    api_customer_stories_list,
+    api_my_customer_story,
+    api_create_customer_story,
+    api_delete_customer_story,
 )
 from events.api_organizer_views import (
     api_organizer_events_list,
@@ -335,6 +339,10 @@ urlpatterns = [
     path('api/events/discover/', api_discover_local_events, name='api_events_discover'),
     path('api/platform/stats/', api_platform_stats, name='api_platform_stats'),
     path('api/platform/reviews/', api_public_reviews, name='api_public_reviews'),
+    path('api/customer-stories/', api_customer_stories_list, name='api_customer_stories_list'),
+    path('api/attendee/customer-stories/', api_create_customer_story, name='api_create_customer_story'),
+    path('api/attendee/customer-stories/mine/', api_my_customer_story, name='api_my_customer_story'),
+    path('api/attendee/customer-stories/delete/', api_delete_customer_story, name='api_delete_customer_story'),
     # ============ ADMIN PORTAL API ENDPOINTS ============
     # Dashboard
     path('api/admin/dashboard/stats/', admin_api.dashboard_stats, name='admin_dashboard_stats'),

@@ -73,9 +73,12 @@
             <button id="readMoreBtn" class="testimonial-btn testimonial-btn-primary">
                 <i class="fas fa-book-open"></i> Load More
             </button>
-            <button id="shareStoryBtn" class="testimonial-btn testimonial-btn-secondary">
+            <button id="shareStoryBtn" class="testimonial-btn testimonial-btn-secondary" type="button" style="display: none;">
                 <i class="fas fa-pen-fancy"></i> Share Your Story
             </button>
+            <a id="loginToShareBtn" href="/login/?next=/customer-stories/" class="testimonial-btn testimonial-btn-secondary">
+                <i class="fas fa-sign-in-alt"></i> Login to Share Your Story
+            </a>
         </div>
     </div>
 </div>
@@ -85,6 +88,7 @@
     <div class="modal-content">
         <button class="modal-close" id="closeModalBtn">&times;</button>
         <h3>Share Your Success Story</h3>
+        <p class="modal-auth-note" id="storyModalAuthNote">You must be signed in to submit a story.</p>
         <form id="storyForm">
             <div class="form-group">
                 <label>Your Name *</label>

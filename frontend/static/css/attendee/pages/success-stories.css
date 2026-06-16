@@ -394,6 +394,21 @@
     cursor: not-allowed;
 }
 
+a.testimonial-btn,
+a#loginToShareBtn {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.modal-auth-note {
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
 /* Modal */
 .story-modal {
     display: none;
