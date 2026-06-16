@@ -5,6 +5,7 @@
 
 let cartData = null;
 let selectedOrganizerKey = null;
+let cartEnriching = false;
 
 const emptyCartEl = document.getElementById('emptyCart');
 const cartContentEl = document.getElementById('cartContent');
@@ -21,17 +22,16 @@ const promoForm = document.getElementById('promoForm');
 const checkoutForm = document.getElementById('checkoutForm');
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadCart();
     setupEventListeners();
-    updateNavBadgesFromCart();
+    loadCart();
     clearCartBadgeOnView();
-    maybeAutoStartCheckout();
 });
 
 function getOrganizerKey(item) {
     if (item.organizer_id) return 'id:' + item.organizer_id;
-    const name = item.organizer || item.organizer_name || 'Event Organizer';
-    return 'name:' + name;
+    const name = item.organizer || item.organizer_name;
+    if (name && name !== 'Event Organizer') return 'name:' + name;
+    return 'unknown:' + item.id;
 }
 
 function getOrganizerName(item) {
@@ -41,10 +41,10 @@ function getOrganizerName(item) {
 function maybeAutoStartCheckout() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('checkout') !== '1') return;
-    if (!cartData?.items?.length) return;
+    if (!cartData?.items?.length || cartEnriching) return;
 
     const groups = groupItemsByOrganizer(cartData.items);
-    if (groups.length === 1) {
+    if (groups.length >= 1) {
         selectOrganizerGroup(groups[0].key);
         proceedToCheckout();
     }
@@ -101,18 +101,56 @@ function onCheckoutProgress() {
 function onCheckoutQueueComplete() {
     loadCart();
     backToCart();
-    const notice = document.getElementById('multiOrganizerNotice');
-    if (notice && cartData?.items?.length) {
-        const remaining = groupItemsByOrganizer(cartData.items);
-        if (remaining.length > 1) {
-            notice.style.display = 'block';
-            notice.querySelector('.notice-text').textContent =
-                `${remaining.length} organizers still have unpaid events in your cart. Pay each one separately using their M-Pesa details.`;
+}
+
+async function enrichCartItemsFromApi() {
+    if (!cartData?.items?.length) return;
+
+    const needsEnrich = cartData.items.filter(item => !item.organizer_id);
+    if (!needsEnrich.length) return;
+
+    cartEnriching = true;
+    displayCart();
+
+    await Promise.all(needsEnrich.map(async (item) => {
+        try {
+            const response = await fetch(`/api/attendee/events/${item.id}/`);
+            const data = await response.json();
+            if (!response.ok || !data.success || !data.event) return;
+
+            const ev = data.event;
+            const organizerName = ev.organizer_name || ev.organizer || 'Event Organizer';
+            item.organizer_id = ev.organizer_id || item.organizer_id;
+            item.organizer_name = organizerName;
+            item.organizer = organizerName;
+            if (!item.ticket_type) item.ticket_type = item.tier || 'regular';
+            if (!item.category) item.category = ev.category_name || ev.category;
+            if (!item.location) item.location = ev.location || ev.venue;
+            if (!item.date) item.date = ev.date || ev.start_date;
+        } catch (err) {
+            console.warn('Could not load organizer for event', item.id, err);
         }
+    }));
+
+    cartEnriching = false;
+    normalizeCartItems();
+    saveCartToLocalStorage();
+}
+
+function normalizeCartItems() {
+    for (let i = 0; i < cartData.items.length; i++) {
+        const item = cartData.items[i];
+        if (!item.organizer && item.organizer_name) item.organizer = item.organizer_name;
+        if (!item.organizer_name && item.organizer) item.organizer_name = item.organizer;
+        if (!item.organizer) {
+            item.organizer = 'Event Organizer';
+            item.organizer_name = 'Event Organizer';
+        }
+        if (!item.ticket_type) item.ticket_type = item.tier || 'regular';
     }
 }
 
-function loadCart() {
+async function loadCart() {
     try {
         if (window.EventhubCartStorage) {
             cartData = window.EventhubCartStorage.loadEventhubCart();
@@ -127,16 +165,6 @@ function loadCart() {
         cartData.discount_amount = cartData.discount_amount || 0;
         cartData.promo_code = cartData.promo_code || null;
 
-        for (let i = 0; i < cartData.items.length; i++) {
-            const item = cartData.items[i];
-            if (!item.organizer && item.organizer_name) item.organizer = item.organizer_name;
-            if (!item.organizer) {
-                item.organizer = 'Event Organizer';
-                item.organizer_name = 'Event Organizer';
-            }
-            if (!item.ticket_type) item.ticket_type = item.tier || 'regular';
-        }
-
         window.cartData = cartData;
         displayCart();
 
@@ -144,11 +172,26 @@ function loadCart() {
             if (emptyCartEl) emptyCartEl.style.display = 'block';
             if (cartContentEl) cartContentEl.style.display = 'none';
             hideSummary();
-        } else {
-            if (emptyCartEl) emptyCartEl.style.display = 'none';
-            if (cartContentEl) cartContentEl.style.display = 'block';
-            updateCartCount(cartData.items.length);
+            updateCheckoutBar();
+            updateNavBadgesFromCart();
+            return;
         }
+
+        if (emptyCartEl) emptyCartEl.style.display = 'none';
+        if (cartContentEl) cartContentEl.style.display = 'block';
+
+        await enrichCartItemsFromApi();
+
+        const groups = groupItemsByOrganizer(cartData.items);
+        if (groups.length === 1 && !selectedOrganizerKey) {
+            selectedOrganizerKey = groups[0].key;
+        } else if (selectedOrganizerKey && !groups.some(g => g.key === selectedOrganizerKey)) {
+            selectedOrganizerKey = groups.length === 1 ? groups[0].key : null;
+        }
+
+        displayCart();
+        updateNavBadgesFromCart();
+        maybeAutoStartCheckout();
     } catch (error) {
         console.error('Error loading cart:', error);
         showToast('Failed to load your booking cart', 'error');
@@ -165,6 +208,7 @@ function hideSummary() {
     selectedOrganizerKey = null;
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
     if (proceedBtn) proceedBtn.disabled = true;
+    updateCheckoutBar();
 }
 
 function getSelectedGroupItems() {
@@ -178,14 +222,14 @@ function updateSummaryForOrganizer(organizerKey) {
         return;
     }
 
-    const organizerItems = getSelectedGroupItems();
+    const organizerItems = cartData.items.filter(item => getOrganizerKey(item) === organizerKey);
     if (!organizerItems.length) {
         hideSummary();
         return;
     }
 
     const organizerName = getOrganizerName(organizerItems[0]);
-    let subtotal = organizerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = organizerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const discount = cartData.discount_amount || 0;
     const total = subtotal - discount;
 
@@ -227,10 +271,48 @@ function updateSummaryForOrganizer(organizerKey) {
 
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
     if (proceedBtn) {
-        proceedBtn.disabled = false;
+        proceedBtn.disabled = cartEnriching;
         proceedBtn.textContent = organizerItems.length > 1
             ? `Pay ${organizerName} (${organizerItems.length} events)`
             : `Pay ${organizerName}`;
+    }
+
+    updateCheckoutBar();
+}
+
+function updateCheckoutBar() {
+    const bar = document.getElementById('cartCheckoutBar');
+    if (!bar) return;
+
+    if (!cartData?.items?.length || checkoutViewEl?.style.display === 'block' || cartEnriching) {
+        bar.style.display = 'none';
+        return;
+    }
+
+    const groups = groupItemsByOrganizer(cartData.items);
+    const labelEl = document.getElementById('checkoutBarLabel');
+    const amountEl = document.getElementById('checkoutBarAmount');
+    const btn = document.getElementById('checkoutBarBtn');
+
+    bar.style.display = 'block';
+
+    if (groups.length > 1) {
+        if (labelEl) labelEl.textContent = `${groups.length} organizers — pay each separately`;
+        if (amountEl) amountEl.textContent = formatCurrency(cartData.subtotal);
+        if (btn) {
+            btn.textContent = selectedOrganizerKey ? 'Continue to payment' : 'Select organizer above';
+            btn.disabled = !selectedOrganizerKey;
+        }
+        return;
+    }
+
+    const group = groups[0];
+    selectedOrganizerKey = group.key;
+    if (labelEl) labelEl.textContent = `Pay ${group.organizer}`;
+    if (amountEl) amountEl.textContent = formatCurrency(group.total - (cartData.discount_amount || 0));
+    if (btn) {
+        btn.textContent = group.items.length > 1 ? `Pay (${group.items.length} events)` : 'Proceed to payment';
+        btn.disabled = false;
     }
 }
 
@@ -262,13 +344,10 @@ function groupItemsByOrganizer(items) {
 
 function selectOrganizerGroup(organizerKey) {
     if (selectedOrganizerKey === organizerKey) {
-        hideSummary();
-        selectedOrganizerKey = null;
-        sessionStorage.removeItem('selected_organizer_key');
-        sessionStorage.removeItem('selected_organizer');
-        sessionStorage.removeItem('selected_items');
-        sessionStorage.removeItem('selected_total');
-        displayCart();
+        if (hasMultipleOrganizers(cartData.items)) {
+            hideSummary();
+            displayCart();
+        }
         return;
     }
     updateSummaryForOrganizer(organizerKey);
@@ -284,6 +363,11 @@ function payOrganizerGroup(organizerKey) {
         return;
     }
 
+    if (cartEnriching) {
+        showToast('Loading organizer payment details…', 'info');
+        return;
+    }
+
     selectOrganizerGroup(organizerKey);
     const items = getSelectedGroupItems();
     if (!items.length) {
@@ -293,87 +377,104 @@ function payOrganizerGroup(organizerKey) {
     proceedToCheckout();
 }
 
+function proceedFromCheckoutBar() {
+    const groups = groupItemsByOrganizer(cartData.items);
+    if (groups.length === 1) {
+        payOrganizerGroup(groups[0].key);
+        return;
+    }
+    if (!selectedOrganizerKey) {
+        showToast('Tap Pay on an organizer section above', 'info');
+        return;
+    }
+    proceedToCheckout();
+}
+
 function displayCart() {
     if (!cartItemsEl) return;
 
     const notice = document.getElementById('multiOrganizerNotice');
+    const checkoutBar = document.getElementById('cartCheckoutBar');
+
     if (!cartData.items || !cartData.items.length) {
         cartItemsEl.innerHTML = '<div class="empty-cart-message">Your booking cart is empty</div>';
         if (notice) notice.style.display = 'none';
+        if (checkoutBar) checkoutBar.style.display = 'none';
         hideSummary();
         return;
     }
 
-    const multiOrg = hasMultipleOrganizers(cartData.items);
+    if (cartEnriching) {
+        cartItemsEl.innerHTML = '<div class="cart-loading-message"><i class="fas fa-circle-notch fa-spin"></i> Loading organizer payment details…</div>';
+        if (checkoutBar) checkoutBar.style.display = 'none';
+        return;
+    }
+
+    const groups = groupItemsByOrganizer(cartData.items);
+    const multiOrg = groups.length > 1;
+
     if (notice) {
         if (multiOrg) {
-            const count = groupItemsByOrganizer(cartData.items).length;
             notice.style.display = 'block';
             notice.querySelector('.notice-text').textContent =
-                `Your cart has events from ${count} organizers. Each organizer uses their own M-Pesa paybill/till — complete payment separately for each group below.`;
+                `Your cart has events from ${groups.length} organizers. Each uses a different M-Pesa paybill or till — pay each organizer separately below.`;
         } else {
             notice.style.display = 'none';
         }
     }
 
-    if (multiOrg) {
-        const groups = groupItemsByOrganizer(cartData.items);
-        let html = '';
-        for (let g = 0; g < groups.length; g++) {
-            const group = groups[g];
-            const isSelected = selectedOrganizerKey === group.key;
-            const safeKey = escapeHtml(group.key).replace(/'/g, "\\'");
-            html += `
-                <div class="organizer-group ${isSelected ? 'is-selected' : ''}" data-organizer-key="${escapeHtml(group.key)}">
-                    <div class="organizer-group-header">
-                        <div class="organizer-select">
-                            <h4>${escapeHtml(group.organizer)}</h4>
-                            <span class="organizer-event-count">${group.items.length} event${group.items.length > 1 ? 's' : ''}</span>
-                        </div>
-                        <span class="organizer-total">${formatCurrency(group.total)}</span>
+    let html = '';
+    for (let g = 0; g < groups.length; g++) {
+        const group = groups[g];
+        const isSelected = selectedOrganizerKey === group.key;
+        const safeKey = escapeHtml(group.key).replace(/'/g, "\\'");
+        html += `
+            <div class="organizer-group ${isSelected ? 'is-selected' : ''}" data-organizer-key="${escapeHtml(group.key)}">
+                <div class="organizer-group-header" onclick="selectOrganizerGroup('${safeKey}')">
+                    <div class="organizer-select">
+                        <h4>${escapeHtml(group.organizer)}</h4>
+                        <span class="organizer-event-count">${group.items.length} event${group.items.length > 1 ? 's' : ''}</span>
                     </div>
-                    <p class="organizer-payment-note"><i class="fas fa-mobile-alt"></i> Pays to ${escapeHtml(group.organizer)}&rsquo;s M-Pesa account</p>
-                    <div class="organizer-group-items">
-            `;
-            for (let i = 0; i < group.items.length; i++) {
-                const item = group.items[i];
-                html += renderBookingItem(item);
-            }
-            html += `
-                    </div>
-                    <div class="organizer-group-actions">
-                        <button type="button" class="organizer-pay-btn" onclick="payOrganizerGroup('${safeKey}')">
-                            <i class="fas fa-mobile-alt"></i> Pay ${escapeHtml(group.organizer)}
-                        </button>
-                    </div>
+                    <span class="organizer-total">${formatCurrency(group.total)}</span>
                 </div>
-            `;
+                <p class="organizer-payment-note"><i class="fas fa-mobile-alt"></i> M-Pesa payment goes to <strong>${escapeHtml(group.organizer)}</strong></p>
+                <div class="organizer-group-items">
+        `;
+        for (let i = 0; i < group.items.length; i++) {
+            html += renderBookingItem(group.items[i]);
         }
-        cartItemsEl.innerHTML = html;
-        if (selectedOrganizerKey) {
-            updateSummaryForOrganizer(selectedOrganizerKey);
-        } else {
-            hideSummary();
-        }
+        html += `
+                </div>
+                <div class="organizer-group-actions">
+                    <button type="button" class="organizer-pay-btn" onclick="event.stopPropagation(); payOrganizerGroup('${safeKey}')">
+                        <i class="fas fa-mobile-alt"></i> Pay ${escapeHtml(group.organizer)}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    cartItemsEl.innerHTML = html;
+
+    if (groups.length === 1) {
+        updateSummaryForOrganizer(groups[0].key);
+    } else if (selectedOrganizerKey) {
+        updateSummaryForOrganizer(selectedOrganizerKey);
     } else {
-        let html = '';
-        for (let i = 0; i < cartData.items.length; i++) {
-            html += renderBookingItem(cartData.items[i]);
-        }
-        cartItemsEl.innerHTML = html;
-        const singleKey = getOrganizerKey(cartData.items[0]);
-        updateSummaryForOrganizer(singleKey);
+        hideSummary();
     }
 
     if (cartItemCountSpan) cartItemCountSpan.textContent = cartData.items.length;
+    updateCheckoutBar();
 }
 
 function renderBookingItem(item) {
+    const orgLine = getOrganizerName(item);
     return `
         <div class="booking-item" data-id="${item.id}">
             <div class="item-image" style="background-image: url('${item.image || '/static/images/placeholder.jpg'}')"></div>
             <div class="item-details">
                 <h4>${escapeHtml(item.title)}</h4>
+                <p class="item-organizer"><i class="fas fa-user-tie"></i> ${escapeHtml(orgLine)}</p>
                 <p class="item-type">${escapeHtml(item.category || 'Event')} · ${escapeHtml(item.ticket_type || item.tier || 'regular')}</p>
                 <p class="item-date">${formatDate(item.date)}</p>
                 <p class="item-venue">${escapeHtml(item.location || '')}</p>
@@ -418,7 +519,10 @@ async function removeItem(itemId) {
         const stillHas = cartData.items.some(i => getOrganizerKey(i) === selectedOrganizerKey);
         if (!stillHas) {
             selectedOrganizerKey = null;
-            hideSummary();
+            const groups = groupItemsByOrganizer(cartData.items);
+            if (groups.length === 1) selectedOrganizerKey = groups[0].key;
+            if (!selectedOrganizerKey) hideSummary();
+            else updateSummaryForOrganizer(selectedOrganizerKey);
         } else {
             updateSummaryForOrganizer(selectedOrganizerKey);
         }
@@ -474,8 +578,7 @@ async function applyPromoCode(e) {
     if (code.toUpperCase() === 'WELCOME10') {
         const scopeItems = selectedOrganizerKey ? getSelectedGroupItems() : cartData.items;
         const scopeSubtotal = scopeItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const discountAmount = Math.floor(scopeSubtotal * 0.1);
-        cartData.discount_amount = discountAmount;
+        cartData.discount_amount = Math.floor(scopeSubtotal * 0.1);
         cartData.promo_code = code.toUpperCase();
         recalculateCartTotals();
         saveCartToLocalStorage();
@@ -483,7 +586,7 @@ async function applyPromoCode(e) {
         displayCart();
         document.getElementById('promoCode').value = '';
         window.dispatchEvent(new Event('cart-updated'));
-        showToast('Promo applied! You saved ' + formatCurrency(discountAmount), 'success');
+        showToast('Promo applied! You saved ' + formatCurrency(cartData.discount_amount), 'success');
     } else {
         showToast('Invalid promo code', 'error');
     }
@@ -521,6 +624,8 @@ function proceedToCheckout() {
     if (bookingSummaryCard) bookingSummaryCard.style.display = 'none';
     const notice = document.getElementById('multiOrganizerNotice');
     if (notice) notice.style.display = 'none';
+    const checkoutBar = document.getElementById('cartCheckoutBar');
+    if (checkoutBar) checkoutBar.style.display = 'none';
 
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
     const nameInput = document.getElementById('billingName');
@@ -535,7 +640,7 @@ function proceedToCheckout() {
 
     const summaryEl = document.getElementById('checkoutOrderSummary');
     if (summaryEl) {
-        let itemsHtml = selectedItems.map(item => `
+        const itemsHtml = selectedItems.map(item => `
             <div class="checkout-summary-item">
                 <span>${escapeHtml(item.title)} × ${item.quantity}</span>
                 <span>${formatCurrency(item.price * item.quantity)}</span>
@@ -547,13 +652,15 @@ function proceedToCheckout() {
                 <i class="fas fa-mobile-alt"></i>
                 <div>
                     <strong>Paying ${escapeHtml(organizerName)}</strong>
-                    <p>Each event is paid separately using this organizer&rsquo;s M-Pesa details.</p>
+                    <p>${selectedItems.length > 1
+                        ? 'You will complete ' + selectedItems.length + ' separate M-Pesa payments — one per event — using this organizer\'s details.'
+                        : 'Payment uses this organizer\'s M-Pesa paybill or till.'}</p>
                 </div>
             </div>
             ${itemsHtml}
-            <div class="summary-row"><span>Subtotal (${selectedItems.length} event${selectedItems.length > 1 ? 's' : ''}):</span><span>${formatCurrency(subtotal)}</span></div>
+            <div class="summary-row"><span>Subtotal:</span><span>${formatCurrency(subtotal)}</span></div>
             ${discount > 0 ? `<div class="summary-row discount"><span>Discount:</span><span>-${formatCurrency(discount)}</span></div>` : ''}
-            <div class="summary-row total"><span>Total for this organizer:</span><span>${formatCurrency(total)}</span></div>
+            <div class="summary-row total"><span>Total for ${escapeHtml(organizerName)}:</span><span>${formatCurrency(total)}</span></div>
         `;
     }
 
@@ -568,11 +675,7 @@ function proceedToCheckout() {
 function backToCart() {
     if (checkoutViewEl) checkoutViewEl.style.display = 'none';
     if (cartContentEl) cartContentEl.style.display = 'block';
-    loadCart();
-    if (selectedOrganizerKey) {
-        const bookingSummaryCard = document.querySelector('.booking-summary-card');
-        if (bookingSummaryCard) bookingSummaryCard.style.display = 'block';
-    }
+    displayCart();
 }
 
 async function processCheckout(e) {
@@ -590,9 +693,9 @@ async function processCheckout(e) {
     const billingInfo = { name: billingName, email: billingEmail };
     sessionStorage.setItem('checkout_billing_info', JSON.stringify(billingInfo));
 
-    if (window.CheckoutFlow && typeof window.CheckoutFlow.startOrganizerCheckout === 'function') {
+    if (window.CheckoutFlow?.startOrganizerCheckout) {
         await window.CheckoutFlow.startOrganizerCheckout(selectedItems, billingInfo);
-    } else if (window.CheckoutFlow && typeof window.CheckoutFlow.startCheckout === 'function') {
+    } else if (window.CheckoutFlow?.startCheckout) {
         const first = selectedItems[0];
         await window.CheckoutFlow.startCheckout(first.id, first.ticket_type || 'regular', first.quantity);
     } else {
@@ -669,5 +772,6 @@ window.clearCart = clearCart;
 window.removePromoCode = removePromoCode;
 window.selectOrganizerGroup = selectOrganizerGroup;
 window.payOrganizerGroup = payOrganizerGroup;
+window.proceedFromCheckoutBar = proceedFromCheckoutBar;
 window.backToCart = backToCart;
 window.proceedToCheckout = proceedToCheckout;

@@ -232,25 +232,35 @@ function addToCart(eventId) {
             return;
         }
 
-        const item = storage
+        const item = storage?.buildCartItemFromEvent
+            ? storage.buildCartItemFromEvent(event, { quantity: 1 })
+            : storage
             ? storage.slimCartItem({
                 id: event.id,
                 title: event.title,
                 price: event.price,
                 quantity: 1,
+                ticket_type: 'regular',
                 image: event.image,
                 location: event.location,
                 date: event.date,
                 category: event.category,
+                organizer_id: event.organizer_id,
+                organizer_name: event.organizer_name,
+                organizer: event.organizer_name || 'Event Organizer',
             })
             : {
                 id: event.id,
                 title: event.title,
                 price: event.price,
                 quantity: 1,
+                ticket_type: 'regular',
                 location: event.location,
                 date: event.date,
                 category: event.category,
+                organizer_id: event.organizer_id,
+                organizer_name: event.organizer_name,
+                organizer: event.organizer_name || 'Event Organizer',
             };
 
         cart.items.push(item);

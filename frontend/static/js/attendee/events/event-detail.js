@@ -827,21 +827,25 @@ function bookTicket(event, quantity = 1, tier = 'Regular') {
         showToast(`⚠️ "${event.title}" is already in your cart. Proceed to checkout to complete your booking.`, 'info');
         return false;
     } else {
-        cart.items.push({
-            id: event.id,
-            title: event.title,
-            tier: tier,
-            ticket_type: tier,
-            price: price,
-            quantity: quantity,
-            image: event.image,
-            date: event.date,
-            location: event.location,
-            category: event.category || event.category_name,
-            organizer_id: event.organizer_id,
-            organizer_name: event.organizer_name || event.organizer,
-            organizer: event.organizer_name || event.organizer || 'Event Organizer',
-        });
+        const storage = window.EventhubCartStorage;
+        const newItem = storage?.buildCartItemFromEvent
+            ? storage.buildCartItemFromEvent(event, { tier, ticket_type: tier, quantity, price })
+            : {
+                id: event.id,
+                title: event.title,
+                tier: tier,
+                ticket_type: tier,
+                price: price,
+                quantity: quantity,
+                image: event.image,
+                date: event.date,
+                location: event.location,
+                category: event.category || event.category_name,
+                organizer_id: event.organizer_id,
+                organizer_name: event.organizer_name || event.organizer,
+                organizer: event.organizer_name || event.organizer || 'Event Organizer',
+            };
+        cart.items.push(newItem);
         
         // Format price display for toast
         const formattedPrice = `KES ${price.toLocaleString()}`;

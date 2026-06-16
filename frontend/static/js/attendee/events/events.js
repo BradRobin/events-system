@@ -680,20 +680,24 @@ function bookTicket(id, title, price) {
         return;
     }
     
-    cart.items.push({
-        id: event.id,
-        title: event.title,
-        category: event.category_name,
-        date: event.date,
-        location: event.location,
-        price: event.price,
-        quantity: 1,
-        ticket_type: 'regular',
-        image: event.image,
-        organizer_id: event.organizer_id,
-        organizer_name: event.organizer_name,
-        organizer: event.organizer_name || 'Event Organizer',
-    });
+    cart.items.push(
+        window.EventhubCartStorage?.buildCartItemFromEvent
+            ? window.EventhubCartStorage.buildCartItemFromEvent(event, { quantity: 1 })
+            : {
+                id: event.id,
+                title: event.title,
+                category: event.category_name,
+                date: event.date,
+                location: event.location,
+                price: event.price,
+                quantity: 1,
+                ticket_type: 'regular',
+                image: event.image,
+                organizer_id: event.organizer_id,
+                organizer_name: event.organizer_name,
+                organizer: event.organizer_name || 'Event Organizer',
+            }
+    );
     
     cart.subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     cart.total = cart.subtotal;

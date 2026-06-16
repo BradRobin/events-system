@@ -5,8 +5,8 @@
 {% block robots_meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/attendee/cart/cart.css' %}">
-<link rel="stylesheet" href="{% static 'css/attendee/payments/checkout.css' %}">
+<link rel="stylesheet" href="{% static 'css/attendee/cart/cart.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/attendee/payments/checkout.css' %}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -78,10 +78,20 @@
 </div>
 
 {% include 'attendee/events/checkout_modal.html' %}
+
+<div id="cartCheckoutBar" class="cart-checkout-bar" style="display: none;" aria-live="polite">
+    <div class="cart-checkout-bar-inner">
+        <div class="cart-checkout-bar-meta">
+            <span id="checkoutBarLabel" class="cart-checkout-bar-label">Ready to pay</span>
+            <strong id="checkoutBarAmount" class="cart-checkout-bar-amount">KES 0</strong>
+        </div>
+        <button type="button" id="checkoutBarBtn" class="cart-checkout-bar-btn" onclick="proceedFromCheckoutBar()">Proceed to payment</button>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/shared/cart-storage.js' %}"></script>
-<script src="{% static 'js/attendee/payments/checkout.js' %}"></script>
-<script src="{% static 'js/attendee/cart/cart.js' %}"></script>
+<script src="{% static 'js/shared/cart-storage.js' %}?v=2"></script>
+<script src="{% static 'js/attendee/payments/checkout.js' %}?v=2"></script>
+<script src="{% static 'js/attendee/cart/cart.js' %}?v=2"></script>
 {% endblock %}

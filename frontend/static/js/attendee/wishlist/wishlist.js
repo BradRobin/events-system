@@ -504,10 +504,14 @@ async function proceedToBooking(eventId, eventTitle, eventPrice) {
         title: event.title,
         price: event.price,
         quantity: 1,
+        ticket_type: 'regular',
         image: event.image,
         location: event.location,
         date: event.date,
-        category: event.category
+        category: event.category,
+        organizer_id: event.organizer_id || null,
+        organizer_name: event.organizer_name || event.organizer || 'Event Organizer',
+        organizer: event.organizer_name || event.organizer || 'Event Organizer',
     });
     
     cart.subtotal = cart.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);

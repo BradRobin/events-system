@@ -366,7 +366,9 @@ function addToCart(eventId) {
         return;
     }
 
-    const item = storage
+    const item = storage?.buildCartItemFromEvent
+        ? storage.buildCartItemFromEvent(event, { quantity: 1 })
+        : storage
         ? storage.slimCartItem({
             id: event.id,
             title: event.title,

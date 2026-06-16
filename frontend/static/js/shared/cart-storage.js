@@ -43,6 +43,31 @@
         return { items: [], subtotal: 0, platform_fee: 0, total: 0 };
     }
 
+    /** Build a normalized cart line item from an event API object. */
+    function buildCartItemFromEvent(event, options) {
+        const opts = options || {};
+        const tier = opts.tier || opts.ticket_type || 'regular';
+        const quantity = opts.quantity || 1;
+        const price = opts.price != null ? opts.price : (event.price || 0);
+        const organizerName = event.organizer_name || event.organizer || 'Event Organizer';
+
+        return slimCartItem({
+            id: event.id,
+            title: event.title,
+            tier: tier,
+            ticket_type: tier,
+            price: price,
+            quantity: quantity,
+            image: event.image || event.banner_image || '',
+            date: event.date || event.start_date || event.end_date || '',
+            location: event.location || event.venue || '',
+            category: event.category_name || event.category || 'Event',
+            organizer_id: event.organizer_id || null,
+            organizer_name: organizerName,
+            organizer: organizerName,
+        });
+    }
+
     function loadEventhubCart() {
         const raw = localStorage.getItem(CART_KEY);
         if (!raw) {
@@ -89,6 +114,7 @@
         slimImage,
         slimCartItem,
         slimCart,
+        buildCartItemFromEvent,
         loadEventhubCart,
         saveEventhubCart,
         defaultCart,

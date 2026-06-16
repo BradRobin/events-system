@@ -698,9 +698,9 @@ def api_dashboard_recent_activity(request):
 @cache_page(3600)
 def api_featured_events(request):
     """API endpoint to get featured events for the attendee homepage"""
-    events = Event.objects.filter(status='published', end_date__gte=timezone.now(), is_featured=True).select_related('category').order_by('start_date')[:6]
+    events = Event.objects.filter(status='published', end_date__gte=timezone.now(), is_featured=True).select_related('category', 'organizer').order_by('start_date')[:6]
     if not events.exists():
-        events = Event.objects.filter(status='published', end_date__gte=timezone.now()).select_related('category').order_by('start_date')[:6]
+        events = Event.objects.filter(status='published', end_date__gte=timezone.now()).select_related('category', 'organizer').order_by('start_date')[:6]
         
     results = []
     for e in events:
@@ -720,6 +720,8 @@ def api_featured_events(request):
             'category_name': e.category.name if e.category else 'General',
             'attendees_count': e.total_seats - e.available_seats,
             'tickets_left': e.available_seats,
+            'organizer_id': e.organizer_id,
+            'organizer_name': e.organizer.organization_name or e.organizer.username,
         })
     return JsonResponse({'success': True, 'events': results})
 
