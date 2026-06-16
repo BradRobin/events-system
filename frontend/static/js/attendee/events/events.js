@@ -688,7 +688,11 @@ function bookTicket(id, title, price) {
         location: event.location,
         price: event.price,
         quantity: 1,
-        image: event.image
+        ticket_type: 'regular',
+        image: event.image,
+        organizer_id: event.organizer_id,
+        organizer_name: event.organizer_name,
+        organizer: event.organizer_name || 'Event Organizer',
     });
     
     cart.subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);

@@ -79,6 +79,13 @@ def _serialize_order(order, include_payment=False):
     }
     if include_payment:
         organizer = order.organizer
+        data['organizer_id'] = organizer.id
+        data['organizer_name'] = (
+            organizer.mpesa_display_name
+            or organizer.organization_name
+            or organizer.get_full_name()
+            or organizer.username
+        )
         data['mpesa_display_name'] = organizer.mpesa_display_name
         data['payment_options'] = organizer.mpesa_payment_options()
         data['stk_available'] = _stk_checkout_enabled()

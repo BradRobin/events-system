@@ -1,7 +1,5 @@
 /**
- * M-Pesa Checkout - Works with both MOCK and REAL API
- * Handles: Order creation, screenshot upload, verification polling, ticket saving
- * Each event appears ONCE with quantity badge, max 8 tickets
+ * M-Pesa Checkout — per-organizer payment settings, multi-event queue support.
  */
 
 (function() {
@@ -9,7 +7,9 @@
 
     let currentOrder = null;
     let statusPollInterval = null;
-    let isMockMode = window.ATTENDEE_API_CONFIG?.USE_MOCK === true;
+    let checkoutQueue = [];
+    let checkoutQueueIndex = 0;
+    let checkoutQueueBilling = null;
 
     function getAuthHeaders(json = true) {
         const headers = {};
@@ -45,6 +45,38 @@
         if (target) target.style.display = 'block';
     }
 
+    function queueHasMore() {
+        return checkoutQueue.length > 0 && checkoutQueueIndex < checkoutQueue.length - 1;
+    }
+
+    function updateQueueProgressUI(order) {
+        const el = document.getElementById('checkoutQueueProgress');
+        if (!el) return;
+        if (checkoutQueue.length <= 1) {
+            el.style.display = 'none';
+            return;
+        }
+        el.style.display = 'block';
+        const current = checkoutQueueIndex + 1;
+        const item = checkoutQueue[checkoutQueueIndex];
+        el.innerHTML = `
+            <span class="checkout-queue-pill">Payment ${current} of ${checkoutQueue.length}</span>
+            <strong>${escapeHtml(item?.title || order?.event_title || 'Event')}</strong>
+        `;
+    }
+
+    function updatePendingActions() {
+        const btn = document.getElementById('checkoutPendingCloseBtn');
+        if (!btn) return;
+        btn.textContent = queueHasMore() ? 'Next payment' : 'Back to cart';
+    }
+
+    function updateSuccessActions() {
+        const btn = document.getElementById('checkoutSuccessCloseBtn');
+        if (!btn) return;
+        btn.textContent = queueHasMore() ? 'Next payment' : 'View my tickets';
+    }
+
     function renderPaymentOptions(order) {
         const container = document.getElementById('checkoutPaymentOptions');
         if (!container) return;
@@ -53,7 +85,7 @@
             container.innerHTML = '<p class="no-payment-options">No payment options available. Contact organizer.</p>';
             return;
         }
-        
+
         container.innerHTML = options.map(opt => {
             const icons = { paybill: 'fa-building', till: 'fa-store', pochi: 'fa-wallet', sendmoney: 'fa-phone-alt', mpesa: 'fa-mobile-alt' };
             return `
@@ -103,12 +135,11 @@
     }
 
     async function createOrder(eventId, ticketType, quantity) {
-        // Enforce max 8 tickets per booking
         const maxQuantity = Math.min(quantity, 8);
         if (quantity > 8) {
             showToast('Maximum 8 tickets per booking. Reducing to 8.', 'warning');
         }
-        
+
         const response = await fetch('/api/attendee/payment-orders/create/', {
             method: 'POST',
             headers: getAuthHeaders(),
@@ -142,13 +173,14 @@
             headers,
             body: formData,
         });
-        
+
         if (!response.ok) throw new Error('Verification request failed');
-        
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        
+        let lastResult = { step: 'pending' };
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -163,86 +195,87 @@
                 if (payload.step === 'completed') {
                     return { step: 'completed', ticket: payload.ticket };
                 }
+                if (payload.step === 'pending_approval') {
+                    lastResult = {
+                        step: 'pending_approval',
+                        order_id: payload.order_id,
+                        event_id: payload.event_id,
+                        message: payload.message,
+                    };
+                }
                 if (payload.step === 'failed') {
                     throw new Error(payload.message);
                 }
             }
         }
-        return { step: 'pending' };
+        return lastResult;
     }
 
-    // Save ticket to localStorage - ONE card per event with quantity
+    function removeEventFromCart(eventId) {
+        if (!window.cartData || !eventId) return;
+        window.cartData.items = window.cartData.items.filter(item => String(item.id) !== String(eventId));
+        if (window.cartData.items.length === 0) {
+            if (window.EventhubCartStorage) {
+                window.EventhubCartStorage.saveEventhubCart({ items: [], subtotal: 0, total: 0 });
+            } else {
+                localStorage.removeItem('eventhub_cart');
+            }
+        } else {
+            window.cartData.subtotal = window.cartData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            window.cartData.total = window.cartData.subtotal - (window.cartData.discount_amount || 0);
+            if (window.EventhubCartStorage) {
+                window.EventhubCartStorage.saveEventhubCart(window.cartData);
+            } else {
+                localStorage.setItem('eventhub_cart', JSON.stringify(window.cartData));
+            }
+        }
+        if (typeof window.displayCart === 'function') {
+            window.displayCart();
+        }
+        window.dispatchEvent(new CustomEvent('cart-updated'));
+    }
+
     function saveTicketToLocalStorage(order, ticketData) {
         try {
             let bookings = JSON.parse(localStorage.getItem('eventhub_bookings') || '[]');
-            let selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
-            let billingInfo = JSON.parse(sessionStorage.getItem('checkout_billing_info') || '{}');
-            let selectedOrganizer = sessionStorage.getItem('selected_organizer') || order.organizer_name;
-            
-            if (selectedItems.length === 0) {
-                const cartData = JSON.parse(localStorage.getItem('eventhub_cart') || '{}');
-                selectedItems = cartData.items || [];
-            }
-            
-            // Group items by event ID to combine quantities
-            const groupedItems = {};
-            for (const item of selectedItems) {
-                if (groupedItems[item.id]) {
-                    groupedItems[item.id].quantity += item.quantity;
-                    // Ensure max 8
-                    if (groupedItems[item.id].quantity > 8) groupedItems[item.id].quantity = 8;
-                } else {
-                    groupedItems[item.id] = { ...item, quantity: Math.min(item.quantity, 8) };
-                }
-            }
-            
-            const finalItems = Object.values(groupedItems);
-            let subtotal = finalItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            let total = order.total_amount || subtotal;
-            const receiptNumber = order.receipt_number || ('MPESA' + Date.now().toString().slice(-8));
-            const bookingId = order.booking_id || ('BK' + Date.now());
-            
-            const formattedItems = finalItems.map(item => {
-                // Generate single ticket code for the booking
-                const ticketCode = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
-                return {
-                    id: item.id,
-                    title: item.title,
-                    category: item.category || 'Event',
-                    date: item.date,
-                    location: item.location,
-                    price: item.price,
-                    quantity: Math.min(item.quantity, 8), // Max 8 per booking
-                    image: item.image,
-                    ticket_code: ticketCode,
-                    ticket_codes: [ticketCode],
-                    ticket_type: item.ticket_type || 'regular',
-                    organizer: item.organizer || selectedOrganizer
-                };
-            });
-            
+            const billingInfo = checkoutQueueBilling || JSON.parse(sessionStorage.getItem('checkout_billing_info') || '{}');
+            const item = checkoutQueue[checkoutQueueIndex] || { id: order.event_id, title: order.event_title };
+            const receiptNumber = order.receipt_number || order.mpesa_receipt || ('MPESA' + Date.now().toString().slice(-8));
+            const bookingId = order.booking_id || ('BK' + order.id);
+            const ticketCode = ticketData?.ticket_number || order.ticket_number || `TKT${order.id}`;
+
             const booking = {
                 id: bookingId,
                 booking_date: new Date().toISOString(),
                 status: 'confirmed',
                 payment_method: 'M-Pesa',
                 receipt_number: receiptNumber,
-                total_amount: total,
-                subtotal: subtotal,
+                total_amount: order.total_amount,
+                subtotal: order.total_amount,
                 discount: 0,
-                organizer: selectedOrganizer,
+                organizer: order.organizer_name || sessionStorage.getItem('selected_organizer'),
                 billing_info: billingInfo,
-                items: formattedItems,
+                items: [{
+                    id: item.id || order.event_id,
+                    title: item.title || order.event_title,
+                    category: item.category || 'Event',
+                    date: item.date,
+                    location: item.location,
+                    price: order.unit_price,
+                    quantity: order.quantity,
+                    image: item.image,
+                    ticket_code: ticketCode,
+                    ticket_codes: [ticketCode],
+                    ticket_type: order.ticket_type || item.ticket_type || 'regular',
+                    organizer: order.organizer_name,
+                }],
                 payment_status: 'completed',
-                payment_date: new Date().toISOString()
+                payment_date: new Date().toISOString(),
             };
-            
-            // Remove any existing booking with same ID to avoid duplicates
+
             bookings = bookings.filter(b => b.id !== bookingId);
             bookings.unshift(booking);
             localStorage.setItem('eventhub_bookings', JSON.stringify(bookings));
-            
-            console.log('Ticket saved to localStorage:', booking);
             return booking;
         } catch (error) {
             console.error('Error saving ticket:', error);
@@ -250,57 +283,82 @@
         }
     }
 
-    function handlePaymentComplete(order) {
-        console.log('Payment completed, saving tickets...');
-        const booking = saveTicketToLocalStorage(order, null);
-        
-        if (booking) {
-            showToast('Payment successful! Your tickets have been issued.', 'success');
+    function showPendingStep(order, message) {
+        const msgEl = document.getElementById('checkoutPendingMessage');
+        const hintEl = document.getElementById('checkoutPendingHint');
+        if (msgEl) {
+            msgEl.textContent = message || 'Your payment proof has been sent to the organizer for approval.';
         }
-        
+        if (hintEl) {
+            hintEl.textContent = queueHasMore()
+                ? 'Once you continue, you will pay the next event using that organizer\'s M-Pesa details.'
+                : 'You will be notified when your ticket is issued. You can check status under My Tickets.';
+        }
+        updatePendingActions();
+        showStep(4);
+    }
+
+    function advanceQueueAfterPayment(order, { completed = false } = {}) {
+        removeEventFromCart(order.event_id);
+
+        if (queueHasMore()) {
+            checkoutQueueIndex += 1;
+            closeCheckoutModal(false);
+            setTimeout(() => processNextInQueue(), 400);
+            return;
+        }
+
+        checkoutQueue = [];
+        checkoutQueueIndex = 0;
+        checkoutQueueBilling = null;
         sessionStorage.removeItem('selected_organizer');
         sessionStorage.removeItem('selected_items');
         sessionStorage.removeItem('selected_total');
-        sessionStorage.removeItem('checkout_billing_info');
-        
-        const selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
-        if (selectedItems.length > 0 && window.cartData) {
-            const purchasedIds = selectedItems.map(item => item.id);
-            window.cartData.items = window.cartData.items.filter(item => !purchasedIds.includes(item.id));
-            
-            if (window.cartData.items.length === 0) {
-                localStorage.removeItem('eventhub_cart');
-                localStorage.removeItem('eventhub_cart_mock');
-            } else {
-                window.cartData.subtotal = window.cartData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                window.cartData.total = window.cartData.subtotal - (window.cartData.discount_amount || 0);
-                localStorage.setItem('eventhub_cart', JSON.stringify(window.cartData));
-                localStorage.setItem('eventhub_cart_mock', JSON.stringify(window.cartData));
+
+        if (completed) {
+            updateSuccessActions();
+        } else {
+            closeCheckoutModal();
+            if (typeof window.backToCart === 'function') {
+                window.backToCart();
             }
-            
-            if (typeof window.displayCart === 'function') {
-                window.displayCart();
-            }
+            showToast('All payments submitted for organizer approval.', 'success');
+            window.dispatchEvent(new CustomEvent('checkout-queue-complete'));
         }
-        
-        window.dispatchEvent(new CustomEvent('cart-updated'));
-        window.dispatchEvent(new CustomEvent('storage'));
-        window.dispatchEvent(new CustomEvent('checkout-completed', { 
-            detail: { order_id: order.id, event_id: order.event_id, booking: booking } 
+    }
+
+    function handlePaymentComplete(order) {
+        const booking = saveTicketToLocalStorage(order, null);
+        if (booking) {
+            showToast('Payment successful! Your ticket has been issued.', 'success');
+        }
+        window.dispatchEvent(new CustomEvent('checkout-completed', {
+            detail: { order_id: order.id, event_id: order.event_id, booking },
         }));
+        advanceQueueAfterPayment(order, { completed: true });
+    }
+
+    function handlePaymentSubmitted(order, message) {
+        window.dispatchEvent(new CustomEvent('checkout-submitted', {
+            detail: { order_id: order.id, event_id: order.event_id },
+        }));
+        if (queueHasMore()) {
+            showToast('Payment submitted. Continuing to next event…', 'success');
+            advanceQueueAfterPayment(order, { completed: false });
+        } else {
+            showPendingStep(order, message);
+        }
     }
 
     function startStatusPolling(orderId, onComplete, onFail) {
         if (statusPollInterval) clearInterval(statusPollInterval);
         let attempts = 0;
         const maxAttempts = 60;
-        
+
         statusPollInterval = setInterval(async () => {
             attempts++;
             try {
                 const order = await checkOrderStatus(orderId);
-                console.log('[Checkout] Status check:', order.payment_status, order.status);
-                
                 if (order.payment_status === 'approved' || order.status === 'completed') {
                     clearInterval(statusPollInterval);
                     statusPollInterval = null;
@@ -315,7 +373,6 @@
                 if (attempts >= maxAttempts) {
                     clearInterval(statusPollInterval);
                     statusPollInterval = null;
-                    onFail({ message: 'Verification timeout. Please contact organizer.' });
                 }
             } catch (e) {
                 console.error('Polling error:', e);
@@ -330,29 +387,92 @@
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
-        document.getElementById('checkoutReceiverName').textContent = order.organizer_name || 'Event Organizer';
+        const receiver = order.organizer_name || order.mpesa_display_name || 'Event Organizer';
+        document.getElementById('checkoutReceiverName').textContent = receiver;
         document.getElementById('checkoutTotalAmount').textContent = `KES ${Number(order.total_amount).toLocaleString()}`;
+
+        const eventTitleEl = document.getElementById('checkoutEventTitle');
+        if (eventTitleEl) {
+            eventTitleEl.textContent = order.event_title || checkoutQueue[checkoutQueueIndex]?.title || '';
+        }
+
         const tierEl = document.getElementById('checkoutTierBadge');
         if (tierEl) {
             tierEl.textContent = order.ticket_type || 'Regular';
             tierEl.className = `checkout-tier-badge ticket-tier-${(order.ticket_type || 'regular').toLowerCase()}`;
         }
 
+        const hintEl = document.getElementById('checkoutManualHint');
+        if (hintEl) {
+            hintEl.innerHTML = `Send <strong>KES ${Number(order.total_amount).toLocaleString()}</strong> to <strong>${escapeHtml(receiver)}</strong> using the details below, then tap <strong>I have paid</strong>.`;
+        }
+
+        updateQueueProgressUI(order);
         renderPaymentOptions(order);
         showStep(1);
-        
+
         document.getElementById('checkoutStreamSteps').innerHTML = '';
         const fileInput = document.getElementById('checkoutScreenshot');
         if (fileInput) fileInput.value = '';
-        document.getElementById('checkoutScreenshotPreview').innerHTML = '';
+        const preview = document.getElementById('checkoutScreenshotPreview');
+        if (preview) preview.innerHTML = '';
     }
 
-    function closeCheckoutModal() {
+    function closeCheckoutModal(clearQueue = true) {
         if (statusPollInterval) clearInterval(statusPollInterval);
+        statusPollInterval = null;
         const modal = getModal();
         if (modal) modal.style.display = 'none';
         document.body.style.overflow = '';
         currentOrder = null;
+        if (clearQueue) {
+            checkoutQueue = [];
+            checkoutQueueIndex = 0;
+            checkoutQueueBilling = null;
+        }
+    }
+
+    async function processNextInQueue() {
+        if (!checkoutQueue.length || checkoutQueueIndex >= checkoutQueue.length) {
+            showToast('All payments processed.', 'success');
+            window.dispatchEvent(new CustomEvent('checkout-queue-complete'));
+            return;
+        }
+
+        const item = checkoutQueue[checkoutQueueIndex];
+        sessionStorage.setItem('selected_items', JSON.stringify([item]));
+        sessionStorage.setItem('selected_organizer', item.organizer || item.organizer_name || '');
+
+        try {
+            const order = await createOrder(
+                item.id,
+                item.ticket_type || item.tier || 'regular',
+                item.quantity || 1,
+            );
+            openCheckoutModal(order);
+        } catch (e) {
+            showToast(e.message, 'error');
+            closeCheckoutModal();
+        }
+    }
+
+    async function startOrganizerCheckout(items, billingInfo) {
+        const token = localStorage.getItem('attendee_access_token');
+        if (!token) {
+            showToast('Please login to book tickets', 'info');
+            setTimeout(() => window.location.href = '/login/', 1500);
+            return;
+        }
+        if (!items || !items.length) {
+            showToast('No events selected for checkout', 'error');
+            return;
+        }
+
+        checkoutQueue = items.slice();
+        checkoutQueueIndex = 0;
+        checkoutQueueBilling = billingInfo || {};
+        sessionStorage.setItem('checkout_billing_info', JSON.stringify(checkoutQueueBilling));
+        await processNextInQueue();
     }
 
     async function startCheckout(eventId, ticketType, quantity) {
@@ -363,11 +483,8 @@
             return;
         }
         try {
-            const selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
-            const billingInfo = JSON.parse(sessionStorage.getItem('checkout_billing_info') || '{}');
-            localStorage.setItem('temp_checkout_items', JSON.stringify(selectedItems));
-            localStorage.setItem('temp_checkout_billing', JSON.stringify(billingInfo));
-            
+            checkoutQueue = [];
+            checkoutQueueIndex = 0;
             const order = await createOrder(eventId, ticketType, quantity);
             openCheckoutModal(order);
         } catch (e) {
@@ -377,7 +494,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const closeBtn = document.getElementById('checkoutClose');
-        if (closeBtn) closeBtn.addEventListener('click', closeCheckoutModal);
+        if (closeBtn) closeBtn.addEventListener('click', () => closeCheckoutModal());
 
         const paidBtn = document.getElementById('checkoutPaidBtn');
         if (paidBtn) paidBtn.addEventListener('click', () => showStep(2));
@@ -408,24 +525,21 @@
                     const result = await verifyScreenshot(currentOrder.id, file);
                     if (result.step === 'completed') {
                         showStep(6);
+                        updateSuccessActions();
                         handlePaymentComplete(currentOrder);
-                        window.dispatchEvent(new CustomEvent('checkout-completed', { 
-                            detail: { order_id: currentOrder.id, event_id: currentOrder.event_id } 
-                        }));
+                    } else if (result.step === 'pending_approval') {
+                        handlePaymentSubmitted(currentOrder, result.message);
                     } else {
-                        startStatusPolling(currentOrder.id, 
+                        startStatusPolling(
+                            currentOrder.id,
                             (order) => {
                                 showStep(6);
+                                updateSuccessActions();
                                 handlePaymentComplete(order);
-                                window.dispatchEvent(new CustomEvent('checkout-completed', { 
-                                    detail: { order_id: order.id, event_id: order.event_id } 
-                                }));
                             },
-                            (order) => {
-                                showStep(5);
-                            }
+                            () => showStep(5),
                         );
-                        showStep(4);
+                        showPendingStep(currentOrder);
                     }
                 } catch (e) {
                     document.getElementById('checkoutFailMessage').textContent = e.message;
@@ -444,17 +558,33 @@
         });
 
         const successClose = document.getElementById('checkoutSuccessCloseBtn');
-        if (successClose) successClose.addEventListener('click', () => {
-            closeCheckoutModal();
-            window.location.href = '/tickets/';
-        });
+        if (successClose) {
+            successClose.addEventListener('click', () => {
+                if (queueHasMore() && currentOrder) {
+                    advanceQueueAfterPayment(currentOrder, { completed: true });
+                } else {
+                    closeCheckoutModal();
+                    window.location.href = '/tickets/';
+                }
+            });
+        }
 
         const pendingClose = document.getElementById('checkoutPendingCloseBtn');
-        if (pendingClose) pendingClose.addEventListener('click', closeCheckoutModal);
-        
-        const cancelBtn = document.getElementById('checkoutCancelBtn');
-        if (cancelBtn) cancelBtn.addEventListener('click', closeCheckoutModal);
+        if (pendingClose) {
+            pendingClose.addEventListener('click', () => {
+                if (currentOrder) {
+                    advanceQueueAfterPayment(currentOrder, { completed: false });
+                } else {
+                    closeCheckoutModal();
+                }
+            });
+        }
     });
 
-    window.CheckoutFlow = { startCheckout, closeCheckoutModal, createOrder };
+    window.CheckoutFlow = {
+        startCheckout,
+        startOrganizerCheckout,
+        closeCheckoutModal,
+        createOrder,
+    };
 })();

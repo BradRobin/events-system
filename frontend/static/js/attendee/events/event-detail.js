@@ -836,7 +836,11 @@ function bookTicket(event, quantity = 1, tier = 'Regular') {
             quantity: quantity,
             image: event.image,
             date: event.date,
-            location: event.location
+            location: event.location,
+            category: event.category || event.category_name,
+            organizer_id: event.organizer_id,
+            organizer_name: event.organizer_name || event.organizer,
+            organizer: event.organizer_name || event.organizer || 'Event Organizer',
         });
         
         // Format price display for toast

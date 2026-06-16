@@ -437,7 +437,7 @@ def api_event_list(request):
     if cached_data:
         return JsonResponse(cached_data)
         
-    events = Event.objects.filter(status='published', end_date__gte=timezone.now()).select_related('category')
+    events = Event.objects.filter(status='published', end_date__gte=timezone.now()).select_related('category', 'organizer')
     
     if query:
         events = events.filter(
@@ -501,6 +501,8 @@ def api_event_list(request):
             'category': e.category.name if e.category else 'General',
             'category_name': e.category.name if e.category else 'General',
             'is_featured': e.is_featured,
+            'organizer_id': e.organizer_id,
+            'organizer_name': e.organizer.organization_name or e.organizer.username,
         })
         
     response_data = {
@@ -569,7 +571,9 @@ def api_event_detail(request, event_id):
             'category': e.category.name if e.category else 'General',
             'category_name': e.category.name if e.category else 'General',
             'is_featured': e.is_featured,
+            'organizer_id': e.organizer_id,
             'organizer_name': e.organizer.organization_name or e.organizer.username,
+            'organizer': e.organizer.organization_name or e.organizer.username,
             'images': [img.url for img in e.images.all()],
         }
         return JsonResponse({'success': True, 'event': data})

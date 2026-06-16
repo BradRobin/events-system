@@ -1,13 +1,11 @@
 // ============================================
-// BOOKING CART - Radio Button Selection
-// Only ONE organizer can be selected at a time
-// Booking Summary hidden until selection
+// BOOKING CART — multi-organizer payment pipeline
+// Each organizer uses their own M-Pesa settings; pay per organizer group.
 // ============================================
 
 let cartData = null;
-let selectedOrganizer = null;
+let selectedOrganizerKey = null;
 
-// DOM Elements
 const emptyCartEl = document.getElementById('emptyCart');
 const cartContentEl = document.getElementById('cartContent');
 const checkoutViewEl = document.getElementById('checkoutView');
@@ -22,7 +20,6 @@ const promoCodeDisplaySpan = document.getElementById('promoCodeDisplay');
 const promoForm = document.getElementById('promoForm');
 const checkoutForm = document.getElementById('checkoutForm');
 
-// Initialize
 document.addEventListener('DOMContentLoaded', function() {
     loadCart();
     setupEventListeners();
@@ -31,26 +28,30 @@ document.addEventListener('DOMContentLoaded', function() {
     maybeAutoStartCheckout();
 });
 
+function getOrganizerKey(item) {
+    if (item.organizer_id) return 'id:' + item.organizer_id;
+    const name = item.organizer || item.organizer_name || 'Event Organizer';
+    return 'name:' + name;
+}
+
+function getOrganizerName(item) {
+    return item.organizer || item.organizer_name || 'Event Organizer';
+}
+
 function maybeAutoStartCheckout() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('checkout') !== '1') return;
     if (!cartData?.items?.length) return;
 
-    if (!selectedOrganizer) {
-        const firstOrg = cartData.items[0].organizer || cartData.items[0].organizer_name || 'Event Organizer';
-        updateSummaryForOrganizer(firstOrg);
-        const radios = document.querySelectorAll('.organizer-radio');
-        for (let i = 0; i < radios.length; i++) {
-            radios[i].checked = (radios[i].value === firstOrg);
-        }
+    const groups = groupItemsByOrganizer(cartData.items);
+    if (groups.length === 1) {
+        selectOrganizerGroup(groups[0].key);
+        proceedToCheckout();
     }
 
-    if (selectedOrganizer) {
-        proceedToCheckout();
-        const url = new URL(window.location.href);
-        url.searchParams.delete('checkout');
-        window.history.replaceState({}, '', url.pathname + url.search);
-    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete('checkout');
+    window.history.replaceState({}, '', url.pathname + url.search);
 }
 
 function clearCartBadgeOnView() {
@@ -84,6 +85,31 @@ function updateNavBadgesFromCart() {
 function setupEventListeners() {
     if (promoForm) promoForm.addEventListener('submit', applyPromoCode);
     if (checkoutForm) checkoutForm.addEventListener('submit', processCheckout);
+
+    window.addEventListener('checkout-submitted', onCheckoutProgress);
+    window.addEventListener('checkout-completed', onCheckoutProgress);
+    window.addEventListener('checkout-queue-complete', onCheckoutQueueComplete);
+}
+
+function onCheckoutProgress() {
+    loadCart();
+    if (checkoutViewEl?.style.display === 'block') {
+        backToCart();
+    }
+}
+
+function onCheckoutQueueComplete() {
+    loadCart();
+    backToCart();
+    const notice = document.getElementById('multiOrganizerNotice');
+    if (notice && cartData?.items?.length) {
+        const remaining = groupItemsByOrganizer(cartData.items);
+        if (remaining.length > 1) {
+            notice.style.display = 'block';
+            notice.querySelector('.notice-text').textContent =
+                `${remaining.length} organizers still have unpaid events in your cart. Pay each one separately using their M-Pesa details.`;
+        }
+    }
 }
 
 function loadCart() {
@@ -94,27 +120,27 @@ function loadCart() {
             const savedCart = localStorage.getItem('eventhub_cart');
             cartData = savedCart ? JSON.parse(savedCart) : { items: [], subtotal: 0, total: 0 };
         }
-        
+
         cartData.items = cartData.items || [];
         cartData.subtotal = cartData.subtotal || 0;
         cartData.total = cartData.total || 0;
         cartData.discount_amount = cartData.discount_amount || 0;
         cartData.promo_code = cartData.promo_code || null;
-        
-        // Ensure each item has organizer field
+
         for (let i = 0; i < cartData.items.length; i++) {
-            if (!cartData.items[i].organizer && cartData.items[i].organizer_name) {
-                cartData.items[i].organizer = cartData.items[i].organizer_name;
+            const item = cartData.items[i];
+            if (!item.organizer && item.organizer_name) item.organizer = item.organizer_name;
+            if (!item.organizer) {
+                item.organizer = 'Event Organizer';
+                item.organizer_name = 'Event Organizer';
             }
-            if (!cartData.items[i].organizer) {
-                cartData.items[i].organizer = 'Event Organizer';
-                cartData.items[i].organizer_name = 'Event Organizer';
-            }
+            if (!item.ticket_type) item.ticket_type = item.tier || 'regular';
         }
-        
+
+        window.cartData = cartData;
         displayCart();
-        
-        if (!cartData.items || cartData.items.length === 0) {
+
+        if (!cartData.items.length) {
             if (emptyCartEl) emptyCartEl.style.display = 'block';
             if (cartContentEl) cartContentEl.style.display = 'none';
             hideSummary();
@@ -136,195 +162,233 @@ function hideSummary() {
     if (totalAmountSpan) totalAmountSpan.textContent = formatCurrency(0);
     if (discountRow) discountRow.style.display = 'none';
     if (appliedPromoDiv) appliedPromoDiv.style.display = 'none';
-    selectedOrganizer = null;
+    selectedOrganizerKey = null;
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
     if (proceedBtn) proceedBtn.disabled = true;
 }
 
-function updateSummaryForOrganizer(organizerName) {
-    if (!organizerName) {
+function getSelectedGroupItems() {
+    if (!selectedOrganizerKey) return [];
+    return cartData.items.filter(item => getOrganizerKey(item) === selectedOrganizerKey);
+}
+
+function updateSummaryForOrganizer(organizerKey) {
+    if (!organizerKey) {
         hideSummary();
         return;
     }
-    
-    const organizerItems = cartData.items.filter(item => 
-        (item.organizer || item.organizer_name || 'Event Organizer') === organizerName
-    );
-    
-    if (organizerItems.length === 0) {
+
+    const organizerItems = getSelectedGroupItems();
+    if (!organizerItems.length) {
         hideSummary();
         return;
     }
-    
+
+    const organizerName = getOrganizerName(organizerItems[0]);
     let subtotal = organizerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const discount = cartData.discount_amount || 0;
     const total = subtotal - discount;
-    
+
     if (subtotalSpan) subtotalSpan.textContent = formatCurrency(subtotal);
     if (totalAmountSpan) totalAmountSpan.textContent = formatCurrency(total);
-    
+
+    const summaryOrganizerEl = document.getElementById('summaryOrganizerName');
+    if (summaryOrganizerEl) summaryOrganizerEl.textContent = organizerName;
+
+    const summaryEventCount = document.getElementById('summaryEventCount');
+    if (summaryEventCount) {
+        summaryEventCount.textContent = organizerItems.length === 1
+            ? '1 event'
+            : organizerItems.length + ' events';
+    }
+
     if (discount > 0) {
         if (discountRow) discountRow.style.display = 'flex';
         if (discountAmountSpan) discountAmountSpan.textContent = `-${formatCurrency(discount)}`;
-    } else {
-        if (discountRow) discountRow.style.display = 'none';
+    } else if (discountRow) {
+        discountRow.style.display = 'none';
     }
-    
+
     if (cartData.promo_code) {
         if (appliedPromoDiv) appliedPromoDiv.style.display = 'flex';
         if (promoCodeDisplaySpan) promoCodeDisplaySpan.textContent = cartData.promo_code;
-    } else {
-        if (appliedPromoDiv) appliedPromoDiv.style.display = 'none';
+    } else if (appliedPromoDiv) {
+        appliedPromoDiv.style.display = 'none';
     }
-    
-    document.querySelector('.booking-summary-card').style.display = 'block';
-    selectedOrganizer = organizerName;
-    
+
+    const bookingSummaryCard = document.querySelector('.booking-summary-card');
+    if (bookingSummaryCard) bookingSummaryCard.style.display = 'block';
+
+    selectedOrganizerKey = organizerKey;
+    sessionStorage.setItem('selected_organizer_key', organizerKey);
     sessionStorage.setItem('selected_organizer', organizerName);
     sessionStorage.setItem('selected_items', JSON.stringify(organizerItems));
     sessionStorage.setItem('selected_total', total);
-    
+
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
-    if (proceedBtn) proceedBtn.disabled = false;
+    if (proceedBtn) {
+        proceedBtn.disabled = false;
+        proceedBtn.textContent = organizerItems.length > 1
+            ? `Pay ${organizerName} (${organizerItems.length} events)`
+            : `Pay ${organizerName}`;
+    }
 }
 
 function hasMultipleOrganizers(items) {
-    const organizers = new Set();
-    for (let i = 0; i < items.length; i++) {
-        const organizerName = items[i].organizer || items[i].organizer_name || 'Event Organizer';
-        organizers.add(organizerName);
-    }
-    return organizers.size > 1;
+    const keys = new Set(items.map(getOrganizerKey));
+    return keys.size > 1;
 }
 
 function groupItemsByOrganizer(items) {
     const groups = {};
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const orgName = item.organizer || item.organizer_name || 'Event Organizer';
-        if (!groups[orgName]) {
-            groups[orgName] = { organizer: orgName, items: [], total: 0 };
+        const key = getOrganizerKey(item);
+        const orgName = getOrganizerName(item);
+        if (!groups[key]) {
+            groups[key] = {
+                key,
+                organizer: orgName,
+                organizer_id: item.organizer_id,
+                items: [],
+                total: 0,
+            };
         }
-        groups[orgName].items.push(item);
-        groups[orgName].total += item.price * item.quantity;
+        groups[key].items.push(item);
+        groups[key].total += item.price * item.quantity;
     }
     return Object.values(groups);
 }
 
-function selectOrganizer(organizerName) {
-    if (selectedOrganizer === organizerName) {
+function selectOrganizerGroup(organizerKey) {
+    if (selectedOrganizerKey === organizerKey) {
         hideSummary();
-        const radios = document.querySelectorAll('.organizer-radio');
-        for (let i = 0; i < radios.length; i++) {
-            radios[i].checked = false;
-        }
-        selectedOrganizer = null;
+        selectedOrganizerKey = null;
+        sessionStorage.removeItem('selected_organizer_key');
         sessionStorage.removeItem('selected_organizer');
         sessionStorage.removeItem('selected_items');
         sessionStorage.removeItem('selected_total');
-    } else {
-        updateSummaryForOrganizer(organizerName);
-        const radios = document.querySelectorAll('.organizer-radio');
-        for (let i = 0; i < radios.length; i++) {
-            radios[i].checked = (radios[i].value === organizerName);
-        }
+        displayCart();
+        return;
     }
+    updateSummaryForOrganizer(organizerKey);
+    displayCart();
+}
+
+function payOrganizerGroup(organizerKey) {
+    const token = localStorage.getItem('attendee_access_token');
+    if (!token) {
+        localStorage.setItem('redirect_after_login', '/cart/?checkout=1');
+        showToast('Please login to continue', 'info');
+        setTimeout(() => { window.location.href = '/login/'; }, 1500);
+        return;
+    }
+
+    selectOrganizerGroup(organizerKey);
+    const items = getSelectedGroupItems();
+    if (!items.length) {
+        showToast('No events for this organizer', 'error');
+        return;
+    }
+    proceedToCheckout();
 }
 
 function displayCart() {
     if (!cartItemsEl) return;
-    
-    if (!cartData.items || cartData.items.length === 0) {
+
+    const notice = document.getElementById('multiOrganizerNotice');
+    if (!cartData.items || !cartData.items.length) {
         cartItemsEl.innerHTML = '<div class="empty-cart-message">Your booking cart is empty</div>';
+        if (notice) notice.style.display = 'none';
         hideSummary();
         return;
     }
-    
-    if (hasMultipleOrganizers(cartData.items)) {
+
+    const multiOrg = hasMultipleOrganizers(cartData.items);
+    if (notice) {
+        if (multiOrg) {
+            const count = groupItemsByOrganizer(cartData.items).length;
+            notice.style.display = 'block';
+            notice.querySelector('.notice-text').textContent =
+                `Your cart has events from ${count} organizers. Each organizer uses their own M-Pesa paybill/till — complete payment separately for each group below.`;
+        } else {
+            notice.style.display = 'none';
+        }
+    }
+
+    if (multiOrg) {
         const groups = groupItemsByOrganizer(cartData.items);
         let html = '';
         for (let g = 0; g < groups.length; g++) {
             const group = groups[g];
-            const isChecked = (selectedOrganizer === group.organizer);
+            const isSelected = selectedOrganizerKey === group.key;
+            const safeKey = escapeHtml(group.key).replace(/'/g, "\\'");
             html += `
-                <div class="organizer-group" data-organizer="${escapeHtml(group.organizer)}">
+                <div class="organizer-group ${isSelected ? 'is-selected' : ''}" data-organizer-key="${escapeHtml(group.key)}">
                     <div class="organizer-group-header">
                         <div class="organizer-select">
-                            <input type="radio" name="selectedOrganizer" class="organizer-radio" value="${escapeHtml(group.organizer)}" ${isChecked ? 'checked' : ''} onclick="selectOrganizer('${escapeHtml(group.organizer).replace(/'/g, "\\'")}')">
                             <h4>${escapeHtml(group.organizer)}</h4>
+                            <span class="organizer-event-count">${group.items.length} event${group.items.length > 1 ? 's' : ''}</span>
                         </div>
                         <span class="organizer-total">${formatCurrency(group.total)}</span>
                     </div>
+                    <p class="organizer-payment-note"><i class="fas fa-mobile-alt"></i> Pays to ${escapeHtml(group.organizer)}&rsquo;s M-Pesa account</p>
                     <div class="organizer-group-items">
             `;
             for (let i = 0; i < group.items.length; i++) {
                 const item = group.items[i];
-                html += `
-                    <div class="booking-item" data-id="${item.id}">
-                        <div class="item-image" style="background-image: url('${item.image || '/static/images/placeholder.jpg'}')"></div>
-                        <div class="item-details">
-                            <h4>${escapeHtml(item.title)}</h4>
-                            <p class="item-type">${escapeHtml(item.category || 'Event')}</p>
-                            <p class="item-date">${formatDate(item.date)}</p>
-                            <p class="item-venue">${escapeHtml(item.location)}</p>
-                        </div>
-                        <div class="item-quantity">
-                            <button class="qty-btn minus" onclick="updateItemQuantity(${item.id}, -1)">-</button>
-                            <span class="qty-value">${item.quantity}</span>
-                            <button class="qty-btn plus" onclick="updateItemQuantity(${item.id}, 1)">+</button>
-                        </div>
-                        <div class="item-price">${formatCurrency(item.price * item.quantity)}</div>
-                        <button class="remove-item" onclick="removeItem(${item.id})">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                `;
+                html += renderBookingItem(item);
             }
             html += `
                     </div>
+                    <div class="organizer-group-actions">
+                        <button type="button" class="organizer-pay-btn" onclick="payOrganizerGroup('${safeKey}')">
+                            <i class="fas fa-mobile-alt"></i> Pay ${escapeHtml(group.organizer)}
+                        </button>
+                    </div>
                 </div>
             `;
         }
         cartItemsEl.innerHTML = html;
-        if (!selectedOrganizer) {
-            hideSummary();
+        if (selectedOrganizerKey) {
+            updateSummaryForOrganizer(selectedOrganizerKey);
         } else {
-            updateSummaryForOrganizer(selectedOrganizer);
+            hideSummary();
         }
     } else {
-        // Single organizer - simple list
         let html = '';
         for (let i = 0; i < cartData.items.length; i++) {
-            const item = cartData.items[i];
-            html += `
-                <div class="booking-item" data-id="${item.id}">
-                    <div class="item-image" style="background-image: url('${item.image || '/static/images/placeholder.jpg'}')"></div>
-                    <div class="item-details">
-                        <h4>${escapeHtml(item.title)}</h4>
-                        <p class="item-type">${escapeHtml(item.category || 'Event')}</p>
-                        <p class="item-date">${formatDate(item.date)}</p>
-                        <p class="item-venue">${escapeHtml(item.location)}</p>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="qty-btn minus" onclick="updateItemQuantity(${item.id}, -1)">-</button>
-                        <span class="qty-value">${item.quantity}</span>
-                        <button class="qty-btn plus" onclick="updateItemQuantity(${item.id}, 1)">+</button>
-                    </div>
-                    <div class="item-price">${formatCurrency(item.price * item.quantity)}</div>
-                    <button class="remove-item" onclick="removeItem(${item.id})">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            `;
+            html += renderBookingItem(cartData.items[i]);
         }
         cartItemsEl.innerHTML = html;
-        
-        if (cartData.items.length > 0) {
-            const singleOrganizer = cartData.items[0].organizer || cartData.items[0].organizer_name || 'Event Organizer';
-            updateSummaryForOrganizer(singleOrganizer);
-        }
+        const singleKey = getOrganizerKey(cartData.items[0]);
+        updateSummaryForOrganizer(singleKey);
     }
+
     if (cartItemCountSpan) cartItemCountSpan.textContent = cartData.items.length;
+}
+
+function renderBookingItem(item) {
+    return `
+        <div class="booking-item" data-id="${item.id}">
+            <div class="item-image" style="background-image: url('${item.image || '/static/images/placeholder.jpg'}')"></div>
+            <div class="item-details">
+                <h4>${escapeHtml(item.title)}</h4>
+                <p class="item-type">${escapeHtml(item.category || 'Event')} · ${escapeHtml(item.ticket_type || item.tier || 'regular')}</p>
+                <p class="item-date">${formatDate(item.date)}</p>
+                <p class="item-venue">${escapeHtml(item.location || '')}</p>
+            </div>
+            <div class="item-quantity">
+                <button class="qty-btn minus" onclick="updateItemQuantity(${item.id}, -1)">-</button>
+                <span class="qty-value">${item.quantity}</span>
+                <button class="qty-btn plus" onclick="updateItemQuantity(${item.id}, 1)">+</button>
+            </div>
+            <div class="item-price">${formatCurrency(item.price * item.quantity)}</div>
+            <button class="remove-item" onclick="removeItem(${item.id})" aria-label="Remove">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    `;
 }
 
 async function updateItemQuantity(itemId, delta) {
@@ -332,36 +396,36 @@ async function updateItemQuantity(itemId, delta) {
     if (!item) return;
     const newQuantity = item.quantity + delta;
     if (newQuantity < 1) return;
-    
+
     item.quantity = newQuantity;
     recalculateCartTotals();
     saveCartToLocalStorage();
     displayCart();
-    if (selectedOrganizer) updateSummaryForOrganizer(selectedOrganizer);
+    if (selectedOrganizerKey) updateSummaryForOrganizer(selectedOrganizerKey);
     window.dispatchEvent(new Event('cart-updated'));
     showToast('Quantity updated', 'success');
 }
 
 async function removeItem(itemId) {
     const item = cartData.items.find(i => i.id == itemId);
-    const removedOrganizer = item?.organizer || item?.organizer_name || 'Event Organizer';
-    
+    const removedKey = item ? getOrganizerKey(item) : null;
+
     cartData.items = cartData.items.filter(i => i.id != itemId);
     recalculateCartTotals();
     saveCartToLocalStorage();
-    
-    if (selectedOrganizer === removedOrganizer) {
-        const stillHasItems = cartData.items.some(i => (i.organizer || i.organizer_name) === selectedOrganizer);
-        if (!stillHasItems) {
-            selectedOrganizer = null;
+
+    if (selectedOrganizerKey === removedKey) {
+        const stillHas = cartData.items.some(i => getOrganizerKey(i) === selectedOrganizerKey);
+        if (!stillHas) {
+            selectedOrganizerKey = null;
             hideSummary();
         } else {
-            updateSummaryForOrganizer(selectedOrganizer);
+            updateSummaryForOrganizer(selectedOrganizerKey);
         }
     }
     displayCart();
-    
-    if (cartData.items.length === 0) {
+
+    if (!cartData.items.length) {
         if (emptyCartEl) emptyCartEl.style.display = 'block';
         if (cartContentEl) cartContentEl.style.display = 'none';
         hideSummary();
@@ -389,15 +453,12 @@ async function clearCart() {
 }
 
 function recalculateCartTotals() {
-    let subtotal = 0;
-    for (let i = 0; i < cartData.items.length; i++) {
-        subtotal += cartData.items[i].price * cartData.items[i].quantity;
-    }
-    cartData.subtotal = subtotal;
-    cartData.total = subtotal - (cartData.discount_amount || 0);
+    cartData.subtotal = cartData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    cartData.total = cartData.subtotal - (cartData.discount_amount || 0);
 }
 
 function saveCartToLocalStorage() {
+    window.cartData = cartData;
     if (window.EventhubCartStorage) {
         window.EventhubCartStorage.saveEventhubCart(cartData);
     } else {
@@ -409,14 +470,16 @@ async function applyPromoCode(e) {
     e.preventDefault();
     const code = document.getElementById('promoCode')?.value.trim();
     if (!code) { showToast('Enter a promo code', 'error'); return; }
-    
+
     if (code.toUpperCase() === 'WELCOME10') {
-        const discountAmount = Math.floor(cartData.subtotal * 0.1);
+        const scopeItems = selectedOrganizerKey ? getSelectedGroupItems() : cartData.items;
+        const scopeSubtotal = scopeItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const discountAmount = Math.floor(scopeSubtotal * 0.1);
         cartData.discount_amount = discountAmount;
         cartData.promo_code = code.toUpperCase();
         recalculateCartTotals();
         saveCartToLocalStorage();
-        if (selectedOrganizer) updateSummaryForOrganizer(selectedOrganizer);
+        if (selectedOrganizerKey) updateSummaryForOrganizer(selectedOrganizerKey);
         displayCart();
         document.getElementById('promoCode').value = '';
         window.dispatchEvent(new Event('cart-updated'));
@@ -431,7 +494,7 @@ async function removePromoCode() {
     cartData.promo_code = null;
     recalculateCartTotals();
     saveCartToLocalStorage();
-    if (selectedOrganizer) updateSummaryForOrganizer(selectedOrganizer);
+    if (selectedOrganizerKey) updateSummaryForOrganizer(selectedOrganizerKey);
     displayCart();
     window.dispatchEvent(new Event('cart-updated'));
     showToast('Promo removed', 'success');
@@ -445,53 +508,68 @@ function proceedToCheckout() {
         setTimeout(() => window.location.href = '/login/', 1500);
         return;
     }
-    
-    if (!selectedOrganizer) {
-        showToast('Select an organizer to proceed', 'error');
-        return;
-    }
-    
-    const selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
+
+    const selectedItems = getSelectedGroupItems();
     if (!selectedItems.length) {
-        showToast('No items selected', 'error');
+        showToast('Select an organizer group to pay', 'error');
         return;
     }
-    
-    // Show billing form
+
     if (cartContentEl) cartContentEl.style.display = 'none';
     if (checkoutViewEl) checkoutViewEl.style.display = 'block';
     const bookingSummaryCard = document.querySelector('.booking-summary-card');
     if (bookingSummaryCard) bookingSummaryCard.style.display = 'none';
-    
-    // Prefill user data
+    const notice = document.getElementById('multiOrganizerNotice');
+    if (notice) notice.style.display = 'none';
+
     const user = JSON.parse(localStorage.getItem('attendee_user') || '{}');
     const nameInput = document.getElementById('billingName');
     const emailInput = document.getElementById('billingEmail');
     if (nameInput) nameInput.value = user.full_name || user.name || '';
     if (emailInput) emailInput.value = user.email || '';
-    
-    // Update summary
-    let subtotal = 0;
-    for (let i = 0; i < selectedItems.length; i++) {
-        subtotal += selectedItems[i].price * selectedItems[i].quantity;
-    }
+
+    const organizerName = getOrganizerName(selectedItems[0]);
+    const subtotal = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const discount = cartData.discount_amount || 0;
     const total = subtotal - discount;
+
     const summaryEl = document.getElementById('checkoutOrderSummary');
     if (summaryEl) {
+        let itemsHtml = selectedItems.map(item => `
+            <div class="checkout-summary-item">
+                <span>${escapeHtml(item.title)} × ${item.quantity}</span>
+                <span>${formatCurrency(item.price * item.quantity)}</span>
+            </div>
+        `).join('');
+
         summaryEl.innerHTML = `
-            <div class="summary-row"><span>Organizer:</span><span>${escapeHtml(selectedOrganizer)}</span></div>
-            <div class="summary-row"><span>Items (${selectedItems.length}):</span><span>${formatCurrency(subtotal)}</span></div>
+            <div class="checkout-organizer-banner">
+                <i class="fas fa-mobile-alt"></i>
+                <div>
+                    <strong>Paying ${escapeHtml(organizerName)}</strong>
+                    <p>Each event is paid separately using this organizer&rsquo;s M-Pesa details.</p>
+                </div>
+            </div>
+            ${itemsHtml}
+            <div class="summary-row"><span>Subtotal (${selectedItems.length} event${selectedItems.length > 1 ? 's' : ''}):</span><span>${formatCurrency(subtotal)}</span></div>
             ${discount > 0 ? `<div class="summary-row discount"><span>Discount:</span><span>-${formatCurrency(discount)}</span></div>` : ''}
-            <div class="summary-row total"><span>Total:</span><span>${formatCurrency(total)}</span></div>
+            <div class="summary-row total"><span>Total for this organizer:</span><span>${formatCurrency(total)}</span></div>
         `;
+    }
+
+    const checkoutTitle = document.getElementById('checkoutBillingTitle');
+    if (checkoutTitle) {
+        checkoutTitle.textContent = selectedItems.length > 1
+            ? `Checkout — ${organizerName} (${selectedItems.length} payments)`
+            : `Checkout — ${organizerName}`;
     }
 }
 
 function backToCart() {
     if (checkoutViewEl) checkoutViewEl.style.display = 'none';
     if (cartContentEl) cartContentEl.style.display = 'block';
-    if (selectedOrganizer) {
+    loadCart();
+    if (selectedOrganizerKey) {
         const bookingSummaryCard = document.querySelector('.booking-summary-card');
         if (bookingSummaryCard) bookingSummaryCard.style.display = 'block';
     }
@@ -499,29 +577,29 @@ function backToCart() {
 
 async function processCheckout(e) {
     e.preventDefault();
-    
+
     const billingName = document.getElementById('billingName')?.value.trim();
     const billingEmail = document.getElementById('billingEmail')?.value.trim();
-    
+
     if (!billingName) { showToast('Enter your full name', 'error'); return; }
     if (!billingEmail || !isValidEmail(billingEmail)) { showToast('Enter valid email', 'error'); return; }
-    
-    const selectedItems = JSON.parse(sessionStorage.getItem('selected_items') || '[]');
+
+    const selectedItems = getSelectedGroupItems();
     if (!selectedItems.length) { showToast('No items selected', 'error'); return; }
-    
-    sessionStorage.setItem('checkout_billing_info', JSON.stringify({ name: billingName, email: billingEmail }));
-    
-    const firstItem = selectedItems[0];
-    const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
-    
-    if (window.CheckoutFlow && typeof window.CheckoutFlow.startCheckout === 'function') {
-        await window.CheckoutFlow.startCheckout(firstItem.id, firstItem.ticket_type || 'regular', totalQuantity);
+
+    const billingInfo = { name: billingName, email: billingEmail };
+    sessionStorage.setItem('checkout_billing_info', JSON.stringify(billingInfo));
+
+    if (window.CheckoutFlow && typeof window.CheckoutFlow.startOrganizerCheckout === 'function') {
+        await window.CheckoutFlow.startOrganizerCheckout(selectedItems, billingInfo);
+    } else if (window.CheckoutFlow && typeof window.CheckoutFlow.startCheckout === 'function') {
+        const first = selectedItems[0];
+        await window.CheckoutFlow.startCheckout(first.id, first.ticket_type || 'regular', first.quantity);
     } else {
         showToast('Payment system unavailable', 'error');
     }
 }
 
-// ========== UTILITIES ==========
 function updateCartCount(count) {
     const badge = document.getElementById('cartBadgeDropdown');
     if (badge) {
@@ -545,7 +623,7 @@ function formatDate(dateString) {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'TBA';
         return date.toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch(e) {
+    } catch (e) {
         return 'TBA';
     }
 }
@@ -555,7 +633,7 @@ function formatCurrency(amount) {
         const val = Number(amount);
         if (isNaN(val)) return 'KES 0';
         return 'KES ' + val.toLocaleString('en-KE');
-    } catch(e) {
+    } catch (e) {
         return 'KES 0';
     }
 }
@@ -571,23 +649,25 @@ function showToast(message, type) {
     type = type || 'success';
     const existingToast = document.querySelector('.toast-notification');
     if (existingToast) existingToast.remove();
-    
+
     const toast = document.createElement('div');
     toast.className = 'toast-notification toast-' + type;
     const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
     toast.innerHTML = '<i class="fas ' + icon + '"></i><span>' + escapeHtml(message) + '</span>';
     document.body.appendChild(toast);
-    
+
     setTimeout(function() {
         if (toast.parentNode) toast.remove();
     }, 4000);
 }
 
-// Exports
+window.cartData = cartData;
+window.displayCart = displayCart;
 window.updateItemQuantity = updateItemQuantity;
 window.removeItem = removeItem;
 window.clearCart = clearCart;
 window.removePromoCode = removePromoCode;
-window.selectOrganizer = selectOrganizer;
+window.selectOrganizerGroup = selectOrganizerGroup;
+window.payOrganizerGroup = payOrganizerGroup;
 window.backToCart = backToCart;
 window.proceedToCheckout = proceedToCheckout;

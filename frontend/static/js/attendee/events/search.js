@@ -375,6 +375,10 @@ function addToCart(eventId) {
             image: event.image || event.banner_image || '',
             location: event.location || event.venue || 'Event Venue',
             date: event.date || event.start_date || new Date().toISOString(),
+            ticket_type: 'regular',
+            organizer_id: event.organizer_id,
+            organizer_name: event.organizer_name,
+            organizer: event.organizer_name || 'Event Organizer',
         })
         : {
             id: event.id,
@@ -383,6 +387,10 @@ function addToCart(eventId) {
             quantity: 1,
             location: event.location || event.venue || 'Event Venue',
             date: event.date || event.start_date || new Date().toISOString(),
+            ticket_type: 'regular',
+            organizer_id: event.organizer_id,
+            organizer_name: event.organizer_name,
+            organizer: event.organizer_name || 'Event Organizer',
         };
 
     cart.items.push(item);
