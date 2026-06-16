@@ -1,0 +1,1268 @@
+// ============================================
+// MOCK API - Complete Dummy Data System
+// Each category has at least one event
+// No pre-populated wishlist
+// Events grouped by organizers
+// Realistic dates for 2026
+// ============================================
+
+(function() {
+    'use strict';
+    
+    const config = window.ATTENDEE_API_CONFIG || {};
+    const shouldUseMock = config.USE_MOCK === true;
+    
+    if (!shouldUseMock) {
+        console.log('%c[Mock API] Disabled - using real API', 'color: #64748b;');
+        return;
+    }
+    
+    console.log('%c[Mock API] Enabled - Fast auto-verification mode', 'color: #10b981; font-weight: bold;');
+    
+    // ============================================
+    // MOCK EVENTS DATA - Each category has at least one event
+    // Categories: Music, Technology, Comedy, Sports, Food, Art, Wellness, Business
+    // ============================================
+    const MOCK_EVENTS = [
+        // ========== MUSIC CATEGORY (2 events) ==========
+        // Organizer: Afrobeat Events Kenya
+        {
+            id: 101,
+            title: "Afrobeat Music Festival 2026",
+            description: "The biggest Afrobeat music festival in Nairobi featuring top artists from across Africa including Burna Boy, Davido, and Diamond Platnumz.",
+            short_description: "Experience the biggest Afrobeat festival",
+            category_name: "Music",
+            category_slug: "music",
+            date: "2026-12-15",
+            time: "18:00",
+            location: "Uhuru Gardens, Nairobi",
+            venue: "Uhuru Gardens",
+            price: 2500,
+            original_price: 3500,
+            vip_price: 5000,
+            vvip_price: 10000,
+            available_tickets: 450,
+            total_tickets: 2000,
+            image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800",
+            is_featured: true,
+            organizer: "Afrobeat Events Kenya",
+            organizer_name: "Afrobeat Events Kenya",
+            organizer_phone: "+254700123456",
+            organizer_email: "info@afrobeatevents.co.ke",
+            payment_method_type: "paybill",
+            payment_method_value: "5678901",
+            payment_method_name: "Paybill Number",
+            account_name: "Afrobeat Events Kenya",
+            rating: 4.8,
+            rating_count: 156
+        },
+        {
+            id: 102,
+            title: "Afrobeat Street Party",
+            description: "Street party featuring the best Afrobeat DJs and live performers. Come dance the night away.",
+            short_description: "Street party with top Afrobeat DJs",
+            category_name: "Music",
+            category_slug: "music",
+            date: "2026-11-22",
+            time: "20:00",
+            location: "Westlands, Nairobi",
+            venue: "Westlands Square",
+            price: 1800,
+            original_price: 2500,
+            vip_price: 3500,
+            available_tickets: 600,
+            total_tickets: 1000,
+            image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800",
+            is_featured: false,
+            organizer: "Afrobeat Events Kenya",
+            organizer_name: "Afrobeat Events Kenya",
+            organizer_phone: "+254700123456",
+            organizer_email: "info@afrobeatevents.co.ke",
+            payment_method_type: "paybill",
+            payment_method_value: "5678901",
+            payment_method_name: "Paybill Number",
+            account_name: "Afrobeat Events Kenya",
+            rating: 4.7,
+            rating_count: 89
+        },
+        
+        // ========== TECHNOLOGY CATEGORY (2 events) ==========
+        // Organizer: TechEvents Kenya
+        {
+            id: 103,
+            title: "Tech Summit Nairobi 2026",
+            description: "Join Kenya's largest tech conference featuring speakers from Google, Microsoft, Meta, and local tech leaders.",
+            short_description: "Kenya's largest tech conference",
+            category_name: "Technology",
+            category_slug: "tech",
+            date: "2026-11-20",
+            time: "09:00",
+            location: "KICC, Nairobi",
+            venue: "Kenyatta International Convention Centre",
+            price: 3500,
+            original_price: 5000,
+            vip_price: 7500,
+            vvip_price: 12000,
+            available_tickets: 280,
+            total_tickets: 500,
+            image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
+            is_featured: true,
+            organizer: "TechEvents Kenya",
+            organizer_name: "TechEvents Kenya",
+            organizer_phone: "+254711234567",
+            organizer_email: "hello@techevents.co.ke",
+            payment_method_type: "till",
+            payment_method_value: "7654321",
+            payment_method_name: "Till Number",
+            account_name: "TechEvents Kenya",
+            rating: 4.6,
+            rating_count: 89
+        },
+        {
+            id: 104,
+            title: "DevOps Bootcamp 2026",
+            description: "Intensive 3-day DevOps bootcamp with hands-on training on Docker, Kubernetes, CI/CD, and cloud deployment.",
+            short_description: "3-day intensive DevOps training",
+            category_name: "Technology",
+            category_slug: "tech",
+            date: "2026-10-05",
+            time: "08:00",
+            location: "Nairobi Garage, Nairobi",
+            venue: "Nairobi Garage",
+            price: 15000,
+            original_price: 20000,
+            available_tickets: 50,
+            total_tickets: 80,
+            image: "https://images.unsplash.com/photo-1551434678-e076c2236a9a?w=800",
+            is_featured: false,
+            organizer: "TechEvents Kenya",
+            organizer_name: "TechEvents Kenya",
+            organizer_phone: "+254711234567",
+            organizer_email: "hello@techevents.co.ke",
+            payment_method_type: "till",
+            payment_method_value: "7654321",
+            payment_method_name: "Till Number",
+            account_name: "TechEvents Kenya",
+            rating: 4.9,
+            rating_count: 45
+        },
+        
+        // ========== COMEDY CATEGORY (2 events) ==========
+        // Organizer: Laugh Out Loud Productions
+        {
+            id: 107,
+            title: "Comedy Night with Eric Omondi",
+            description: "A night of laughter with Kenya's top comedians. Headlined by Eric Omondi featuring Churchill, Mulamwah, and others.",
+            short_description: "Kenya's biggest comedy show",
+            category_name: "Comedy",
+            category_slug: "comedy",
+            date: "2026-09-25",
+            time: "19:30",
+            location: "KICC, Nairobi",
+            venue: "Tsavo Ballroom",
+            price: 1500,
+            original_price: 2000,
+            vip_price: 3000,
+            available_tickets: 500,
+            total_tickets: 800,
+            image: "https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=800",
+            is_featured: true,
+            organizer: "Laugh Out Loud Productions",
+            organizer_name: "Laugh Out Loud Productions",
+            organizer_phone: "+254733445566",
+            organizer_email: "bookings@lolproductions.co.ke",
+            payment_method_type: "pochi",
+            payment_method_value: "0742233445",
+            payment_method_name: "Pochi la Biashara",
+            account_name: "LOL Productions",
+            rating: 4.9,
+            rating_count: 234
+        },
+        {
+            id: 108,
+            title: "Churchill Show Live",
+            description: "Kenya's favorite comedy show featuring top comedians. Recorded live for TV broadcast.",
+            short_description: "Kenya's favorite comedy show",
+            category_name: "Comedy",
+            category_slug: "comedy",
+            date: "2026-08-18",
+            time: "18:00",
+            location: "Carnivore, Nairobi",
+            venue: "Carnivore Simba Saloon",
+            price: 2000,
+            original_price: 3000,
+            vip_price: 4000,
+            available_tickets: 350,
+            total_tickets: 500,
+            image: "https://images.unsplash.com/photo-1585694830642-6c4a9d7c6e4b?w=800",
+            is_featured: false,
+            organizer: "Laugh Out Loud Productions",
+            organizer_name: "Laugh Out Loud Productions",
+            organizer_phone: "+254733445566",
+            organizer_email: "bookings@lolproductions.co.ke",
+            payment_method_type: "pochi",
+            payment_method_value: "0742233445",
+            payment_method_name: "Pochi la Biashara",
+            account_name: "LOL Productions",
+            rating: 4.7,
+            rating_count: 189
+        },
+        
+        // ========== SPORTS CATEGORY (1 event) ==========
+        // Organizer: Athletics Kenya
+        {
+            id: 111,
+            title: "Nairobi City Marathon 2026",
+            description: "Annual charity marathon through the streets of Nairobi. Run for a cause and support local charities.",
+            short_description: "Annual charity marathon",
+            category_name: "Sports",
+            category_slug: "sports",
+            date: "2026-07-10",
+            time: "06:00",
+            location: "Nyayo Stadium, Nairobi",
+            venue: "Nyayo National Stadium",
+            price: 2000,
+            original_price: 3000,
+            vip_price: 5000,
+            available_tickets: 3200,
+            total_tickets: 5000,
+            image: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800",
+            is_featured: true,
+            organizer: "Athletics Kenya",
+            organizer_name: "Athletics Kenya",
+            organizer_phone: "+254777889900",
+            organizer_email: "info@athleticskenya.co.ke",
+            payment_method_type: "sendmoney",
+            payment_method_value: "0743778899",
+            payment_method_name: "Send Money",
+            account_name: "Athletics Kenya",
+            rating: 4.9,
+            rating_count: 456
+        },
+        
+        // ========== FOOD CATEGORY (2 events) ==========
+        // Organizer: StreetFood Nairobi
+        {
+            id: 106,
+            title: "Street Food Festival 2026",
+            description: "Celebrating Nairobi's best street food vendors and local delicacies. Taste over 50 different local dishes.",
+            short_description: "Celebrate Nairobi's street food",
+            category_name: "Food",
+            category_slug: "food",
+            date: "2026-06-22",
+            time: "11:00",
+            location: "Junction Mall, Nairobi",
+            venue: "Junction Mall Parking",
+            price: 800,
+            original_price: 1500,
+            vip_price: 1500,
+            available_tickets: 750,
+            total_tickets: 1000,
+            image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800",
+            is_featured: true,
+            organizer: "StreetFood Nairobi",
+            organizer_name: "StreetFood Nairobi",
+            organizer_phone: "+254733446677",
+            organizer_email: "events@streetfood.co.ke",
+            payment_method_type: "mpesa",
+            payment_method_value: "0744889900",
+            payment_method_name: "M-Pesa Number",
+            account_name: "StreetFood Nairobi",
+            rating: 4.8,
+            rating_count: 123
+        },
+        // Organizer: Gourmet Events Kenya
+        {
+            id: 105,
+            title: "Food & Wine Experience 2026",
+            description: "A culinary journey through Kenya's finest cuisine. Sample dishes from top chefs, enjoy wine tastings.",
+            short_description: "Premium food and wine tasting",
+            category_name: "Food",
+            category_slug: "food",
+            date: "2026-03-15",
+            time: "14:00",
+            location: "Sarit Centre, Nairobi",
+            venue: "Sarit Expo Hall",
+            price: 3000,
+            original_price: 4500,
+            vip_price: 6000,
+            available_tickets: 0,
+            total_tickets: 300,
+            image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800",
+            is_featured: false,
+            organizer: "Gourmet Events Kenya",
+            organizer_name: "Gourmet Events Kenya",
+            organizer_phone: "+254722334455",
+            organizer_email: "info@gourmetevents.co.ke",
+            payment_method_type: "paybill",
+            payment_method_value: "9876543",
+            payment_method_name: "Paybill Number",
+            account_name: "Gourmet Events Kenya",
+            rating: 4.6,
+            rating_count: 78
+        },
+        
+        // ========== ART CATEGORY (1 event) ==========
+        // Organizer: Shutter Speed Kenya
+        {
+            id: 114,
+            title: "Photography Workshop & Expo",
+            description: "Learn photography skills from professional photographers and view amazing photo exhibitions.",
+            short_description: "Learn photography from pros",
+            category_name: "Art",
+            category_slug: "art",
+            date: "2026-05-25",
+            time: "09:00",
+            location: "Alliance Francaise, Nairobi",
+            venue: "Alliance Francaise",
+            price: 2500,
+            original_price: 4000,
+            vip_price: 4500,
+            available_tickets: 0,
+            total_tickets: 60,
+            image: "https://images.unsplash.com/photo-1452780212940-6f5c0d14d848?w=800",
+            is_featured: true,
+            organizer: "Shutter Speed Kenya",
+            organizer_name: "Shutter Speed Kenya",
+            organizer_phone: "+254710112233",
+            organizer_email: "workshops@shutterspeed.co.ke",
+            payment_method_type: "paybill",
+            payment_method_value: "1112223",
+            payment_method_name: "Paybill Number",
+            account_name: "Shutter Speed Kenya",
+            rating: 4.8,
+            rating_count: 67
+        },
+        
+        // ========== WELLNESS CATEGORY (2 events) ==========
+        // Organizer: Wellness Kenya
+        {
+            id: 109,
+            title: "Wellness & Yoga Retreat",
+            description: "A weekend of relaxation, yoga, meditation, and wellness workshops in the serene Tigoni hills.",
+            short_description: "Weekend wellness retreat",
+            category_name: "Wellness",
+            category_slug: "wellness",
+            date: "2026-04-08",
+            time: "08:00",
+            location: "Tigoni, Limuru",
+            venue: "The Retreat Centre",
+            price: 4500,
+            original_price: 6000,
+            available_tickets: 0,
+            total_tickets: 120,
+            image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800",
+            is_featured: false,
+            organizer: "Wellness Kenya",
+            organizer_name: "Wellness Kenya",
+            organizer_phone: "+254744556677",
+            organizer_email: "hello@wellnesskenya.co.ke",
+            payment_method_type: "mpesa",
+            payment_method_value: "0745566778",
+            payment_method_name: "M-Pesa Number",
+            account_name: "Wellness Kenya",
+            rating: 4.7,
+            rating_count: 45
+        },
+        // Organizer: Mindful Kenya
+        {
+            id: 110,
+            title: "Mental Health Awareness Conference",
+            description: "Discussing mental health awareness, workshops, and support resources for better well-being.",
+            short_description: "Mental health awareness event",
+            category_name: "Wellness",
+            category_slug: "wellness",
+            date: "2026-01-14",
+            time: "09:00",
+            location: "Radisson Blu, Nairobi",
+            venue: "Radisson Blu Hotel",
+            price: 3000,
+            original_price: 5000,
+            vip_price: 5500,
+            available_tickets: 0,
+            total_tickets: 120,
+            image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=800",
+            is_featured: false,
+            organizer: "Mindful Kenya",
+            organizer_name: "Mindful Kenya",
+            organizer_phone: "+254766779900",
+            organizer_email: "info@mindfulkenya.co.ke",
+            payment_method_type: "mpesa",
+            payment_method_value: "0747667799",
+            payment_method_name: "M-Pesa Number",
+            account_name: "Mindful Kenya",
+            rating: 4.8,
+            rating_count: 78
+        },
+        
+        // ========== BUSINESS CATEGORY (1 event) ==========
+        // Organizer: Startup Grind Nairobi
+        {
+            id: 115,
+            title: "Entrepreneurs Summit 2026",
+            description: "Connect with investors and learn from successful entrepreneurs. Network with Kenya's top business leaders.",
+            short_description: "Kenya's premier business summit",
+            category_name: "Business",
+            category_slug: "business",
+            date: "2026-02-20",
+            time: "08:00",
+            location: "Sankara Hotel, Nairobi",
+            venue: "Sankara Hotel",
+            price: 8000,
+            original_price: 12000,
+            vip_price: 15000,
+            available_tickets: 0,
+            total_tickets: 250,
+            image: "https://images.unsplash.com/photo-1556761175-4b46a572b786?w=800",
+            is_featured: true,
+            organizer: "Startup Grind Nairobi",
+            organizer_name: "Startup Grind Nairobi",
+            organizer_phone: "+254721334455",
+            organizer_email: "nairobi@startupgrind.com",
+            payment_method_type: "paybill",
+            payment_method_value: "5556667",
+            payment_method_name: "Paybill Number",
+            account_name: "Startup Grind",
+            rating: 4.7,
+            rating_count: 123
+        }
+    ];
+    
+    // Current date for filtering: June 15, 2026
+    const MOCK_FEATURED_EVENTS = MOCK_EVENTS.filter(e => e.is_featured === true);
+    
+    const MOCK_CATEGORIES = {
+        success: true,
+        categories: [
+            { id: 1, name: "Music", slug: "music", icon: "fa-music", count: 2, color: "#f59e0b" },
+            { id: 2, name: "Technology", slug: "tech", icon: "fa-laptop-code", count: 2, color: "#3b82f6" },
+            { id: 3, name: "Comedy", slug: "comedy", icon: "fa-laugh", count: 2, color: "#10b981" },
+            { id: 4, name: "Sports", slug: "sports", icon: "fa-futbol", count: 1, color: "#ef4444" },
+            { id: 5, name: "Food", slug: "food", icon: "fa-utensils", count: 2, color: "#ea580c" },
+            { id: 6, name: "Art", slug: "art", icon: "fa-palette", count: 1, color: "#8b5cf6" },
+            { id: 7, name: "Wellness", slug: "wellness", icon: "fa-spa", count: 2, color: "#14b8a6" },
+            { id: 8, name: "Business", slug: "business", icon: "fa-briefcase", count: 1, color: "#6366f1" }
+        ]
+    };
+    
+    const STORAGE_KEYS = {
+        CART: 'eventhub_cart',
+        CART_MOCK: 'eventhub_cart_mock',
+        WISHLIST: 'eventhub_wishlist_mock',
+        PAYMENT_ORDERS: 'eventhub_payment_orders_mock',
+        TICKETS: 'eventhub_tickets_mock',
+        BOOKINGS: 'eventhub_bookings',
+        USER: 'attendee_user',
+        TOKEN: 'attendee_access_token',
+        REVIEWS: 'eventhub_reviews'
+    };
+    
+    // Initialize storage - EMPTY wishlist, no pre-populated data
+    let mockWishlist = [];
+    let mockPaymentOrders = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAYMENT_ORDERS) || '[]');
+    let mockTickets = JSON.parse(localStorage.getItem(STORAGE_KEYS.TICKETS) || '[]');
+    let mockCart = JSON.parse(localStorage.getItem(STORAGE_KEYS.CART_MOCK) || JSON.stringify({
+        items: [], subtotal: 0, total: 0, discount_amount: 0, promo_code: null, platform_fee: 0
+    }));
+    let nextTicketId = mockTickets.length + 1000;
+    let nextOrderId = mockPaymentOrders.length + 5000;
+    
+    function saveWishlist() { localStorage.setItem(STORAGE_KEYS.WISHLIST, JSON.stringify(mockWishlist)); }
+    function saveCart() { 
+        localStorage.setItem(STORAGE_KEYS.CART_MOCK, JSON.stringify(mockCart));
+        localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(mockCart));
+    }
+    function savePaymentOrders() { localStorage.setItem(STORAGE_KEYS.PAYMENT_ORDERS, JSON.stringify(mockPaymentOrders)); }
+    function saveTickets() { localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(mockTickets)); }
+    
+    function getEventById(id) {
+        for (var i = 0; i < MOCK_EVENTS.length; i++) {
+            if (MOCK_EVENTS[i].id === id) return MOCK_EVENTS[i];
+        }
+        return null;
+    }
+    
+    function createResponse(data, status, delay) {
+        status = status || 200;
+        delay = delay || 300;
+        return new Promise(function(resolve) {
+            setTimeout(function() {
+                resolve({
+                    ok: status === 200,
+                    status: status,
+                    json: function() { return Promise.resolve(data); }
+                });
+            }, delay);
+        });
+    }
+    
+    function generateTicketNumber() {
+        return 'TKT-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+    }
+    
+    function generateQRCode(data) {
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data);
+    }
+    
+    function createTicket(event, order, bookingId) {
+        var ticket = {
+            id: nextTicketId++,
+            ticket_number: generateTicketNumber(),
+            booking_id: bookingId,
+            event_id: event.id,
+            event_title: event.title,
+            event_date: event.date,
+            event_time: event.time,
+            event_location: event.location,
+            event_venue: event.venue,
+            ticket_type: order.ticket_type || 'regular',
+            quantity: 1,
+            price: order.amount / (order.quantity || 1),
+            total_amount: order.amount,
+            status: 'active',
+            qr_code: generateQRCode('TKT-' + nextTicketId + '-' + event.id),
+            purchase_date: new Date().toISOString(),
+            valid_from: event.date,
+            valid_until: event.end_date || event.date
+        };
+        mockTickets.push(ticket);
+        saveTickets();
+        return ticket;
+    }
+    
+    function createPaymentOrder(orderData) {
+        var event = getEventById(orderData.event_id);
+        var paymentOption = null;
+        
+        if (event) {
+            var paymentType = event.payment_method_type || 'paybill';
+            var paymentValue = event.payment_method_value || '';
+            var accountName = event.account_name || event.organizer_name || 'EventHub';
+            
+            if (paymentType === 'paybill' && paymentValue) {
+                paymentOption = { type: 'paybill', label: 'Paybill Number', value: paymentValue, instruction: 'Account: ' + accountName };
+            } else if (paymentType === 'till' && paymentValue) {
+                paymentOption = { type: 'till', label: 'Till Number', value: paymentValue, instruction: 'Business: ' + accountName };
+            } else if (paymentType === 'pochi' && paymentValue) {
+                paymentOption = { type: 'pochi', label: 'Pochi la Biashara', value: paymentValue, instruction: 'Send money to this number' };
+            } else if (paymentType === 'sendmoney' && paymentValue) {
+                paymentOption = { type: 'sendmoney', label: 'Send Money', value: paymentValue, instruction: 'Send to this M-Pesa number' };
+            } else if (paymentType === 'mpesa' && paymentValue) {
+                paymentOption = { type: 'mpesa', label: 'M-Pesa Number', value: paymentValue, instruction: 'Send money to this number' };
+            }
+        }
+        
+        if (!paymentOption) {
+            paymentOption = { type: 'paybill', label: 'Paybill Number', value: '1234567', instruction: 'Account: EventHub' };
+        }
+        
+        var maxQuantity = Math.min(orderData.quantity, 8);
+        
+        var newOrder = {
+            id: nextOrderId++,
+            booking_id: 'BK' + Date.now(),
+            checkout_request_id: 'CHECKOUT_' + Date.now(),
+            merchant_request_id: 'MERCHANT_' + Date.now(),
+            amount: orderData.amount,
+            total_amount: orderData.amount,
+            phone_number: orderData.phone_number || '254700000000',
+            status: 'pending',
+            payment_status: 'pending',
+            created_at: new Date().toISOString(),
+            event_id: orderData.event_id,
+            event_title: event ? event.title : 'Event',
+            ticket_type: orderData.ticket_type || 'regular',
+            quantity: maxQuantity,
+            payment_method: paymentOption.type,
+            receipt_number: orderData.receipt_number || null,
+            reference: orderData.reference || null,
+            organizer_name: event ? event.organizer_name : 'Event Organizer',
+            payment_options: [paymentOption],
+            screenshot_submitted: false,
+            screenshot_verified: false,
+            verified_at: null,
+            tickets: []
+        };
+        mockPaymentOrders.push(newOrder);
+        savePaymentOrders();
+        return newOrder;
+    }
+    
+    async function approveOrder(orderId) {
+        var order = null;
+        for (var i = 0; i < mockPaymentOrders.length; i++) {
+            if (mockPaymentOrders[i].id === orderId) {
+                order = mockPaymentOrders[i];
+                break;
+            }
+        }
+        if (!order) return false;
+        
+        order.status = 'completed';
+        order.payment_status = 'approved';
+        order.verified_at = new Date().toISOString();
+        order.screenshot_verified = true;
+        
+        var event = getEventById(order.event_id);
+        if (event) {
+            var tickets = [];
+            for (var t = 0; t < order.quantity; t++) {
+                var ticket = createTicket(event, order, order.booking_id);
+                tickets.push(ticket);
+            }
+            order.tickets = tickets;
+            order.ticket_number = tickets[0]?.ticket_number;
+        }
+        
+        var selectedItems = [];
+        try {
+            var tempItems = localStorage.getItem('temp_checkout_items');
+            if (tempItems) {
+                selectedItems = JSON.parse(tempItems);
+                localStorage.removeItem('temp_checkout_items');
+            }
+        } catch(e) {}
+        
+        if (selectedItems.length === 0 && event) {
+            selectedItems = [{
+                id: event.id,
+                title: event.title,
+                category: event.category_name,
+                date: event.date,
+                location: event.location,
+                price: event.price,
+                quantity: Math.min(order.quantity, 8),
+                image: event.image,
+                ticket_type: order.ticket_type || 'regular',
+                organizer: event.organizer
+            }];
+        }
+        
+        var groupedItems = {};
+        for (var s = 0; s < selectedItems.length; s++) {
+            var item = selectedItems[s];
+            if (groupedItems[item.id]) {
+                var newQty = groupedItems[item.id].quantity + (item.quantity || 1);
+                groupedItems[item.id].quantity = Math.min(newQty, 8);
+            } else {
+                groupedItems[item.id] = {
+                    id: item.id,
+                    title: item.title,
+                    category: item.category || 'Event',
+                    date: item.date,
+                    location: item.location,
+                    price: item.price,
+                    quantity: Math.min((item.quantity || 1), 8),
+                    image: item.image,
+                    ticket_type: item.ticket_type || order.ticket_type || 'regular',
+                    organizer: item.organizer || order.organizer_name
+                };
+            }
+        }
+        
+        var finalItems = Object.values(groupedItems);
+        var subtotal = 0;
+        for (var s = 0; s < finalItems.length; s++) {
+            subtotal += finalItems[s].price * finalItems[s].quantity;
+        }
+        var total = order.total_amount || subtotal;
+        
+        var formattedItems = [];
+        for (var s = 0; s < finalItems.length; s++) {
+            var item = finalItems[s];
+            var ticketCode = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}${s}`;
+            formattedItems.push({
+                id: item.id,
+                title: item.title,
+                category: item.category,
+                date: item.date,
+                location: item.location,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image,
+                ticket_code: ticketCode,
+                ticket_codes: [ticketCode],
+                ticket_type: item.ticket_type,
+                organizer: item.organizer
+            });
+        }
+        
+        var billingInfo = {};
+        try {
+            var tempBilling = localStorage.getItem('temp_checkout_billing');
+            if (tempBilling) {
+                billingInfo = JSON.parse(tempBilling);
+                localStorage.removeItem('temp_checkout_billing');
+            }
+        } catch(e) {}
+        
+        var existingBookings = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
+        var newBooking = {
+            id: order.booking_id,
+            booking_date: order.created_at,
+            status: 'confirmed',
+            payment_method: 'M-Pesa',
+            receipt_number: 'MPESA' + Math.floor(Math.random() * 1000000),
+            total_amount: total,
+            subtotal: subtotal,
+            discount: 0,
+            organizer: order.organizer_name,
+            billing_info: billingInfo,
+            items: formattedItems,
+            payment_status: 'completed',
+            payment_date: new Date().toISOString()
+        };
+        
+        existingBookings = existingBookings.filter(function(b) { return b.id !== order.booking_id; });
+        existingBookings.unshift(newBooking);
+        localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(existingBookings));
+        
+        var existingTickets = JSON.parse(localStorage.getItem(STORAGE_KEYS.TICKETS) || '[]');
+        for (var s = 0; s < finalItems.length; s++) {
+            var ticketItem = finalItems[s];
+            for (var t = 0; t < ticketItem.quantity; t++) {
+                existingTickets.push({
+                    id: existingTickets.length + 1000 + t,
+                    ticket_number: `TKT${Date.now()}${Math.floor(Math.random() * 10000)}${t}`,
+                    booking_id: order.booking_id,
+                    event_id: ticketItem.id,
+                    event_title: ticketItem.title,
+                    event_date: ticketItem.date,
+                    event_time: 'TBD',
+                    event_location: ticketItem.location,
+                    ticket_type: ticketItem.ticket_type,
+                    quantity: 1,
+                    price: ticketItem.price,
+                    total_amount: ticketItem.price,
+                    status: new Date(ticketItem.date) >= new Date() ? 'active' : 'used',
+                    qr_code: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${ticketItem.id}-${Date.now()}`,
+                    purchase_date: new Date().toISOString()
+                });
+            }
+        }
+        localStorage.setItem(STORAGE_KEYS.TICKETS, JSON.stringify(existingTickets));
+        
+        savePaymentOrders();
+        console.log('[Mock] Order approved and booking saved:', newBooking);
+        
+        return true;
+    }
+    
+    // ============================================
+    // FETCH INTERCEPTOR
+    // ============================================
+    var originalFetch = window.fetch;
+    
+    window.fetch = async function(url, options) {
+        options = options || {};
+        var urlStr = typeof url === 'string' ? url : url.url;
+        
+        var urlObj;
+        try {
+            urlObj = new URL(urlStr, window.location.origin);
+        } catch(e) {
+            return originalFetch(url, options);
+        }
+        
+        var pathname = urlObj.pathname;
+        var method = options.method || 'GET';
+        
+        console.log('[Mock] ' + method + ' ' + pathname);
+        
+        // ========== EVENTS API - Only show UPCOMING events ==========
+        if (pathname === '/api/attendee/events/') {
+            var search = urlObj.searchParams.get('search');
+            var category = urlObj.searchParams.get('category');
+            var offset = parseInt(urlObj.searchParams.get('offset') || '0');
+            var limit = parseInt(urlObj.searchParams.get('limit') || '12');
+            
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            var upcomingOnly = MOCK_EVENTS.filter(function(e) {
+                var eventDate = new Date(e.date);
+                return eventDate >= today && e.available_tickets > 0;
+            });
+            
+            var filtered = upcomingOnly.slice();
+            if (search) {
+                var searchLower = search.toLowerCase();
+                filtered = filtered.filter(function(e) {
+                    return e.title.toLowerCase().indexOf(searchLower) !== -1 ||
+                           e.description.toLowerCase().indexOf(searchLower) !== -1;
+                });
+            }
+            if (category && category !== 'all') {
+                filtered = filtered.filter(function(e) { return e.category_slug === category; });
+            }
+            var paginated = filtered.slice(offset, offset + limit);
+            return createResponse({ success: true, events: paginated, total: filtered.length });
+        }
+        
+        if (pathname === '/api/attendee/events/featured/') {
+            var todayFeatured = new Date();
+            todayFeatured.setHours(0, 0, 0, 0);
+            
+            var upcomingFeatured = MOCK_FEATURED_EVENTS.filter(function(e) {
+                var eventDate = new Date(e.date);
+                return eventDate >= todayFeatured && e.available_tickets > 0;
+            });
+            return createResponse({ success: true, events: upcomingFeatured });
+        }
+        
+        var eventMatch = pathname.match(/\/api\/attendee\/events\/(\d+)\/$/);
+        if (eventMatch) {
+            var event = getEventById(parseInt(eventMatch[1], 10));
+            if (event) {
+                var eventDate = new Date(event.date);
+                var todayEvent = new Date();
+                todayEvent.setHours(0, 0, 0, 0);
+                
+                if (eventDate >= todayEvent && event.available_tickets > 0) {
+                    return createResponse({ success: true, event: event });
+                } else {
+                    return createResponse({ success: false, message: 'Event not found or has passed' }, 404);
+                }
+            }
+            return createResponse({ success: false, message: 'Event not found' }, 404);
+        }
+        
+        if (pathname === '/api/attendee/categories/') {
+            return createResponse(MOCK_CATEGORIES);
+        }
+        
+        // ========== AUTH API ==========
+        if (pathname === '/api/attendee/auth/login/' && method === 'POST') {
+            var loginBody = JSON.parse(options.body || '{}');
+            return createResponse({
+                success: true,
+                access: 'mock_access_token_' + Date.now(),
+                refresh: 'mock_refresh_token_' + Date.now(),
+                user: { id: 1, email: loginBody.email, full_name: loginBody.email.split('@')[0], phone: '+254700000000' }
+            });
+        }
+        
+        if (pathname === '/api/attendee/auth/register/' && method === 'POST') {
+            var registerBody = JSON.parse(options.body || '{}');
+            return createResponse({
+                success: true,
+                access: 'mock_access_token_' + Date.now(),
+                refresh: 'mock_refresh_token_' + Date.now(),
+                user: { id: 1, email: registerBody.email, full_name: registerBody.full_name, phone: registerBody.phone }
+            });
+        }
+        
+        if (pathname === '/api/attendee/auth/logout/' && method === 'POST') {
+            return createResponse({ success: true });
+        }
+        
+        // ========== PROFILE API ==========
+        if (pathname === '/api/attendee/profile/') {
+            var user = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER) || '{}');
+            return createResponse({
+                success: true,
+                profile: { id: 1, email: user.email || 'test@example.com', full_name: user.full_name || 'Test User', phone: user.phone || '+254700000000' }
+            });
+        }
+        
+        // ========== CART API - FIXED with organizer field ==========
+        if (pathname === '/api/attendee/cart/add/' && method === 'POST') {
+            var body = JSON.parse(options.body || '{}');
+            var event = getEventById(body.event_id);
+            if (event) {
+                console.log('[Mock] Adding to cart:', event.title);
+                console.log('[Mock] Event organizer:', event.organizer);
+                
+                var existingItem = null;
+                for (var i = 0; i < mockCart.items.length; i++) {
+                    if (mockCart.items[i].id === body.event_id) {
+                        existingItem = mockCart.items[i];
+                        break;
+                    }
+                }
+                
+                var ticketPrice = event.price;
+                if (body.ticket_type === 'vip' && event.vip_price) {
+                    ticketPrice = event.vip_price;
+                } else if (body.ticket_type === 'vvip' && event.vvip_price) {
+                    ticketPrice = event.vvip_price;
+                }
+                
+                // CRITICAL: Make sure organizer is NOT undefined
+                var organizerValue = event.organizer || event.organizer_name || 'Event Organizer';
+                
+                if (existingItem) {
+                    var newQty = existingItem.quantity + (body.quantity || 1);
+                    existingItem.quantity = Math.min(newQty, 8);
+                    console.log('[Mock] Updated existing item, new quantity:', existingItem.quantity);
+                } else {
+                    var newItem = {
+                        id: event.id,
+                        title: event.title,
+                        price: ticketPrice,
+                        quantity: Math.min(body.quantity || 1, 8),
+                        image: event.image,
+                        organizer: organizerValue,
+                        organizer_name: organizerValue,
+                        date: event.date,
+                        location: event.location,
+                        category: event.category_name,
+                        ticket_type: body.ticket_type || 'regular'
+                    };
+                    console.log('[Mock] Adding new item:', newItem);
+                    mockCart.items.push(newItem);
+                }
+                
+                var newSubtotal = 0;
+                for (var j = 0; j < mockCart.items.length; j++) {
+                    newSubtotal += mockCart.items[j].price * mockCart.items[j].quantity;
+                }
+                mockCart.subtotal = newSubtotal;
+                mockCart.total = newSubtotal - (mockCart.discount_amount || 0);
+                saveCart();
+                
+                console.log('[Mock] Cart now has', mockCart.items.length, 'items');
+                console.log('[Mock] Organizers in cart:', [...new Set(mockCart.items.map(function(i) { return i.organizer; }))]);
+                
+                return createResponse({ success: true, message: 'Added to cart', cart: mockCart });
+            }
+            return createResponse({ success: false, message: 'Event not found' }, 404);
+        }
+        
+        if (pathname === '/api/attendee/cart/' && method === 'GET') {
+            console.log('[Mock] Returning cart with', mockCart.items.length, 'items');
+            console.log('[Mock] Organizers in cart:', [...new Set(mockCart.items.map(function(i) { return i.organizer; }))]);
+            return createResponse({ success: true, cart: mockCart });
+        }
+        
+        if (pathname === '/api/attendee/cart/update/' && method === 'POST') {
+            var updateBody = JSON.parse(options.body || '{}');
+            for (var u = 0; u < mockCart.items.length; u++) {
+                if (mockCart.items[u].id === updateBody.event_id) {
+                    var newQty = updateBody.quantity;
+                    mockCart.items[u].quantity = Math.min(newQty, 8);
+                    break;
+                }
+            }
+            mockCart.subtotal = mockCart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            mockCart.total = mockCart.subtotal - (mockCart.discount_amount || 0);
+            saveCart();
+            return createResponse({ success: true, cart: mockCart });
+        }
+        
+        if (pathname === '/api/attendee/cart/remove/' && method === 'POST') {
+            var removeBody = JSON.parse(options.body || '{}');
+            mockCart.items = mockCart.items.filter(function(i) { return i.id !== removeBody.event_id; });
+            mockCart.subtotal = mockCart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            mockCart.total = mockCart.subtotal - (mockCart.discount_amount || 0);
+            saveCart();
+            return createResponse({ success: true, cart: mockCart });
+        }
+        
+        if (pathname === '/api/attendee/cart/clear/' && method === 'POST') {
+            mockCart.items = [];
+            mockCart.subtotal = 0;
+            mockCart.total = 0;
+            mockCart.discount_amount = 0;
+            mockCart.promo_code = null;
+            saveCart();
+            return createResponse({ success: true, cart: mockCart });
+        }
+        
+        // ========== PAYMENT ORDERS API ==========
+        if (pathname === '/api/attendee/payment-orders/create/' && method === 'POST') {
+            var orderBody = JSON.parse(options.body || '{}');
+            var event = getEventById(orderBody.event_id);
+            var maxQty = Math.min(orderBody.quantity || 1, 8);
+            var amount = orderBody.amount || (event ? event.price * maxQty : 0);
+            
+            var newOrder = createPaymentOrder({
+                amount: amount, phone_number: orderBody.phone_number, event_id: orderBody.event_id,
+                ticket_type: orderBody.ticket_type || 'regular', quantity: maxQty,
+                receipt_number: orderBody.receipt_number, reference: orderBody.reference
+            });
+            
+            console.log(`[Mock] Order created - Status: pending, ID: ${newOrder.id}, Quantity: ${maxQty}`);
+            
+            return createResponse({
+                success: true, message: 'Payment order created', order: newOrder,
+                checkout_request_id: newOrder.checkout_request_id
+            });
+        }
+        
+        var paymentStatusMatch = pathname.match(/\/api\/attendee\/payment-orders\/(\d+)\/status\//);
+        if (paymentStatusMatch) {
+            var orderId = parseInt(paymentStatusMatch[1], 10);
+            var order = mockPaymentOrders.find(function(o) { return o.id === orderId; });
+            if (order) {
+                return createResponse({ success: true, status: order.status, payment_status: order.payment_status, order: order });
+            }
+            return createResponse({ success: false, message: 'Order not found' }, 404);
+        }
+        
+        // POST verify screenshot - FAST AUTO-VERIFY FOR MOCK
+        var verifyMatch = pathname.match(/\/api\/attendee\/payment-orders\/(\d+)\/verify-screenshot\//);
+        if (verifyMatch && method === 'POST') {
+            var verifyOrderId = parseInt(verifyMatch[1], 10);
+            var verifyOrder = mockPaymentOrders.find(function(o) { return o.id === verifyOrderId; });
+            
+            if (verifyOrder) {
+                verifyOrder.screenshot_submitted = true;
+                verifyOrder.payment_status = 'verifying';
+                savePaymentOrders();
+                
+                console.log(`[Mock] Screenshot uploaded - Auto-verifying order ${verifyOrder.id}`);
+                
+                const encoder = new TextEncoder();
+                const stream = new ReadableStream({
+                    start(controller) {
+                        controller.enqueue(encoder.encode('data: {"step": "processing", "message": "Processing screenshot..."}\n\n'));
+                        
+                        setTimeout(async () => {
+                            controller.enqueue(encoder.encode('data: {"step": "verifying", "message": "Auto-verifying payment..."}\n\n'));
+                            
+                            setTimeout(async () => {
+                                await approveOrder(verifyOrderId);
+                                console.log(`[Mock] Payment auto-approved for order ${verifyOrder.id}`);
+                                
+                                controller.enqueue(encoder.encode(`data: {"step": "completed", "message": "Payment verified and approved!", "ticket": ${JSON.stringify(verifyOrder.tickets?.[0] || {})}}\n\n`));
+                                controller.close();
+                            }, 300);
+                        }, 300);
+                    }
+                });
+                
+                return new Response(stream, {
+                    status: 200,
+                    headers: { 'Content-Type': 'text/event-stream' }
+                });
+            }
+            return createResponse({ success: false, message: 'Order not found' }, 404);
+        }
+        
+        // ========== TICKETS API ==========
+        if (pathname === '/api/attendee/tickets/upcoming/') {
+            var bookings = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            var upcomingTickets = [];
+            for (var b = 0; b < bookings.length; b++) {
+                var booking = bookings[b];
+                var items = booking.items || [];
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    var eventDate = new Date(item.date);
+                    if (eventDate >= today) {
+                        upcomingTickets.push({
+                            ticket_number: item.ticket_code || ('TKT' + Date.now() + b + i),
+                            event: {
+                                id: item.id,
+                                title: item.title,
+                                start_date: item.date,
+                                venue_name: item.location,
+                                banner_image: item.image
+                            },
+                            price: item.price,
+                            quantity: item.quantity || 1,
+                            ticket_type: item.ticket_type || 'regular',
+                            status: 'active',
+                            purchase_date: booking.booking_date
+                        });
+                    }
+                }
+            }
+            return createResponse({ success: true, results: upcomingTickets, count: upcomingTickets.length });
+        }
+        
+        if (pathname === '/api/attendee/tickets/past/') {
+            var bookingsPast = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
+            var todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            
+            var pastTickets = [];
+            for (var b = 0; b < bookingsPast.length; b++) {
+                var booking = bookingsPast[b];
+                var items = booking.items || [];
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    var eventDate = new Date(item.date);
+                    if (eventDate < todayDate) {
+                        pastTickets.push({
+                            ticket_number: item.ticket_code || ('TKT' + Date.now() + b + i),
+                            event: {
+                                id: item.id,
+                                title: item.title,
+                                start_date: item.date,
+                                venue_name: item.location,
+                                banner_image: item.image
+                            },
+                            price: item.price,
+                            quantity: item.quantity || 1,
+                            ticket_type: item.ticket_type || 'regular',
+                            status: 'used',
+                            purchase_date: booking.booking_date
+                        });
+                    }
+                }
+            }
+            return createResponse({ success: true, results: pastTickets, count: pastTickets.length });
+        }
+        
+        var ticketDetailMatch = pathname.match(/\/api\/attendee\/tickets\/(.+)\/$/);
+        if (ticketDetailMatch && method === 'GET' && !pathname.includes('/upcoming/') && !pathname.includes('/past/')) {
+            var ticketNumber = ticketDetailMatch[1];
+            var bookingsList = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
+            var foundTicket = null;
+            
+            for (var b = 0; b < bookingsList.length; b++) {
+                var booking = bookingsList[b];
+                var items = booking.items || [];
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    if (item.ticket_code === ticketNumber || (item.ticket_codes && item.ticket_codes.includes(ticketNumber))) {
+                        foundTicket = {
+                            ticket_number: ticketNumber,
+                            event: {
+                                id: item.id,
+                                title: item.title,
+                                start_date: item.date,
+                                venue_name: item.location,
+                                banner_image: item.image
+                            },
+                            price: item.price,
+                            quantity: 1,
+                            ticket_type: item.ticket_type || 'regular',
+                            status: 'active',
+                            purchase_date: booking.booking_date,
+                            booking_id: booking.id
+                        };
+                        break;
+                    }
+                }
+                if (foundTicket) break;
+            }
+            
+            if (foundTicket) {
+                return createResponse({ success: true, ticket: foundTicket });
+            }
+            return createResponse({ success: false, message: 'Ticket not found' }, 404);
+        }
+        
+        // ========== REVIEWS API ==========
+        if (pathname === '/api/attendee/reviews/' && method === 'GET') {
+            var userReviews = [];
+            try {
+                var storedReviews = localStorage.getItem(STORAGE_KEYS.REVIEWS);
+                if (storedReviews) {
+                    userReviews = JSON.parse(storedReviews);
+                }
+            } catch(e) {}
+            return createResponse({ success: true, results: userReviews, count: userReviews.length });
+        }
+        
+        var createReviewMatch = pathname.match(/\/api\/attendee\/reviews\/create\/(\d+)\/$/);
+        if (createReviewMatch && method === 'POST') {
+            var eventId = parseInt(createReviewMatch[1], 10);
+            var reviewBody = JSON.parse(options.body || '{}');
+            
+            var newReview = {
+                id: Date.now(),
+                event_id: eventId,
+                rating: reviewBody.rating,
+                comment: reviewBody.comment || '',
+                created_at: new Date().toISOString()
+            };
+            
+            var existingReviews = JSON.parse(localStorage.getItem(STORAGE_KEYS.REVIEWS) || '[]');
+            existingReviews.push(newReview);
+            localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(existingReviews));
+            
+            return createResponse({ success: true, message: 'Review submitted', review: newReview });
+        }
+        
+        var updateReviewMatch = pathname.match(/\/api\/attendee\/reviews\/update\/(\d+)\/$/);
+        if (updateReviewMatch && method === 'PUT') {
+            var reviewId = parseInt(updateReviewMatch[1], 10);
+            var updateBody = JSON.parse(options.body || '{}');
+            
+            var existingReviews = JSON.parse(localStorage.getItem(STORAGE_KEYS.REVIEWS) || '[]');
+            var updatedReview = null;
+            for (var r = 0; r < existingReviews.length; r++) {
+                if (existingReviews[r].id === reviewId) {
+                    existingReviews[r].rating = updateBody.rating;
+                    existingReviews[r].comment = updateBody.comment || '';
+                    existingReviews[r].updated_at = new Date().toISOString();
+                    updatedReview = existingReviews[r];
+                    break;
+                }
+            }
+            localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(existingReviews));
+            
+            return createResponse({ success: true, message: 'Review updated', review: updatedReview });
+        }
+        
+        // ========== BOOKINGS API ==========
+        if (pathname === '/api/attendee/bookings/') {
+            var bookings = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
+            return createResponse({ success: true, results: bookings, count: bookings.length });
+        }
+        
+        // ========== WISHLIST API ==========
+        if (pathname === '/api/attendee/wishlist/' && method === 'GET') {
+            var wishlistEvents = mockWishlist.map(function(id) { return getEventById(id); }).filter(function(e) { return e; });
+            return createResponse({ success: true, wishlist: wishlistEvents });
+        }
+        
+        if (pathname === '/api/attendee/wishlist/add/' && method === 'POST') {
+            var wishBody = JSON.parse(options.body || '{}');
+            if (mockWishlist.indexOf(wishBody.event_id) === -1) {
+                mockWishlist.push(wishBody.event_id);
+                saveWishlist();
+            }
+            return createResponse({ success: true, message: 'Added to wishlist' });
+        }
+        
+        if (pathname === '/api/attendee/wishlist/remove/' && method === 'POST') {
+            var removeWishBody = JSON.parse(options.body || '{}');
+            mockWishlist = mockWishlist.filter(function(id) { return id !== removeWishBody.event_id; });
+            saveWishlist();
+            return createResponse({ success: true, message: 'Removed from wishlist' });
+        }
+        
+        // ========== NOTIFICATIONS API ==========
+        if (pathname === '/api/attendee/notifications/') {
+            return createResponse({ success: true, notifications: [], unread_count: 0 });
+        }
+        
+        // ========== DASHBOARD STATS API ==========
+        if (pathname === '/api/attendee/dashboard/stats/') {
+            var upcomingCount = mockTickets.filter(function(t) { return new Date(t.event_date) >= new Date(); }).length;
+            return createResponse({
+                success: true,
+                stats: {
+                    total_tickets: mockTickets.length,
+                    upcoming_events: upcomingCount,
+                    wishlist_count: mockWishlist.length
+                }
+            });
+        }
+        
+        // ========== CHECK EXPIRED EVENTS ==========
+        if (pathname === '/api/events/check-expired/') {
+            return createResponse({ success: true, expired_events: [] });
+        }
+        
+        console.warn('[Mock] No handler for ' + method + ' ' + pathname + ', using real API');
+        return originalFetch(url, options);
+    };
+    
+    console.log('%c[Mock API] Interceptor active - Events grouped by organizers', 'color: #10b981;');
+    console.log('%c  - ' + MOCK_EVENTS.length + ' total events', 'color: #64748b;');
+    console.log('%c  - Categories: Music (2), Tech (2), Comedy (2), Sports (1), Food (2), Art (1), Wellness (2), Business (1)', 'color: #f59e0b;');
+    console.log('%c  - Each organizer has ONE payment method', 'color: #f59e0b;');
+    console.log('%c  - Wishlist starts EMPTY (no pre-populated items)', 'color: #f59e0b;');
+    console.log('%c  - Cart items include organizer field for grouping (FIXED)', 'color: #10b981;');
+    console.log('%c  - Max 8 tickets per booking', 'color: #f59e0b;');
+    console.log('%c[Mock API] Ready for testing!', 'color: #10b981; font-weight: bold;');
+})();

@@ -149,6 +149,13 @@
     margin-bottom: 0.5rem;
 }
 
+.detail-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .ticket-detail-container {
@@ -172,5 +179,9 @@
     .btn-back, .btn-qr {
         width: 100%;
         justify-content: center;
+    }
+    
+    .detail-actions {
+        flex-direction: column;
     }
 }

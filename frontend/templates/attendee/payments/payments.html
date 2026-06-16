@@ -1,0 +1,32 @@
+{% extends 'attendee/base.html' %}
+{% load static %}
+
+{% block title %}Transaction History - EventHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/attendee/payments/payments.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="payments-page">
+    <div class="container">
+        <div class="payments-header">
+            <h1>Transaction History</h1>
+            <p>View your payment history and booking receipts</p>
+        </div>
+
+        <div class="transactions-container">
+            <div class="transactions-header">
+                <h2><i class="fas fa-receipt"></i> All Transactions</h2>
+                <span class="history-count" id="historyCount"></span>
+            </div>
+            <div id="transactionsList" class="transactions-list"></div>
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/attendee/payments/payments.js' %}"></script>
+{% endblock %}

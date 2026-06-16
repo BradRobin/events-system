@@ -82,8 +82,6 @@
     cursor: default;
 }
 
-/* REMOVED: Progress bar and hover indicator styles */
-
 /* Responsive breakpoints */
 @media (max-width: 1024px) {
     .featured-item {
@@ -205,13 +203,13 @@ function attachButtonEventListeners() {
         btn.addEventListener('click', handleWishlistClick);
     });
     
-    // Details buttons
+    // Details buttons - NO login required
     document.querySelectorAll('.featured-item .view-details-btn').forEach(btn => {
         btn.removeEventListener('click', handleViewDetailsClick);
         btn.addEventListener('click', handleViewDetailsClick);
     });
     
-    // Book ticket buttons
+    // Book ticket buttons - REQUIRES login
     document.querySelectorAll('.featured-item .book-ticket-btn').forEach(btn => {
         btn.removeEventListener('click', handleBookTicketClick);
         btn.addEventListener('click', handleBookTicketClick);
@@ -226,11 +224,14 @@ function handleWishlistClick(e) {
     toggleWishlist(eventId, btn, eventTitle);
 }
 
+// FIXED: Details button - NO login required
 function handleViewDetailsClick(e) {
     e.stopPropagation();
     const btn = this;
     const eventId = parseInt(btn.dataset.id);
-    viewEventDetails(eventId);
+    if (eventId) {
+        window.location.href = `/events/detail/?id=${eventId}`;
+    }
 }
 
 function handleBookTicketClick(e) {
@@ -385,8 +386,14 @@ async function toggleWishlist(eventId, btnElement, eventTitle) {
                 window.dispatchEvent(new Event('wishlist-updated'));
                 window.dispatchEvent(new Event('storage'));
             } else {
-                btnElement.classList.add('active');
-                btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove';
+                // Revert UI
+                if (isActive) {
+                    btnElement.classList.add('active');
+                    btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove';
+                } else {
+                    btnElement.classList.remove('active');
+                    btnElement.innerHTML = '<i class="far fa-heart"></i> Wishlist';
+                }
                 showToast('Failed to add to wishlist', 'error');
             }
         } else {
@@ -402,13 +409,20 @@ async function toggleWishlist(eventId, btnElement, eventTitle) {
                 window.dispatchEvent(new Event('wishlist-updated'));
                 window.dispatchEvent(new Event('storage'));
             } else {
-                btnElement.classList.remove('active');
-                btnElement.innerHTML = '<i class="far fa-heart"></i> Wishlist';
+                // Revert UI
+                if (isActive) {
+                    btnElement.classList.remove('active');
+                    btnElement.innerHTML = '<i class="far fa-heart"></i> Wishlist';
+                } else {
+                    btnElement.classList.add('active');
+                    btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove';
+                }
                 showToast('Failed to remove from wishlist', 'error');
             }
         }
     } catch (error) {
         console.error('Wishlist error:', error);
+        // Revert UI on error
         if (isActive) {
             btnElement.classList.add('active');
             btnElement.innerHTML = '<i class="fas fa-heart"></i> Remove';
@@ -478,18 +492,9 @@ function bookTicket(eventId, title, price) {
     showToast(`✅ "${title}" has been added to your cart. Total: KES ${price.toLocaleString()}`, 'success');
 }
 
+// FIXED: Details button - NO login required, directly goes to event detail
 function viewEventDetails(eventId) {
-    const token = localStorage.getItem('attendee_access_token');
-    
-    if (!token) {
-        showToast('🔐 Please login to view event details and book tickets', 'info');
-        setTimeout(() => {
-            localStorage.setItem('redirect_after_login', window.location.pathname);
-            window.location.href = '/login/';
-        }, 1500);
-        return;
-    }
-    
+    // No login check - anyone can view event details
     window.location.href = `/events/detail/?id=${eventId}`;
 }
 
