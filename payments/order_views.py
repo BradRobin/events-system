@@ -167,6 +167,7 @@ def _notify_attendee_payment_review(order, *, ocr_passed):
         title='Payment submitted for review',
         message=message,
         notification_type='info',
+        action_url='/cart/',
     )
 
 
@@ -744,15 +745,17 @@ def organizer_approve_order(request, order_id):
         payment_order=order, organizer=request.user, requires_action=True
     ).update(is_read=True, requires_action=False)
 
+    ticket_url = f'/tickets/detail/?ticket={ticket.ticket_number}'
     AttendeeNotification.objects.create(
         attendee=order.attendee,
         payment_order=order,
-        title='Payment approved',
+        title='Payment approved — ticket ready',
         message=(
             f'Your payment for {order.event.title} was approved. '
-            f'Ticket {ticket.ticket_number} has been issued.'
+            f'Ticket {ticket.ticket_number} is ready to view.'
         ),
         notification_type='success',
+        action_url=ticket_url,
     )
 
     return JsonResponse({
@@ -814,6 +817,7 @@ def organizer_reject_order(request, order_id):
         title='Payment not confirmed',
         message='Payment could not be confirmed. Please submit your M-Pesa screenshot again.',
         notification_type='warning',
+        action_url='/cart/',
     )
 
     return JsonResponse({
@@ -824,6 +828,9 @@ def organizer_reject_order(request, order_id):
 
 
 def _serialize_organizer_notification(notification):
+    action_url = notification.action_url or ''
+    if not action_url and notification.requires_action and notification.action_type == 'payment_approval':
+        action_url = '/organizer/dashboard/'
     return {
         'id': notification.id,
         'title': notification.title,
@@ -833,6 +840,7 @@ def _serialize_organizer_notification(notification):
         'requires_action': notification.requires_action,
         'action_type': notification.action_type,
         'payment_order_id': notification.payment_order_id,
+        'action_url': action_url,
         'created_at': notification.created_at.isoformat(),
     }
 

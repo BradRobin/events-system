@@ -302,6 +302,7 @@
             markAllButtonId: null,
             tokenKey: 'attendee_access_token',
             actionUrl: function (n) {
+                if (n.action_url) return n.action_url;
                 if (n.payment_order_id || n.notification_type === 'payment') return '/tickets/';
                 return '/notifications/';
             },
@@ -328,10 +329,11 @@
             markAllButtonId: 'organizerMarkAllReadBtn',
             tokenKey: 'organizer_access_token',
             actionUrl: function (n) {
-                if (n.requires_action || n.notification_type === 'payment') {
+                if (n.action_url) return n.action_url;
+                if (n.requires_action || n.action_type === 'payment_approval') {
                     return '/organizer/dashboard/';
                 }
-                return '/organizer/dashboard/';
+                return '/organizer/settings/?tab=plan';
             },
             iconForType: defaultIconForType,
         });

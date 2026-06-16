@@ -64,9 +64,11 @@ from subscriptions.views import (
     create_subscription_order,
     subscription_order_status,
     verify_subscription_screenshot,
+    admin_subscription_orders_list,
     admin_pending_subscription_orders,
     admin_approve_subscription_order,
     admin_reject_subscription_order,
+    admin_subscription_order_screenshot,
 )
 from reviews.views import (
     api_my_reviews,
@@ -297,9 +299,11 @@ urlpatterns = [
     path('api/organizer/subscription/orders/create/', create_subscription_order, name='create_subscription_order'),
     path('api/organizer/subscription/orders/<int:order_id>/status/', subscription_order_status, name='subscription_order_status'),
     path('api/organizer/subscription/orders/<int:order_id>/verify-screenshot/', verify_subscription_screenshot, name='verify_subscription_screenshot'),
+    path('api/admin/subscription-orders/', admin_subscription_orders_list, name='admin_subscription_orders_list'),
     path('api/admin/subscription-orders/pending/', admin_pending_subscription_orders, name='admin_pending_subscription_orders'),
     path('api/admin/subscription-orders/<int:order_id>/approve/', admin_approve_subscription_order, name='admin_approve_subscription_order'),
     path('api/admin/subscription-orders/<int:order_id>/reject/', admin_reject_subscription_order, name='admin_reject_subscription_order'),
+    path('api/admin/subscription-orders/<int:order_id>/screenshot/', admin_subscription_order_screenshot, name='admin_subscription_order_screenshot'),
 
     # Manual M-Pesa payment orders
     path('api/attendee/payment-orders/create/', create_payment_order, name='create_payment_order'),
@@ -421,7 +425,9 @@ urlpatterns = [
 
     # Payments & Payouts Management
     path('api/admin/transactions/', admin_api.transactions_list_api, name='admin_transactions_list'),
+    path('api/admin/payment-orders/', admin_api.admin_payment_orders_list, name='admin_payment_orders_list'),
     path('api/admin/transactions/stats/', admin_api.transactions_stats, name='admin_transactions_stats'),
+    path('api/admin/transactions/combined-stats/', admin_api.admin_transactions_combined_stats, name='admin_transactions_combined_stats'),
     path('api/admin/transactions/export/', admin_api.transactions_export, name='admin_transactions_export'),
     path('api/admin/transactions/<str:transaction_id>/', admin_api.transaction_detail_api, name='admin_transaction_detail'),
     path('api/admin/transactions/refund/', admin_api.transaction_refund_api, name='admin_transaction_refund'),

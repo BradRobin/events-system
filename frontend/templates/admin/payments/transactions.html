@@ -5,6 +5,21 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin/payments/payments.css' %}">
+<style>
+.tx-type-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.tx-type-tab {
+    border: 1px solid #e2e8f0; background: #fff; color: #475569;
+    padding: 0.55rem 1rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer;
+}
+.tx-type-tab.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+.pending-approvals-card { margin-bottom: 1.25rem; }
+.pending-approval-item {
+    border: 1px solid #fde68a; background: #fffbeb; border-radius: 0.5rem;
+    padding: 1rem; margin-bottom: 0.75rem;
+}
+.pending-approval-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+.screenshot-modal-img { max-width: 100%; border-radius: 0.5rem; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -12,43 +27,57 @@
     <div class="page-header">
         <div>
             <h1><i class="fas fa-credit-card"></i> Payment Transactions</h1>
-            <p class="text-muted">View all customer payment transactions</p>
+            <p class="text-muted">Ticket purchases and organizer subscription plan payments</p>
         </div>
         <div class="header-actions">
-            <button class="btn-primary" id="exportBtn">
+            <button class="btn-primary" id="exportBtn" style="display:none;">
                 <i class="fas fa-download"></i> Export PDF
             </button>
         </div>
     </div>
 
+    <div class="tx-type-tabs" role="tablist">
+        <button type="button" class="tx-type-tab active" data-tab="tickets" id="tabTickets">Event ticket purchases</button>
+        <button type="button" class="tx-type-tab" data-tab="subscriptions" id="tabSubscriptions">Subscription plans</button>
+    </div>
+
     <div class="stats-row">
         <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
             <div class="stat-info">
-                <h3 id="totalTransactions">0</h3>
-                <span>Total Transactions</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-chart-pie"></i></div>
-            <div class="stat-info">
-                <h3 id="totalVolume">Kes 0</h3>
-                <span>Total Volume</span>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-            <div class="stat-info">
-                <h3 id="successCount">0</h3>
-                <span>Successful</span>
+                <h3 id="ticketCompletedCount">0</h3>
+                <span>Ticket purchases completed</span>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon"><i class="fas fa-clock"></i></div>
             <div class="stat-info">
-                <h3 id="pendingCount">0</h3>
-                <span>Pending</span>
+                <h3 id="ticketPendingCount">0</h3>
+                <span>Ticket orders pending</span>
             </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+            <div class="stat-info">
+                <h3 id="subCompletedCount">0</h3>
+                <span>Subscriptions completed</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+            <div class="stat-info">
+                <h3 id="subPendingCount">0</h3>
+                <span>Subscriptions awaiting approval</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="subscriptionPendingCard" class="card pending-approvals-card" style="display:none;">
+        <div class="card-header">
+            <h3><i class="fas fa-hourglass-half"></i> Subscription upgrades awaiting your approval</h3>
+        </div>
+        <div class="card-body" id="subscriptionPendingList">
+            <p class="text-muted">Loading…</p>
         </div>
     </div>
 
@@ -56,7 +85,7 @@
         <div class="filters-row">
             <div class="filter-group search-group">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchTransactions" placeholder="Search by transaction ID or customer...">
+                <input type="text" id="searchTransactions" placeholder="Search transactions...">
             </div>
             <div class="filter-group">
                 <label>Status</label>
@@ -65,52 +94,37 @@
                     <option value="success">Success</option>
                     <option value="pending">Pending</option>
                     <option value="failed">Failed</option>
-                    <option value="refunded">Refunded</option>
                 </select>
             </div>
-            <div class="filter-group">
-                <label>From Date</label>
-                <input type="date" id="dateFrom">
-            </div>
-            <div class="filter-group">
-                <label>To Date</label>
-                <input type="date" id="dateTo">
-            </div>
-            <button class="btn-secondary" id="applyFiltersBtn">
-                <i class="fas fa-filter"></i> Apply
-            </button>
-            <button class="btn-outline" id="resetFiltersBtn">
-                <i class="fas fa-redo"></i> Reset
-            </button>
+            <button class="btn-secondary" id="applyFiltersBtn"><i class="fas fa-filter"></i> Apply</button>
+            <button class="btn-outline" id="resetFiltersBtn"><i class="fas fa-redo"></i> Reset</button>
         </div>
     </div>
 
     <div class="card">
         <div class="card-header">
-            <h3><i class="fas fa-list-ul"></i> Transaction History</h3>
-            <div class="table-info">
-                <span id="recordsCount">0 records</span>
-            </div>
+            <h3 id="tableTitle"><i class="fas fa-list-ul"></i> Event ticket purchases</h3>
+            <div class="table-info"><span id="recordsCount">0 records</span></div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="data-table">
-                    <thead>
+                    <thead id="transactionsTableHead">
                         <tr>
-                            <th>Transaction ID</th>
+                            <th>Order ID</th>
                             <th>Date & Time</th>
                             <th>Customer</th>
-                            <th>Event</th>
+                            <th>Event / Organizer</th>
                             <th>Amount</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="transactionsList">
-                            <tr><td colspan="7" class="text-center">Loading transactions...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+                        <tr><td colspan="7" class="text-center">Loading transactions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
             <div id="pagination" class="pagination"></div>
         </div>
     </div>
@@ -125,10 +139,18 @@
         <div class="modal-body" id="transactionModalBody"></div>
         <div class="modal-footer">
             <button class="btn-secondary" id="cancelModalBtn">Close</button>
-            <button class="btn-warning" id="refundBtn" style="display: none;">
-                <i class="fas fa-undo-alt"></i> Refund
-            </button>
+            <button class="btn-warning" id="refundBtn" style="display: none;"><i class="fas fa-undo-alt"></i> Refund</button>
         </div>
+    </div>
+</div>
+
+<div id="screenshotModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Payment screenshot</h3>
+            <button class="modal-close" id="closeScreenshotBtn">&times;</button>
+        </div>
+        <div class="modal-body"><img id="screenshotModalImage" class="screenshot-modal-img" alt="Payment screenshot"></div>
     </div>
 </div>
 {% endblock %}
@@ -136,5 +158,5 @@
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-<script src="{% static 'js/admin/payments/transactions.js' %}"></script>
+<script src="{% static 'js/admin/payments/transactions.js' %}?v=2"></script>
 {% endblock %}

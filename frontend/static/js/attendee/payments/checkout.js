@@ -400,13 +400,14 @@
             attempts++;
             try {
                 const order = await checkOrderStatus(orderId);
-                if (order.payment_status === 'approved' || order.status === 'completed') {
+                if (order.status === 'completed') {
                     clearInterval(statusPollInterval);
                     statusPollInterval = null;
-                    const ticket = order.tickets?.[0] || null;
-                    saveTicketToLocalStorage(order, ticket);
+                    if (order.ticket_number) {
+                        saveTicketToLocalStorage(order, { ticket_number: order.ticket_number });
+                    }
                     onComplete(order);
-                } else if (order.payment_status === 'rejected' || order.status === 'failed') {
+                } else if (order.status === 'rejected' || order.status === 'failed') {
                     clearInterval(statusPollInterval);
                     statusPollInterval = null;
                     onFail(order);

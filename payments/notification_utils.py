@@ -26,6 +26,9 @@ def paginate_notifications(queryset, request, *, default_page_size=10, max_page_
 
 
 def serialize_attendee_notification(notification):
+    action_url = notification.action_url or ''
+    if not action_url and notification.payment_order_id:
+        action_url = '/tickets/'
     return {
         'id': notification.id,
         'title': notification.title,
@@ -34,5 +37,5 @@ def serialize_attendee_notification(notification):
         'is_read': notification.is_read,
         'payment_order_id': notification.payment_order_id,
         'created_at': notification.created_at.isoformat(),
-        'action_url': '/tickets/' if notification.payment_order_id else '/notifications/',
+        'action_url': action_url,
     }

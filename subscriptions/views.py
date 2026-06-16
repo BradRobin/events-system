@@ -11,7 +11,8 @@ from django.utils import timezone
 
 from accounts.auth import authenticate_bearer, parse_json_body
 from events.api_organizer_views import organizer_required
-from payments.screenshot_storage import encode_upload_to_data_uri, open_screenshot_stream
+from payments.models import OrganizerNotification
+from payments.screenshot_storage import encode_upload_to_data_uri, get_screenshot_data_uri, open_screenshot_stream, order_has_screenshot
 from payments.screenshot_verifier import verify_screenshot as analyze_payment_screenshot, ocr_is_available
 
 from .models import SubscriptionOrder
@@ -68,6 +69,47 @@ def _escalate_to_admin_review(order, *, ocr_passed, verification_message=''):
     order.screenshot_verified = ocr_passed
     order.verification_message = verification_message or 'Payment submitted for admin approval.'
     order.save(update_fields=['status', 'screenshot_verified', 'verification_message', 'updated_at'])
+    _notify_organizer_subscription_pending(order)
+
+
+def _notify_organizer_subscription_pending(order):
+    plan = get_plan(order.plan) or {}
+    plan_name = plan.get('name', order.plan)
+    OrganizerNotification.objects.create(
+        organizer=order.organizer,
+        title='Plan upgrade awaiting approval',
+        message=(
+            f'Your {plan_name} upgrade (KES {order.amount:,.0f}) has been submitted. '
+            'EventHub will review your payment and activate your plan shortly.'
+        ),
+        notification_type='info',
+        action_url='/organizer/settings/?tab=plan',
+    )
+
+
+def _notify_organizer_subscription_approved(order):
+    plan = get_plan(order.plan) or {}
+    plan_name = plan.get('name', order.plan)
+    OrganizerNotification.objects.create(
+        organizer=order.organizer,
+        title='Plan upgraded successfully',
+        message=f'Your account has been upgraded to the {plan_name} plan. You can publish more events this month.',
+        notification_type='success',
+        action_url='/organizer/settings/?tab=plan',
+    )
+
+
+def _notify_organizer_subscription_rejected(order, reason=''):
+    plan = get_plan(order.plan) or {}
+    plan_name = plan.get('name', order.plan)
+    detail = reason or order.verification_message or 'Your plan payment could not be confirmed.'
+    OrganizerNotification.objects.create(
+        organizer=order.organizer,
+        title='Plan upgrade declined',
+        message=f'Your {plan_name} upgrade was not approved. {detail}',
+        notification_type='warning',
+        action_url='/organizer/settings/?tab=plan',
+    )
 
 
 @csrf_exempt
@@ -273,6 +315,58 @@ def _admin_required(view_func):
 @csrf_exempt
 @_admin_required
 @require_http_methods(["GET"])
+def admin_subscription_orders_list(request):
+    status = (request.GET.get('status') or '').strip()
+    search = (request.GET.get('search') or '').strip()
+    page = max(1, int(request.GET.get('page', 1) or 1))
+    page_size = min(50, max(1, int(request.GET.get('page_size', 10) or 10)))
+
+    qs = SubscriptionOrder.objects.select_related('organizer').order_by('-updated_at')
+    if status == 'success':
+        qs = qs.filter(status='completed')
+    elif status == 'pending':
+        qs = qs.filter(status__in=['pending_payment', 'verifying', 'manual_review'])
+    elif status == 'failed':
+        qs = qs.filter(status__in=['failed', 'rejected'])
+    elif status:
+        qs = qs.filter(status=status)
+    if search:
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(organizer__username__icontains=search)
+            | Q(organizer__email__icontains=search)
+            | Q(organizer__organization_name__icontains=search)
+            | Q(plan__icontains=search)
+        )
+
+    total = qs.count()
+    start = (page - 1) * page_size
+    orders = qs[start:start + page_size]
+    results = []
+    for order in orders:
+        item = _serialize_order(order, include_payment=False)
+        item['organizer_name'] = (
+            order.organizer.organization_name or order.organizer.get_full_name() or order.organizer.username
+        )
+        item['organizer_email'] = order.organizer.email
+        item['has_screenshot'] = order_has_screenshot(order)
+        results.append(item)
+
+    return JsonResponse({
+        'success': True,
+        'orders': results,
+        'pagination': {
+            'current_page': page,
+            'page_size': page_size,
+            'total_items': total,
+            'total_pages': max(1, (total + page_size - 1) // page_size),
+        },
+    })
+
+
+@csrf_exempt
+@_admin_required
+@require_http_methods(["GET"])
 def admin_pending_subscription_orders(request):
     orders = SubscriptionOrder.objects.filter(status='manual_review').select_related('organizer').order_by('-updated_at')[:100]
     results = []
@@ -282,6 +376,7 @@ def admin_pending_subscription_orders(request):
             order.organizer.organization_name or order.organizer.get_full_name() or order.organizer.username
         )
         item['organizer_email'] = order.organizer.email
+        item['has_screenshot'] = order_has_screenshot(order)
         results.append(item)
     return JsonResponse({'success': True, 'orders': results})
 
@@ -301,6 +396,13 @@ def admin_approve_subscription_order(request, order_id):
     activate_subscription(order.organizer, order.plan, months=order.billing_months)
     order.status = 'completed'
     order.save(update_fields=['status', 'updated_at'])
+
+    _notify_organizer_subscription_approved(order)
+    try:
+        from accounts.admin_store import expire_notifications_for_entity
+        expire_notifications_for_entity('subscription', order.id, action_types=['subscription_pending_approval'])
+    except Exception:
+        pass
 
     return JsonResponse({
         'success': True,
@@ -325,4 +427,35 @@ def admin_reject_subscription_order(request, order_id):
     order.status = 'rejected'
     order.verification_message = (data.get('reason') or 'Payment rejected by admin.').strip()
     order.save(update_fields=['status', 'verification_message', 'updated_at'])
+
+    _notify_organizer_subscription_rejected(order, order.verification_message)
+    try:
+        from accounts.admin_store import expire_notifications_for_entity
+        expire_notifications_for_entity('subscription', order.id, action_types=['subscription_pending_approval'])
+    except Exception:
+        pass
+
     return JsonResponse({'success': True, 'message': 'Subscription payment rejected.'})
+
+
+@csrf_exempt
+@_admin_required
+@require_http_methods(["GET"])
+def admin_subscription_order_screenshot(request, order_id):
+    try:
+        order = SubscriptionOrder.objects.get(pk=order_id)
+    except SubscriptionOrder.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Order not found.'}, status=404)
+
+    if not order_has_screenshot(order):
+        return JsonResponse({'success': False, 'message': 'No screenshot on file.'}, status=404)
+
+    data_uri = get_screenshot_data_uri(order)
+    if not data_uri:
+        return JsonResponse({'success': False, 'message': 'Screenshot could not be loaded.'}, status=404)
+
+    return JsonResponse({
+        'success': True,
+        'screenshot_data': data_uri,
+        'order_id': order.id,
+    })

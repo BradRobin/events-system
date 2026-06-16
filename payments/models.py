@@ -152,6 +152,7 @@ class OrganizerNotification(models.Model):
     is_read = models.BooleanField(default=False)
     requires_action = models.BooleanField(default=False)
     action_type = models.CharField(max_length=50, blank=True)
+    action_url = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -175,6 +176,7 @@ class AttendeeNotification(models.Model):
     message = models.TextField()
     notification_type = models.CharField(max_length=20, default='info')
     is_read = models.BooleanField(default=False)
+    action_url = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

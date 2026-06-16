@@ -89,6 +89,24 @@ class SubscriptionPlanTests(TestCase):
         self.assertEqual(res.status_code, 200)
         self.organizer.refresh_from_db()
         self.assertEqual(self.organizer.subscription_plan, 'premium')
+        from payments.models import OrganizerNotification
+        self.assertTrue(
+            OrganizerNotification.objects.filter(
+                organizer=self.organizer,
+                title='Plan upgraded successfully',
+            ).exists()
+        )
+
+    def test_admin_notification_includes_pending_subscription(self):
+        SubscriptionOrder.objects.create(
+            organizer=self.organizer,
+            plan='plus',
+            amount=Decimal('500'),
+            status='manual_review',
+        )
+        from accounts.admin_store import build_dynamic_notifications
+        notes = build_dynamic_notifications()
+        self.assertTrue(any(n.get('action_type') == 'subscription_pending_approval' for n in notes))
 
     def test_ocr_health_endpoint(self):
         res = self.client.get('/api/health/ocr/')

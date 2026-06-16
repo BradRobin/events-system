@@ -1,4 +1,4 @@
-// Transactions Management - Production Ready with PDF Export
+// Admin transactions — ticket purchases + subscription plans
 
 function getCSRFToken() {
     const cookieValue = document.cookie.match('(^|; )csrftoken=([^;]*)');
@@ -6,505 +6,336 @@ function getCSRFToken() {
 }
 
 const API = {
-    getTransactions: '/api/admin/transactions/',
-    getStats: '/api/admin/transactions/stats/',
-    refundTransaction: '/api/admin/transactions/refund/',
-    exportTransactions: '/api/admin/transactions/export/',
-    getTransactionDetail: (id) => `/api/admin/transactions/${id}/`
+    ticketOrders: '/api/admin/payment-orders/',
+    subscriptions: '/api/admin/subscription-orders/',
+    subscriptionsPending: '/api/admin/subscription-orders/pending/',
+    subscriptionScreenshot: (id) => `/api/admin/subscription-orders/${id}/screenshot/`,
+    subscriptionApprove: (id) => `/api/admin/subscription-orders/${id}/approve/`,
+    subscriptionReject: (id) => `/api/admin/subscription-orders/${id}/reject/`,
+    combinedStats: '/api/admin/transactions/combined-stats/',
 };
 
+let activeTab = 'tickets';
 let currentTransactions = [];
 let currentPage = 1;
 let itemsPerPage = 10;
-let selectedTransaction = null;
-let currentFilters = {
-    search: '',
-    status: '',
-    dateFrom: '',
-    dateTo: ''
-};
+let currentFilters = { search: '', status: '' };
 
-const elements = {
-    transactionsList: document.getElementById('transactionsList'),
-    pagination: document.getElementById('pagination'),
-    recordsCount: document.getElementById('recordsCount'),
-    searchTransactions: document.getElementById('searchTransactions'),
-    statusFilter: document.getElementById('statusFilter'),
-    dateFrom: document.getElementById('dateFrom'),
-    dateTo: document.getElementById('dateTo'),
-    exportBtn: document.getElementById('exportBtn'),
-    applyFiltersBtn: document.getElementById('applyFiltersBtn'),
-    resetFiltersBtn: document.getElementById('resetFiltersBtn'),
-    transactionModal: document.getElementById('transactionModal'),
-    transactionModalBody: document.getElementById('transactionModalBody'),
-    refundBtn: document.getElementById('refundBtn'),
-    closeModalBtn: document.getElementById('closeModalBtn'),
-    cancelModalBtn: document.getElementById('cancelModalBtn')
-};
+const elements = {};
 
 document.addEventListener('DOMContentLoaded', () => {
+    elements.transactionsList = document.getElementById('transactionsList');
+    elements.pagination = document.getElementById('pagination');
+    elements.recordsCount = document.getElementById('recordsCount');
+    elements.searchTransactions = document.getElementById('searchTransactions');
+    elements.statusFilter = document.getElementById('statusFilter');
+    elements.applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    elements.resetFiltersBtn = document.getElementById('resetFiltersBtn');
+    elements.tableTitle = document.getElementById('tableTitle');
+    elements.subscriptionPendingCard = document.getElementById('subscriptionPendingCard');
+    elements.subscriptionPendingList = document.getElementById('subscriptionPendingList');
+    elements.screenshotModal = document.getElementById('screenshotModal');
+    elements.screenshotModalImage = document.getElementById('screenshotModalImage');
+    elements.closeScreenshotBtn = document.getElementById('closeScreenshotBtn');
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'subscriptions') activeTab = 'subscriptions';
+
+    document.querySelectorAll('.tx-type-tab').forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    elements.applyFiltersBtn?.addEventListener('click', applyFilters);
+    elements.resetFiltersBtn?.addEventListener('click', resetFilters);
+    elements.searchTransactions?.addEventListener('input', debounce(applyFilters, 400));
+    elements.statusFilter?.addEventListener('change', applyFilters);
+    elements.closeScreenshotBtn?.addEventListener('click', () => {
+        if (elements.screenshotModal) elements.screenshotModal.style.display = 'none';
+    });
+
+    updateTabUI();
+    loadCombinedStats();
     loadTransactions();
-    loadStats();
-    attachEventListeners();
+    if (activeTab === 'subscriptions') loadSubscriptionPending();
 });
 
-function attachEventListeners() {
-    elements.searchTransactions.addEventListener('input', debounce(applyFilters, 500));
-    elements.statusFilter.addEventListener('change', applyFilters);
-    elements.dateFrom.addEventListener('change', applyFilters);
-    elements.dateTo.addEventListener('change', applyFilters);
-    elements.applyFiltersBtn.addEventListener('click', applyFilters);
-    elements.resetFiltersBtn.addEventListener('click', resetFilters);
-    elements.exportBtn.addEventListener('click', exportTransactionsToPDF);
-    elements.refundBtn.addEventListener('click', processRefund);
-    elements.closeModalBtn.addEventListener('click', closeModal);
-    elements.cancelModalBtn.addEventListener('click', closeModal);
+function switchTab(tab) {
+    activeTab = tab;
+    currentPage = 1;
+    updateTabUI();
+    loadTransactions();
+    if (tab === 'subscriptions') loadSubscriptionPending();
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', url);
+}
+
+function updateTabUI() {
+    document.querySelectorAll('.tx-type-tab').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === activeTab);
+    });
+    if (elements.tableTitle) {
+        elements.tableTitle.innerHTML = activeTab === 'subscriptions'
+            ? '<i class="fas fa-layer-group"></i> Subscription plan payments'
+            : '<i class="fas fa-ticket-alt"></i> Event ticket purchases';
+    }
+    if (elements.subscriptionPendingCard) {
+        elements.subscriptionPendingCard.style.display = activeTab === 'subscriptions' ? 'block' : 'none';
+    }
+}
+
+async function loadCombinedStats() {
+    try {
+        const response = await fetch(API.combinedStats, { headers: { 'X-CSRFToken': getCSRFToken() } });
+        if (!response.ok) return;
+        const data = await response.json();
+        const stats = data.stats || {};
+        const tickets = stats.ticket_purchases || {};
+        const subs = stats.subscriptions || {};
+        setText('ticketCompletedCount', tickets.completed || 0);
+        setText('ticketPendingCount', tickets.pending || 0);
+        setText('subCompletedCount', subs.completed || 0);
+        setText('subPendingCount', subs.pending || 0);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
 }
 
 async function loadTransactions() {
+    if (!elements.transactionsList) return;
     showLoading(elements.transactionsList, 7);
-    
+
+    const endpoint = activeTab === 'subscriptions' ? API.subscriptions : API.ticketOrders;
+    const params = new URLSearchParams({
+        page: currentPage,
+        page_size: itemsPerPage,
+        search: currentFilters.search,
+        status: currentFilters.status,
+    });
+
     try {
-        const params = new URLSearchParams({
-            page: currentPage,
-            page_size: itemsPerPage,
-            search: currentFilters.search,
-            status: currentFilters.status,
-            date_from: currentFilters.dateFrom,
-            date_to: currentFilters.dateTo
+        const response = await fetch(`${endpoint}?${params}`, {
+            headers: { 'X-CSRFToken': getCSRFToken() },
         });
-        
-        const response = await fetch(`${API.getTransactions}?${params}`, {
-            headers: {
-                'X-CSRFToken': getCSRFToken(),
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load transactions');
-        
+        if (!response.ok) throw new Error('Failed to load');
         const data = await response.json();
-        currentTransactions = data.transactions || data.results || [];
-        const totalItems = data.pagination?.total_items || currentTransactions.length;
+        currentTransactions = data.transactions || data.orders || [];
         renderTransactions();
+        const totalItems = data.pagination?.total_items || currentTransactions.length;
         renderPagination(totalItems);
-    } catch (error) {
-        console.error('Error loading transactions:', error);
+        if (elements.recordsCount) elements.recordsCount.textContent = `${totalItems} records`;
+    } catch (e) {
+        console.error(e);
         showError(elements.transactionsList, 'Failed to load transactions');
     }
 }
 
-async function loadStats() {
-    try {
-        const response = await fetch(API.getStats, {
-            headers: { 'X-CSRFToken': getCSRFToken() }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load stats');
-        
-        const data = await response.json();
-        const stats = data.stats || data;
-        
-        document.getElementById('totalTransactions').textContent = stats.total || stats.total_count || 0;
-        document.getElementById('totalVolume').textContent = `Kes ${formatNumber(stats.total_amount || stats.total_volume || 0)}`;
-        document.getElementById('successCount').textContent = stats.success || stats.success_count || 0;
-        document.getElementById('pendingCount').textContent = stats.pending_count || stats.pending || 0;
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
-}
-
 function renderTransactions() {
-    if (!currentTransactions || currentTransactions.length === 0) {
-        elements.transactionsList.innerHTML = '<tr><td colspan="7" class="text-center">No transactions found</td>\n    </tr>';
-        elements.recordsCount.textContent = '0 records';
+    if (!currentTransactions.length) {
+        elements.transactionsList.innerHTML = '<tr><td colspan="7" class="text-center">No transactions found</td></tr>';
         return;
     }
-    
-    elements.transactionsList.innerHTML = currentTransactions.map(transaction => `
+
+    if (activeTab === 'subscriptions') {
+        elements.transactionsList.innerHTML = currentTransactions.map((order) => `
+            <tr>
+                <td><code>SUB-${order.id}</code></td>
+                <td>${formatDateTime(order.created_at)}</td>
+                <td>${escapeHtml(order.organizer_name)}<br><small class="text-muted">${escapeHtml(order.organizer_email || '')}</small></td>
+                <td>${escapeHtml(order.plan_name || order.plan)} plan</td>
+                <td class="amount">KES ${formatNumber(order.amount)}</td>
+                <td>${getStatusBadge(mapSubscriptionStatus(order.status))}</td>
+                <td class="action-buttons">
+                    ${order.status === 'manual_review' ? `
+                        <button class="action-btn view" onclick="viewSubScreenshot(${order.id})" title="Screenshot"><i class="fas fa-image"></i></button>
+                        <button class="action-btn" style="color:#16a34a" onclick="approveSubscription(${order.id})" title="Approve"><i class="fas fa-check"></i></button>
+                        <button class="action-btn refund" onclick="rejectSubscription(${order.id})" title="Reject"><i class="fas fa-times"></i></button>
+                    ` : (order.has_screenshot ? `<button class="action-btn view" onclick="viewSubScreenshot(${order.id})" title="Screenshot"><i class="fas fa-image"></i></button>` : '—')}
+                </td>
+            </tr>
+        `).join('');
+        return;
+    }
+
+    elements.transactionsList.innerHTML = currentTransactions.map((tx) => `
         <tr>
-            <td><code>${escapeHtml(transaction.transaction_id || transaction.id)}</code></td>
-            <td>${formatDateTime(transaction.created_at || transaction.date)}</td>
-            <td>${escapeHtml(transaction.customer_name || transaction.customer?.name || 'N/A')}<br><small class="text-muted">${escapeHtml(transaction.customer_email || '')}</small></td>
-            <td>${escapeHtml(transaction.event_title || transaction.event_name || transaction.event?.name || '-')}</td>
-            <td class="amount">Kes ${formatNumber(transaction.amount)}</td>
-            <td>${getStatusBadge(transaction.status)}</td>
-            <td class="action-buttons">
-                <button class="action-btn view" onclick="viewTransactionDetails('${transaction.id}')" title="View">
-                    <i class="fas fa-eye"></i>
-                </button>
-                ${transaction.status === 'success' ? 
-                    `<button class="action-btn refund" onclick="openRefundModal('${transaction.id}')" title="Refund">
-                        <i class="fas fa-undo-alt"></i>
-                    </button>` : ''
-                }
-              </td>
-         </tr>
+            <td><code>${escapeHtml(tx.id)}</code></td>
+            <td>${formatDateTime(tx.created_at)}</td>
+            <td>${escapeHtml(tx.customer_name)}<br><small class="text-muted">${escapeHtml(tx.customer_email || '')}</small></td>
+            <td>${escapeHtml(tx.event_title)}<br><small class="text-muted">${escapeHtml(tx.organizer_name || '')}</small></td>
+            <td class="amount">KES ${formatNumber(tx.amount)}</td>
+            <td>${getStatusBadge(tx.status)}${tx.raw_status === 'manual_review' ? '<br><small>Awaiting organizer</small>' : ''}</td>
+            <td>${tx.ticket_number ? `<code>${escapeHtml(tx.ticket_number)}</code>` : '—'}</td>
+        </tr>
     `).join('');
-    
-    elements.recordsCount.textContent = `${currentTransactions.length} records`;
 }
 
+function mapSubscriptionStatus(status) {
+    if (status === 'completed') return 'success';
+    if (status === 'manual_review' || status === 'pending_payment' || status === 'verifying') return 'pending';
+    if (status === 'rejected' || status === 'failed') return 'failed';
+    return status;
+}
+
+async function loadSubscriptionPending() {
+    if (!elements.subscriptionPendingList) return;
+    try {
+        const response = await fetch(API.subscriptionsPending, {
+            headers: { 'X-CSRFToken': getCSRFToken() },
+        });
+        if (!response.ok) throw new Error('Failed');
+        const data = await response.json();
+        const orders = data.orders || [];
+        if (!orders.length) {
+            elements.subscriptionPendingList.innerHTML = '<p class="text-muted mb-0">No subscription upgrades awaiting approval.</p>';
+            return;
+        }
+        elements.subscriptionPendingList.innerHTML = orders.map((order) => `
+            <div class="pending-approval-item" id="pending-sub-${order.id}">
+                <strong>${escapeHtml(order.organizer_name)}</strong> — ${escapeHtml(order.plan_name || order.plan)}
+                <br><small>KES ${formatNumber(order.amount)} · ${formatDateTime(order.updated_at || order.created_at)}</small>
+                <div class="pending-approval-actions">
+                    ${order.has_screenshot ? `<button class="btn-secondary btn-sm" onclick="viewSubScreenshot(${order.id})"><i class="fas fa-image"></i> View screenshot</button>` : ''}
+                    <button class="btn-primary btn-sm" onclick="approveSubscription(${order.id})"><i class="fas fa-check"></i> Approve upgrade</button>
+                    <button class="btn-outline btn-sm" onclick="rejectSubscription(${order.id})"><i class="fas fa-times"></i> Reject</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        elements.subscriptionPendingList.innerHTML = '<p class="text-muted">Could not load pending approvals.</p>';
+    }
+}
+
+window.viewSubScreenshot = async function(orderId) {
+    try {
+        const response = await fetch(API.subscriptionScreenshot(orderId), {
+            headers: { 'X-CSRFToken': getCSRFToken() },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.screenshot_data) throw new Error(data.message || 'No screenshot');
+        if (elements.screenshotModalImage) elements.screenshotModalImage.src = data.screenshot_data;
+        if (elements.screenshotModal) elements.screenshotModal.style.display = 'flex';
+    } catch (e) {
+        alert(e.message || 'Could not load screenshot');
+    }
+};
+
+window.approveSubscription = async function(orderId) {
+    if (!confirm('Approve this subscription upgrade and activate the organizer plan?')) return;
+    try {
+        const response = await fetch(API.subscriptionApprove(orderId), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json' },
+            body: '{}',
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Approval failed');
+        alert(data.message || 'Plan upgraded.');
+        loadCombinedStats();
+        loadTransactions();
+        loadSubscriptionPending();
+    } catch (e) {
+        alert(e.message || 'Approval failed');
+    }
+};
+
+window.rejectSubscription = async function(orderId) {
+    const reason = prompt('Reason for rejection (optional):', '');
+    if (reason === null) return;
+    try {
+        const response = await fetch(API.subscriptionReject(orderId), {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: reason || 'Payment rejected by admin.' }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Rejection failed');
+        alert('Subscription payment rejected.');
+        loadCombinedStats();
+        loadTransactions();
+        loadSubscriptionPending();
+    } catch (e) {
+        alert(e.message || 'Rejection failed');
+    }
+};
+
 function renderPagination(totalItems) {
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    
+    if (!elements.pagination) return;
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
     if (totalPages <= 1) {
         elements.pagination.innerHTML = '';
         return;
     }
-    
-    let paginationHtml = `
-        <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
-            <i class="fas fa-chevron-left"></i>
-        </button>
-    `;
-    
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, startPage + 4);
-    
-    for (let i = startPage; i <= endPage; i++) {
-        paginationHtml += `
-            <button onclick="changePage(${i})" class="${currentPage === i ? 'active' : ''}">
-                ${i}
-            </button>
-        `;
+    let html = `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+        html += `<button onclick="changePage(${i})" class="${currentPage === i ? 'active' : ''}">${i}</button>`;
     }
-    
-    paginationHtml += `
-        <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
-            <i class="fas fa-chevron-right"></i>
-        </button>
-    `;
-    
-    elements.pagination.innerHTML = paginationHtml;
+    html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+    elements.pagination.innerHTML = html;
 }
 
-function changePage(page) {
+window.changePage = function(page) {
     if (page < 1) return;
     currentPage = page;
     loadTransactions();
-}
+};
 
 function applyFilters() {
     currentFilters = {
-        search: elements.searchTransactions.value,
-        status: elements.statusFilter.value,
-        dateFrom: elements.dateFrom.value,
-        dateTo: elements.dateTo.value
+        search: elements.searchTransactions?.value || '',
+        status: elements.statusFilter?.value || '',
     };
     currentPage = 1;
     loadTransactions();
 }
 
 function resetFilters() {
-    elements.searchTransactions.value = '';
-    elements.statusFilter.value = '';
-    elements.dateFrom.value = '';
-    elements.dateTo.value = '';
+    if (elements.searchTransactions) elements.searchTransactions.value = '';
+    if (elements.statusFilter) elements.statusFilter.value = '';
     applyFilters();
 }
 
-async function viewTransactionDetails(transactionId) {
-    try {
-        const response = await fetch(API.getTransactionDetail(transactionId), {
-            headers: { 'X-CSRFToken': getCSRFToken() }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load transaction details');
-        
-        selectedTransaction = await response.json();
-        
-        elements.transactionModalBody.innerHTML = `
-            <div class="detail-row">
-                <span class="detail-label">Transaction ID:</span>
-                <span class="detail-value"><code>${escapeHtml(selectedTransaction.transaction_id || selectedTransaction.id)}</code></span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Date & Time:</span>
-                <span class="detail-value">${formatDateTime(selectedTransaction.created_at || selectedTransaction.date)}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Customer:</span>
-                <span class="detail-value">${escapeHtml(selectedTransaction.customer_name || selectedTransaction.customer?.name)}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Email:</span>
-                <span class="detail-value">${escapeHtml(selectedTransaction.customer_email || selectedTransaction.customer?.email || '-')}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Phone:</span>
-                <span class="detail-value">${escapeHtml(selectedTransaction.customer_phone || selectedTransaction.customer?.phone || '-')}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Event:</span>
-                <span class="detail-value">${escapeHtml(selectedTransaction.event_name || selectedTransaction.event?.name)}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Amount:</span>
-                <span class="detail-value amount-positive">Kes ${formatNumber(selectedTransaction.amount)}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value">${getStatusBadge(selectedTransaction.status)}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Reference:</span>
-                <span class="detail-value">${escapeHtml(selectedTransaction.reference || '-')}</span>
-            </div>
-        `;
-        
-        elements.refundBtn.style.display = selectedTransaction.status === 'success' ? 'inline-flex' : 'none';
-        elements.transactionModal.style.display = 'flex';
-    } catch (error) {
-        console.error('Error loading transaction details:', error);
-        showToast('Failed to load transaction details', 'error');
-    }
-}
-
-function openRefundModal(transactionId) {
-    viewTransactionDetails(transactionId);
-}
-
-async function processRefund() {
-    if (!selectedTransaction) return;
-    
-    if (!confirm(`Refund Kes ${formatNumber(selectedTransaction.amount)} to ${selectedTransaction.customer_name || selectedTransaction.customer?.name}?`)) {
-        return;
-    }
-    
-    elements.refundBtn.disabled = true;
-    elements.refundBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    
-    try {
-        const response = await fetch(API.refundTransaction, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCSRFToken(),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ transaction_id: selectedTransaction.id })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to process refund');
-        }
-        
-        closeModal();
-        loadTransactions();
-        loadStats();
-        showToast('Refund processed successfully', 'success');
-    } catch (error) {
-        console.error('Error processing refund:', error);
-        showToast(error.message, 'error');
-    } finally {
-        elements.refundBtn.disabled = false;
-        elements.refundBtn.innerHTML = '<i class="fas fa-undo-alt"></i> Refund';
-    }
-}
-
-async function exportTransactionsToPDF() {
-    showToast('Generating PDF report...', 'info');
-    
-    try {
-        // Fetch all transactions for export (without pagination)
-        const params = new URLSearchParams({
-            page_size: 1000,
-            search: currentFilters.search,
-            status: currentFilters.status,
-            date_from: currentFilters.dateFrom,
-            date_to: currentFilters.dateTo
-        });
-        
-        const response = await fetch(`${API.getTransactions}?${params}`, {
-            headers: {
-                'X-CSRFToken': getCSRFToken(),
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load transaction data');
-        
-        const data = await response.json();
-        const transactions = data.results || data;
-        
-        // Also fetch stats for the report
-        const statsResponse = await fetch(API.getStats, {
-            headers: { 'X-CSRFToken': getCSRFToken() }
-        });
-        const stats = await statsResponse.json();
-        
-        generateTransactionsPDF(transactions, stats);
-    } catch (error) {
-        console.error('Error exporting transactions:', error);
-        showToast('Failed to generate PDF report', 'error');
-    }
-}
-
-function generateTransactionsPDF(transactions, stats) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    
-    // Header
-    doc.setFontSize(20);
-    doc.setTextColor(245, 158, 11);
-    doc.text('EventHub Payment Transactions Report', 20, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 30);
-    
-    // Add filter info
-    let filterText = '';
-    if (currentFilters.search) filterText += `Search: ${currentFilters.search} `;
-    if (currentFilters.status) filterText += `Status: ${currentFilters.status} `;
-    if (currentFilters.dateFrom) filterText += `From: ${formatDate(currentFilters.dateFrom)} `;
-    if (currentFilters.dateTo) filterText += `To: ${formatDate(currentFilters.dateTo)}`;
-    if (filterText) {
-        doc.text(filterText, 20, 37);
-    }
-    
-    // Summary Statistics
-    doc.setFontSize(14);
-    doc.setTextColor(30, 41, 59);
-    doc.text('Summary Statistics', 20, 50);
-    
-    const summaryData = [
-        ['Total Transactions', formatNumber(stats.total_count || 0)],
-        ['Total Volume', `Kes ${formatNumber(stats.total_volume || 0)}`],
-        ['Successful Transactions', formatNumber(stats.success_count || 0)],
-        ['Pending Transactions', formatNumber(stats.pending_count || 0)],
-        ['Failed Transactions', formatNumber(stats.failed_count || 0)],
-        ['Refunded Transactions', formatNumber(stats.refunded_count || 0)],
-        ['Transactions in Report', formatNumber(transactions.length)]
-    ];
-    
-    doc.autoTable({
-        startY: 55,
-        body: summaryData,
-        theme: 'striped',
-        headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255] },
-        margin: { left: 20, right: 20 },
-        columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 80 } }
-    });
-    
-    // Transactions Table
-    let yPosition = doc.lastAutoTable.finalY + 10;
-    if (yPosition > 180) { doc.addPage(); yPosition = 20; }
-    
-    doc.setFontSize(14);
-    doc.text('Transaction Details', 20, yPosition);
-    yPosition += 5;
-    
-    const transactionsData = transactions.map(transaction => [
-        transaction.transaction_id || transaction.id,
-        formatDateTime(transaction.created_at || transaction.date),
-        transaction.customer_name || transaction.customer?.name || 'N/A',
-        transaction.event_name || transaction.event?.name || '-',
-        `Kes ${formatNumber(transaction.amount)}`,
-        transaction.status
-    ]);
-    
-    if (transactionsData.length) {
-        doc.autoTable({
-            startY: yPosition,
-            head: [['Transaction ID', 'Date & Time', 'Customer', 'Event', 'Amount', 'Status']],
-            body: transactionsData,
-            theme: 'striped',
-            headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255] },
-            margin: { left: 20, right: 20 },
-            styles: { fontSize: 8, cellPadding: 3 }
-        });
-    } else {
-        doc.text('No transaction data available', 20, yPosition + 10);
-    }
-    
-    // Footer
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`EventHub Transactions Report - Page ${i} of ${pageCount}`, 20, 287);
-        doc.text(`Generated on ${new Date().toLocaleString()}`, 20, 292);
-    }
-    
-    doc.save(`transactions_report_${new Date().toISOString().split('T')[0]}.pdf`);
-    showToast('PDF report downloaded successfully', 'success');
-}
-
 function getStatusBadge(status) {
-    const badges = {
-        success: '<span class="status-badge status-success"><i class="fas fa-check"></i> Success</span>',
-        pending: '<span class="status-badge status-pending"><i class="fas fa-clock"></i> Pending</span>',
-        failed: '<span class="status-badge status-failed"><i class="fas fa-times"></i> Failed</span>',
-        refunded: '<span class="status-badge status-refunded"><i class="fas fa-undo-alt"></i> Refunded</span>'
+    const map = {
+        success: '<span class="status-badge success">Success</span>',
+        pending: '<span class="status-badge pending">Pending</span>',
+        failed: '<span class="status-badge failed">Failed</span>',
+        refunded: '<span class="status-badge refunded">Refunded</span>',
     };
-    return badges[status] || badges.pending;
+    return map[status] || `<span class="status-badge">${escapeHtml(status)}</span>`;
 }
 
 function formatNumber(num) {
-    if (!num && num !== 0) return '0';
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return Number(num || 0).toLocaleString('en-KE');
 }
 
-function formatDate(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-KE');
+function formatDateTime(dateStr) {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleString('en-KE', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
 }
 
-function formatDateTime(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-KE');
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
+function escapeHtml(str) {
+    if (!str) return '';
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = str;
     return div.innerHTML;
 }
 
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+function debounce(fn, wait) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
 }
 
-function showLoading(container, colspan) {
-    container.innerHTML = `<tr><td colspan="${colspan}" class="text-center"><div class="loading-spinner"></div>Loading...</td></tr>`;
+function showLoading(container, cols) {
+    container.innerHTML = `<tr><td colspan="${cols}" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>`;
 }
 
-function showError(container, message) {
-    container.innerHTML = `<tr><td colspan="7" class="text-center error-state"><i class="fas fa-exclamation-circle"></i><p>${message}</p><button class="btn-secondary" onclick="location.reload()">Retry</button></td></tr>`;
-}
-
-function showToast(message, type = 'success') {
-    const existingToast = document.querySelector('.toast-notification');
-    if (existingToast) existingToast.remove();
-    
-    const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${type}`;
-    toast.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-        <span>${escapeHtml(message)}</span>
-    `;
-    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:1rem 1.5rem;border-radius:8px;background:white;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);z-index:1100;display:flex;align-items:center;gap:0.75rem;border-left:4px solid #10b981;';
-    if (type === 'error') toast.style.borderLeftColor = '#ef4444';
-    document.body.appendChild(toast);
-    
-    setTimeout(() => toast.remove(), 5000);
-}
-
-function closeModal() {
-    elements.transactionModal.style.display = 'none';
-    selectedTransaction = null;
+function showError(container, msg) {
+    container.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${escapeHtml(msg)}</td></tr>`;
 }

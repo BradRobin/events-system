@@ -1794,6 +1794,130 @@ def transactions_stats(request):
     except Exception as e:
         return safe_api_error_response(request, e)
 
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def admin_payment_orders_list(request):
+    """List attendee ticket purchase orders (PaymentOrder) for admin reporting."""
+    try:
+        from payments.models import PaymentOrder
+
+        search = request.GET.get('search', '').strip()
+        status = request.GET.get('status', '').strip()
+        page = max(1, int(request.GET.get('page', 1) or 1))
+        page_size = min(50, max(1, int(request.GET.get('page_size', 10) or 10)))
+
+        query = Q()
+        if search:
+            query &= (
+                Q(event__title__icontains=search)
+                | Q(attendee__username__icontains=search)
+                | Q(attendee__email__icontains=search)
+                | Q(organizer__organization_name__icontains=search)
+                | Q(organizer__username__icontains=search)
+            )
+
+        orders = PaymentOrder.objects.filter(query).select_related(
+            'attendee', 'event', 'organizer', 'ticket'
+        ).order_by('-created_at')
+
+        if status == 'success':
+            orders = orders.filter(status='completed')
+        elif status == 'pending':
+            orders = orders.filter(status__in=['pending_payment', 'verifying', 'manual_review'])
+        elif status == 'failed':
+            orders = orders.filter(status__in=['failed', 'rejected'])
+
+        total_items = orders.count()
+        start = (page - 1) * page_size
+        slice_orders = orders[start:start + page_size]
+
+        status_map = {
+            'completed': 'success',
+            'pending_payment': 'pending',
+            'verifying': 'pending',
+            'manual_review': 'pending',
+            'failed': 'failed',
+            'rejected': 'failed',
+        }
+
+        data = []
+        for order in slice_orders:
+            attendee = order.attendee
+            data.append({
+                'id': f'PO-{order.id}',
+                'order_id': order.id,
+                'transaction_type': 'ticket_purchase',
+                'customer_name': attendee.get_full_name() or attendee.username,
+                'customer_email': attendee.email,
+                'organizer_name': (
+                    order.organizer.organization_name
+                    or order.organizer.get_full_name()
+                    or order.organizer.username
+                ),
+                'event_title': order.event.title,
+                'ticket_type': order.ticket_type,
+                'quantity': order.quantity,
+                'amount': float(order.total_amount),
+                'status': status_map.get(order.status, order.status),
+                'raw_status': order.status,
+                'payment_method': 'mpesa',
+                'ticket_number': order.ticket.ticket_number if order.ticket_id else None,
+                'created_at': order.created_at.isoformat(),
+            })
+
+        pagination = {
+            'current_page': page,
+            'total_pages': max(1, (total_items + page_size - 1) // page_size),
+            'total_items': total_items,
+        }
+        return JsonResponse({'success': True, 'transactions': data, 'pagination': pagination})
+    except Exception as e:
+        return safe_api_error_response(request, e)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def admin_transactions_combined_stats(request):
+    """Stats for ticket purchases and subscription plans."""
+    try:
+        from payments.models import PaymentOrder, Payment
+        from subscriptions.models import SubscriptionOrder
+
+        ticket_pending = PaymentOrder.objects.filter(
+            status__in=['pending_payment', 'verifying', 'manual_review']
+        ).count()
+        ticket_completed = PaymentOrder.objects.filter(status='completed').count()
+        ticket_volume = PaymentOrder.objects.filter(status='completed').aggregate(
+            total=Sum('total_amount')
+        )['total'] or 0
+
+        sub_pending = SubscriptionOrder.objects.filter(status='manual_review').count()
+        sub_completed = SubscriptionOrder.objects.filter(status='completed').count()
+        sub_volume = SubscriptionOrder.objects.filter(status='completed').aggregate(
+            total=Sum('amount')
+        )['total'] or 0
+
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'ticket_purchases': {
+                    'pending': ticket_pending,
+                    'completed': ticket_completed,
+                    'volume': float(ticket_volume),
+                },
+                'subscriptions': {
+                    'pending': sub_pending,
+                    'completed': sub_completed,
+                    'volume': float(sub_volume),
+                },
+            },
+        })
+    except Exception as e:
+        return safe_api_error_response(request, e)
+
 @csrf_exempt
 @require_http_methods(["GET"])
 @admin_required_json

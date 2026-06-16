@@ -183,6 +183,39 @@ def build_dynamic_notifications():
 
     notifications = []
 
+    try:
+        from subscriptions.models import SubscriptionOrder
+        pending_subscriptions = (
+            SubscriptionOrder.objects.filter(status='manual_review')
+            .select_related('organizer')
+            .order_by('-updated_at')[:25]
+        )
+        for order in pending_subscriptions:
+            organizer_name = (
+                order.organizer.organization_name
+                or order.organizer.get_full_name()
+                or order.organizer.username
+            )
+            plan_label = order.plan.replace('_', ' ').title()
+            notifications.append({
+                "id": f"subscription-pending-{order.id}",
+                "title": "Subscription Upgrade Pending",
+                "message": (
+                    f"{organizer_name} requested upgrade to {plan_label} "
+                    f"(KES {float(order.amount):,.0f}). Review payment screenshot."
+                ),
+                "type": "warning",
+                "is_read": False,
+                "created_at": order.updated_at.isoformat(),
+                "redirect_url": f"/admin-portal/payments/?tab=subscriptions&order={order.id}",
+                "entity_type": "subscription",
+                "entity_id": order.id,
+                "action_type": "subscription_pending_approval",
+                "requires_action": True,
+            })
+    except Exception as e:
+        print(f"Subscription notifications unavailable: {e}")
+
     pending_events = (
         Event.objects.filter(status__in=['pending', 'draft'])
         .select_related('organizer', 'category')
@@ -296,6 +329,8 @@ def expire_notifications_for_entity(entity_type, entity_id, action_types=None):
         keys.append(f"event-pending-{entity_id}")
     elif entity_type == "refund":
         keys.append(f"refund-pending-{entity_id}")
+    elif entity_type == "subscription":
+        keys.append(f"subscription-pending-{entity_id}")
 
     for key in set(keys):
         _upsert_notification_state(key, is_dismissed=True, is_read=True)
