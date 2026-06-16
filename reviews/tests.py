@@ -73,8 +73,26 @@ class ReviewApiTests(TestCase):
 
         notification = OrganizerNotification.objects.get(organizer=self.organizer)
         self.assertEqual(notification.action_type, 'event_review')
-        self.assertEqual(notification.action_url, '/organizer/reviews/')
+        self.assertIn(f'review={EventReview.objects.first().id}', notification.action_url)
         self.assertIn('World cup campaign', notification.message)
+
+    def test_organizer_reviews_list_returns_submitted_review(self):
+        review = EventReview.objects.create(
+            user=self.attendee,
+            event=self.event,
+            ticket=self.ticket,
+            rating=4,
+            comment='Awesome event.',
+        )
+
+        self.client.force_login(self.organizer)
+        response = self.client.get('/api/organizer/reviews/')
+        self.assertEqual(response.status_code, 200, response.content)
+        data = response.json()
+        self.assertEqual(data['count'], 1)
+        self.assertEqual(len(data['results']), 1)
+        self.assertEqual(data['results'][0]['id'], review.id)
+        self.assertEqual(data['results'][0]['comment'], 'Awesome event.')
 
     def test_create_review_rejects_future_event_with_message(self):
         future_event = Event.objects.create(

@@ -78,5 +78,5 @@ def notify_organizer_event_review(review):
         ),
         notification_type='info',
         action_type='event_review',
-        action_url='/organizer/reviews/',
+        action_url=f'/organizer/reviews/?review={review.id}',
     )
