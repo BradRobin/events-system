@@ -4,6 +4,7 @@ from django.test import TestCase
 from payments.screenshot_storage import (
     decode_data_uri,
     encode_upload_to_data_uri,
+    get_screenshot_data_uri,
     open_screenshot_stream,
 )
 
@@ -29,3 +30,13 @@ class ScreenshotStorageTests(TestCase):
         stream = open_screenshot_stream(Order())
         self.assertIsNotNone(stream)
         self.assertEqual(stream.read(), b'pngbytes')
+
+    def test_get_screenshot_data_uri_from_stored_field(self):
+        upload = SimpleUploadedFile('pay.png', b'pngbytes', content_type='image/png')
+        data_uri, _ = encode_upload_to_data_uri(upload)
+
+        class Order:
+            screenshot_data = data_uri
+            screenshot = None
+
+        self.assertEqual(get_screenshot_data_uri(Order()), data_uri)

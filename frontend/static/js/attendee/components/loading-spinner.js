@@ -4,16 +4,32 @@
 
 (function() {
     'use strict';
+
+    if (window.__EventhubPageLoaderInit) {
+        return;
+    }
+    window.__EventhubPageLoaderInit = true;
     
     let loader = null;
     let loaderVisible = false;
+    let maxHideTimer = null;
+    let hideFallbackTimer = null;
     
     var CONFIG = {
         fadeOutDelay: 200,
-        minDisplayTime: 0  // No minimum display time for instant loading
+        minDisplayTime: 0,
+        maxDisplayTime: 12000,
+        navigationHideDelay: 300
     };
     
     let loaderStartTime = null;
+    
+    function getLoaderElement() {
+        if (!loader) {
+            loader = document.getElementById('pageLoader');
+        }
+        return loader;
+    }
     
     function createLoader() {
         if (document.getElementById('pageLoader')) return;
@@ -23,73 +39,119 @@
         loader = document.getElementById('pageLoader');
     }
     
+    function clearLoaderTimers() {
+        if (maxHideTimer) {
+            clearTimeout(maxHideTimer);
+            maxHideTimer = null;
+        }
+        if (hideFallbackTimer) {
+            clearTimeout(hideFallbackTimer);
+            hideFallbackTimer = null;
+        }
+    }
+    
+    function forceHideLoader() {
+        clearLoaderTimers();
+        var el = getLoaderElement();
+        if (el) {
+            el.style.display = 'none';
+            el.classList.remove('fade-out', 'active');
+        }
+        document.body.style.overflow = '';
+        loaderVisible = false;
+        loaderStartTime = null;
+    }
+    
     function showLoader() {
-        if (!loader) {
-            loader = document.getElementById('pageLoader');
-            if (!loader) {
-                createLoader();
-                loader = document.getElementById('pageLoader');
-            }
+        var el = getLoaderElement();
+        if (!el) {
+            createLoader();
+            el = getLoaderElement();
         }
         
-        if (loader && !loaderVisible) {
-            loader.style.display = 'flex';
-            loader.classList.remove('fade-out');
-            loader.classList.add('active');
+        if (el && !loaderVisible) {
+            el.style.display = 'flex';
+            el.classList.remove('fade-out');
+            el.classList.add('active');
             document.body.style.overflow = 'hidden';
             loaderVisible = true;
             loaderStartTime = Date.now();
+            
+            clearLoaderTimers();
+            maxHideTimer = setTimeout(function() {
+                forceHideLoader();
+            }, CONFIG.maxDisplayTime);
         }
     }
     
     function hideLoader() {
-        if (loader && loaderVisible) {
-            // Check if minimum display time has passed
-            if (CONFIG.minDisplayTime > 0 && loaderStartTime) {
-                const elapsed = Date.now() - loaderStartTime;
-                if (elapsed < CONFIG.minDisplayTime) {
-                    const remaining = CONFIG.minDisplayTime - elapsed;
-                    setTimeout(function() {
-                        performHide();
-                    }, remaining);
-                    return;
-                }
-            }
-            performHide();
+        if (!loaderVisible) {
+            forceHideLoader();
+            return;
         }
+        
+        if (CONFIG.minDisplayTime > 0 && loaderStartTime) {
+            const elapsed = Date.now() - loaderStartTime;
+            if (elapsed < CONFIG.minDisplayTime) {
+                const remaining = CONFIG.minDisplayTime - elapsed;
+                setTimeout(function() {
+                    performHide();
+                }, remaining);
+                return;
+            }
+        }
+        performHide();
     }
     
     function performHide() {
-        if (loader && loaderVisible) {
-            loader.classList.add('fade-out');
-            document.body.style.overflow = '';
-            
-            setTimeout(function() {
-                if (loader) {
-                    loader.style.display = 'none';
-                    loader.classList.remove('fade-out', 'active');
-                }
-                loaderVisible = false;
-                loaderStartTime = null;
-            }, CONFIG.fadeOutDelay);
+        var el = getLoaderElement();
+        if (!el || !loaderVisible) {
+            forceHideLoader();
+            return;
         }
+        
+        el.classList.add('fade-out');
+        document.body.style.overflow = '';
+        
+        clearLoaderTimers();
+        setTimeout(function() {
+            forceHideLoader();
+        }, CONFIG.fadeOutDelay);
+    }
+    
+    function scheduleHideAfterNavigation() {
+        clearLoaderTimers();
+        hideFallbackTimer = setTimeout(function() {
+            hideLoader();
+        }, CONFIG.navigationHideDelay);
     }
     
     function setMinDisplayTime(time) {
         CONFIG.minDisplayTime = time || 0;
-        console.log('Loader min display time set to:', CONFIG.minDisplayTime);
     }
     
     function initLoader() {
         createLoader();
         loader = document.getElementById('pageLoader');
         
-        // Hide loader immediately when page is fully loaded
         window.addEventListener('load', function() {
             hideLoader();
         });
         
-        // Also hide after a very short timeout as fallback (no delay)
+        // bfcache: browser back/forward restores the page without firing load
+        window.addEventListener('pageshow', function(event) {
+            forceHideLoader();
+            if (event.persisted) {
+                document.body.style.overflow = '';
+            }
+        });
+        
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                scheduleHideAfterNavigation();
+            }
+        });
+        
         setTimeout(function() {
             if (loaderVisible) {
                 hideLoader();
@@ -98,7 +160,6 @@
     }
     
     function setupNavigationDetection() {
-        // Handle link clicks - show loader instantly
         document.addEventListener('click', function(e) {
             var link = e.target.closest('a');
             
@@ -112,7 +173,6 @@
                 var isTel = link.href.startsWith('tel:');
                 var isExternal = !isInternalLink;
                 
-                // Show loader instantly for internal navigation (no delay)
                 if (isInternalLink && !isAnchorLink && !isSamePage && !hasNoLoader && 
                     !isDownload && !isMailTo && !isTel && !isExternal) {
                     showLoader();
@@ -120,7 +180,6 @@
             }
         });
         
-        // Handle form submissions - show loader instantly
         document.addEventListener('submit', function(e) {
             if (e.defaultPrevented) return;
             var form = e.target.closest('form');
@@ -129,55 +188,37 @@
             }
         });
         
-        // Handle beforeunload - show loader instantly
-        window.addEventListener('beforeunload', function() {
-            showLoader();
-        });
+        // Do not show loader on beforeunload — it pollutes bfcache and sticks on browser back.
         
-        // Handle history API navigation
         var originalPushState = history.pushState;
         var originalReplaceState = history.replaceState;
         
         history.pushState = function() {
             showLoader();
             originalPushState.apply(this, arguments);
-            // Hide after content loads (no unnecessary delay)
-            setTimeout(function() {
-                if (loaderVisible) {
-                    hideLoader();
-                }
-            }, 200);
+            scheduleHideAfterNavigation();
         };
         
         history.replaceState = function() {
             showLoader();
             originalReplaceState.apply(this, arguments);
-            setTimeout(function() {
-                if (loaderVisible) {
-                    hideLoader();
-                }
-            }, 200);
+            scheduleHideAfterNavigation();
         };
         
         window.addEventListener('popstate', function() {
             showLoader();
-            setTimeout(function() {
-                if (loaderVisible) {
-                    hideLoader();
-                }
-            }, 200);
+            scheduleHideAfterNavigation();
         });
     }
     
-    // Expose public API with all methods
     window.PageLoader = {
         show: showLoader,
         hide: hideLoader,
+        forceHide: forceHideLoader,
         init: initLoader,
         setMinDisplayTime: setMinDisplayTime
     };
     
-    // Initialize immediately
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             initLoader();

@@ -24,8 +24,6 @@ def ocr_is_available() -> bool:
     """Return True when Tesseract OCR can run (not available on typical serverless hosts)."""
     if pytesseract is None:
         return False
-    if not TESSERACT_CMD:
-        return False
     try:
         pytesseract.get_tesseract_version()
         return True
