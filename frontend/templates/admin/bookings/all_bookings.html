@@ -22,6 +22,61 @@
         </div>
     </div>
 
+    <!-- Platform Revenue (MRR / ARR) -->
+    <div class="revenue-metrics-card card">
+        <div class="card-header revenue-metrics-header">
+            <div>
+                <h3><i class="fas fa-coins"></i> Platform Revenue</h3>
+                <p class="text-muted revenue-metrics-subtitle" id="revenuePeriodLabel">Loading…</p>
+            </div>
+            <div class="revenue-month-filter">
+                <label for="revenueMonthFilter">Month</label>
+                <input type="month" id="revenueMonthFilter" aria-label="Filter revenue by month">
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="stats-row revenue-stats-row">
+                <div class="stat-card revenue-stat">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-info">
+                        <h3 id="monthlyGrossRevenue">Kes 0</h3>
+                        <span>Gross Revenue (month)</span>
+                    </div>
+                </div>
+                <div class="stat-card revenue-stat mrr">
+                    <div class="stat-icon"><i class="fas fa-sync-alt"></i></div>
+                    <div class="stat-info">
+                        <h3 id="mrrValue">Kes 0</h3>
+                        <span>MRR <small>(platform fees)</small></span>
+                        <span class="stat-trend" id="mrrTrend"></span>
+                    </div>
+                </div>
+                <div class="stat-card revenue-stat arr">
+                    <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="stat-info">
+                        <h3 id="arrValue">Kes 0</h3>
+                        <span>ARR <small>(MRR × 12)</small></span>
+                    </div>
+                </div>
+                <div class="stat-card revenue-stat">
+                    <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="stat-info">
+                        <h3 id="lifetimeRevenue">Kes 0</h3>
+                        <span>Total Revenue (all time)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="revenue-meta">
+                <span id="platformFeeLabel">Platform fee: 5%</span>
+                <span id="monthlyBookingsLabel">0 bookings · 0 tickets this month</span>
+            </div>
+            <div class="revenue-chart-wrap">
+                <h4><i class="fas fa-chart-bar"></i> MRR trend (last 12 months)</h4>
+                <canvas id="mrrTrendChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+
     <!-- Stats Cards -->
     <div class="stats-row">
         <div class="stat-card">
@@ -191,5 +246,6 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'js/admin/bookings/bookings.js' %}"></script>
 {% endblock %}

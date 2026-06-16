@@ -2,12 +2,25 @@
 let currentPage = 1;
 let totalPages = 1;
 let currentBookingId = null;
+let mrrTrendChart = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    initRevenueMonthFilter();
     loadBookings();
     loadStats();
+    loadRevenueMetrics();
     setupEventListeners();
 });
+
+function initRevenueMonthFilter() {
+    const input = document.getElementById('revenueMonthFilter');
+    if (!input) return;
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    input.value = `${now.getFullYear()}-${month}`;
+    input.max = input.value;
+    input.addEventListener('change', loadRevenueMetrics);
+}
 
 function setupEventListeners() {
     const searchInput = document.getElementById('searchBookings');
@@ -54,6 +67,121 @@ async function loadStats() {
     } catch (error) {
         console.error('Error loading stats:', error);
     }
+}
+
+async function loadRevenueMetrics() {
+    const monthInput = document.getElementById('revenueMonthFilter');
+    const month = monthInput?.value || '';
+    try {
+        const params = new URLSearchParams({ month, series_months: '12' });
+        const data = await apiRequest(`/api/admin/bookings/revenue-metrics/?${params}`);
+        if (!data.metrics) return;
+
+        const m = data.metrics;
+        const period = data.period || {};
+
+        const periodLabel = document.getElementById('revenuePeriodLabel');
+        if (periodLabel) {
+            periodLabel.textContent = `Platform fee revenue for ${period.label || 'selected month'}`;
+        }
+
+        setText('monthlyGrossRevenue', formatCurrency(m.gross_revenue || 0));
+        setText('mrrValue', formatCurrency(m.mrr || 0));
+        setText('arrValue', formatCurrency(m.arr || 0));
+        setText('lifetimeRevenue', formatCurrency(m.total_revenue_lifetime || 0));
+
+        const feeLabel = document.getElementById('platformFeeLabel');
+        if (feeLabel) {
+            feeLabel.textContent = `Platform fee: ${m.platform_fee_rate_pct || 5}% of gross ticket sales`;
+        }
+
+        const bookingsLabel = document.getElementById('monthlyBookingsLabel');
+        if (bookingsLabel) {
+            bookingsLabel.textContent = `${m.booking_count || 0} bookings · ${m.ticket_count || 0} tickets this month`;
+        }
+
+        const trendEl = document.getElementById('mrrTrend');
+        if (trendEl && data.comparison) {
+            const pct = data.comparison.mrr_growth_pct;
+            const prev = data.comparison.previous_month_label;
+            if (pct > 0) {
+                trendEl.className = 'stat-trend up';
+                trendEl.textContent = `↑ ${pct}% vs ${prev}`;
+            } else if (pct < 0) {
+                trendEl.className = 'stat-trend down';
+                trendEl.textContent = `↓ ${Math.abs(pct)}% vs ${prev}`;
+            } else {
+                trendEl.className = 'stat-trend neutral';
+                trendEl.textContent = `Flat vs ${prev}`;
+            }
+        }
+
+        if (data.monthly_series) {
+            renderMrrChart(data.monthly_series);
+        }
+    } catch (error) {
+        console.error('Error loading revenue metrics:', error);
+    }
+}
+
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function renderMrrChart(series) {
+    const canvas = document.getElementById('mrrTrendChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const labels = series.map(row => {
+        const d = new Date(row.year, row.month - 1, 1);
+        return d.toLocaleDateString('en-KE', { month: 'short', year: '2-digit' });
+    });
+    const mrrData = series.map(row => row.mrr || 0);
+
+    if (mrrTrendChart) mrrTrendChart.destroy();
+
+    mrrTrendChart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'MRR (platform fees)',
+                    data: mrrData,
+                    backgroundColor: 'rgba(245, 158, 11, 0.75)',
+                    borderColor: '#f59e0b',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label(ctx) {
+                            return `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`;
+                        },
+                    },
+                },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback(value) {
+                            return `Kes ${Number(value).toLocaleString('en-KE')}`;
+                        },
+                    },
+                },
+            },
+        },
+    });
 }
 
 async function loadBookings() {

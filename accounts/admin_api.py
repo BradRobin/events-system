@@ -738,6 +738,28 @@ def bookings_stats(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@admin_required_json
+def bookings_revenue_metrics(request):
+    """MRR / ARR and monthly platform revenue for the admin bookings dashboard."""
+    try:
+        from accounts.revenue_metrics import compute_revenue_metrics
+
+        month = request.GET.get('month', '').strip()
+        include_series = request.GET.get('include_series', '1') != '0'
+        series_months = min(24, max(1, int(request.GET.get('series_months', 12))))
+        data = compute_revenue_metrics(
+            month_str=month or None,
+            include_series=include_series,
+            series_months=series_months,
+        )
+        return JsonResponse({'success': True, **data})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 @admin_required_json

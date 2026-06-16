@@ -331,6 +331,7 @@ urlpatterns = [
     # Bookings Management
     path('api/admin/bookings/', admin_api.bookings_list_api, name='admin_bookings_list'),
     path('api/admin/bookings/stats/', admin_api.bookings_stats, name='admin_bookings_stats'),
+    path('api/admin/bookings/revenue-metrics/', admin_api.bookings_revenue_metrics, name='admin_bookings_revenue_metrics'),
     path('api/admin/bookings/export/', admin_api.bookings_export, name='admin_bookings_export'),
     path('api/admin/bookings/<str:booking_id>/', admin_api.booking_detail, name='admin_booking_detail'),
     path('api/admin/bookings/<str:booking_id>/refund/', admin_api.booking_refund, name='admin_booking_refund'),
