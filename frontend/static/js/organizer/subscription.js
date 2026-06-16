@@ -163,40 +163,39 @@
         const csrf = document.cookie.match(/csrftoken=([^;]+)/);
         if (csrf) headers['X-CSRFToken'] = csrf[1];
 
+        const streamEl = document.getElementById('subStreamSteps');
+        if (streamEl) {
+            streamEl.innerHTML = '<div class="stream-step active"><i class="fas fa-circle-notch fa-spin"></i> Uploading screenshot…</div>';
+        }
+
         const response = await fetch(`/api/organizer/subscription/orders/${orderId}/verify-screenshot/`, {
             method: 'POST',
             headers,
             body: formData,
         });
-        if (!response.ok) throw new Error('Verification request failed');
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split('\n\n');
-            buffer = parts.pop();
-            for (const part of parts) {
-                const line = part.trim();
-                if (!line.startsWith('data:')) continue;
-                const payload = JSON.parse(line.slice(5));
-                if (payload.message) {
-                    const el = document.getElementById('subStreamSteps');
-                    if (el) {
-                        const item = document.createElement('div');
-                        item.className = 'stream-step active';
-                        item.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${escapeHtml(payload.message)}`;
-                        el.appendChild(item);
-                    }
-                }
-                if (payload.step === 'failed') throw new Error(payload.message);
-                if (payload.step === 'pending_approval') return payload;
-            }
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (_) {
+            throw new Error('Verification request failed. Please try again.');
         }
-        return { step: 'pending_approval' };
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Verification request failed');
+        }
+
+        if (streamEl) {
+            streamEl.innerHTML = '<div class="stream-step done"><i class="fas fa-check-circle"></i> Screenshot received</div>';
+        }
+
+        if (data.step === 'pending_approval') {
+            return data;
+        }
+        if (data.step === 'failed') {
+            throw new Error(data.message || 'Verification failed');
+        }
+        return data;
     }
 
     window.startPlanUpgrade = async function(planSlug) {

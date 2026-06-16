@@ -108,6 +108,33 @@ class SubscriptionPlanTests(TestCase):
         notes = build_dynamic_notifications()
         self.assertTrue(any(n.get('action_type') == 'subscription_pending_approval' for n in notes))
 
+    def test_verify_subscription_screenshot_submits_for_approval(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        order = SubscriptionOrder.objects.create(
+            organizer=self.organizer,
+            plan='plus',
+            amount=Decimal('500'),
+            status='pending_payment',
+        )
+        self.client.force_login(self.organizer)
+        image = SimpleUploadedFile(
+            'payment.png',
+            b'\x89PNG\r\n\x1a\n' + b'0' * 128,
+            content_type='image/png',
+        )
+        res = self.client.post(
+            f'/api/organizer/subscription/orders/{order.id}/verify-screenshot/',
+            data={'screenshot': image},
+        )
+        self.assertEqual(res.status_code, 200, res.content)
+        data = res.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['step'], 'pending_approval')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'manual_review')
+        self.assertTrue(order.screenshot_data)
+
     def test_ocr_health_endpoint(self):
         res = self.client.get('/api/health/ocr/')
         self.assertEqual(res.status_code, 200)

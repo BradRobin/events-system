@@ -1,13 +1,10 @@
-import json
 import logging
-import time
 from io import BytesIO
 
 from django.db.utils import ProgrammingError
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.utils import timezone
 
 from accounts.auth import authenticate_bearer, parse_json_body
 from events.api_organizer_views import organizer_required
@@ -32,11 +29,6 @@ def get_authenticated_user(request):
         if bearer_user:
             user = bearer_user
     return user if user.is_authenticated else None
-
-
-def _sse_event(step, message, **extra):
-    payload = {'step': step, 'message': message, **extra}
-    return f"data: {json.dumps(payload)}\n\n"
 
 
 def _platform_mpesa_numbers():
@@ -75,16 +67,70 @@ def _escalate_to_admin_review(order, *, ocr_passed, verification_message=''):
 def _notify_organizer_subscription_pending(order):
     plan = get_plan(order.plan) or {}
     plan_name = plan.get('name', order.plan)
-    OrganizerNotification.objects.create(
-        organizer=order.organizer,
-        title='Plan upgrade awaiting approval',
-        message=(
-            f'Your {plan_name} upgrade (KES {order.amount:,.0f}) has been submitted. '
-            'EventHub will review your payment and activate your plan shortly.'
-        ),
-        notification_type='info',
-        action_url='/organizer/settings/?tab=plan',
+    try:
+        OrganizerNotification.objects.create(
+            organizer=order.organizer,
+            title='Plan upgrade awaiting approval',
+            message=(
+                f'Your {plan_name} upgrade (KES {order.amount:,.0f}) has been submitted. '
+                'EventHub will review your payment and activate your plan shortly.'
+            ),
+            notification_type='info',
+            action_url='/organizer/settings/?tab=plan',
+        )
+    except Exception as exc:
+        logger.warning('Could not create organizer subscription notification: %s', exc)
+
+
+def _run_subscription_screenshot_verification(order, screenshot_bytes):
+    """Process screenshot OCR and route order to admin manual review. Returns result dict."""
+    image_stream = open_screenshot_stream(order) or BytesIO(screenshot_bytes)
+    try:
+        result = analyze_payment_screenshot(
+            image_stream,
+            PLATFORM_MPESA_DISPLAY_NAME,
+            order.amount,
+            _platform_mpesa_numbers(),
+        )
+    except Exception:
+        logger.exception('Subscription screenshot OCR failed for order %s', order.id)
+        _escalate_to_admin_review(
+            order,
+            ocr_passed=False,
+            verification_message='Payment submitted for admin approval.',
+        )
+        return {
+            'step': 'pending_approval',
+            'message': 'Your payment has been sent to EventHub for approval.',
+            'order_id': order.id,
+        }
+
+    if result.get('ocr_unavailable'):
+        _escalate_to_admin_review(order, ocr_passed=False)
+        return {
+            'step': 'pending_approval',
+            'message': 'Your payment has been sent to EventHub for approval.',
+            'order_id': order.id,
+        }
+
+    order.ocr_raw_text = result.get('ocr_text', '')
+    order.save(update_fields=['ocr_raw_text', 'updated_at'])
+
+    ocr_passed = bool(result.get('success'))
+    notes = result.get('notes', '') or 'Payment submitted for admin approval.'
+    _escalate_to_admin_review(order, ocr_passed=ocr_passed, verification_message=notes)
+
+    message = (
+        'Screenshot verified! Your upgrade request has been sent to EventHub for final approval.'
+        if ocr_passed else
+        'Your payment has been sent to EventHub for approval.'
     )
+    return {
+        'step': 'pending_approval',
+        'message': message,
+        'ocr_passed': ocr_passed,
+        'order_id': order.id,
+    }
 
 
 def _notify_organizer_subscription_approved(order):
@@ -226,6 +272,14 @@ def verify_subscription_screenshot(request, order_id):
     except SubscriptionOrder.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Order not found.'}, status=404)
 
+    if order.status == 'manual_review':
+        return JsonResponse({
+            'success': True,
+            'step': 'pending_approval',
+            'message': 'Your upgrade request is already awaiting EventHub approval.',
+            'order_id': order.id,
+        })
+
     if order.status not in ('pending_payment', 'failed', 'rejected', 'verifying'):
         return JsonResponse({'success': False, 'message': 'This order cannot accept a new screenshot.'}, status=400)
 
@@ -236,8 +290,13 @@ def verify_subscription_screenshot(request, order_id):
         return JsonResponse({'success': False, 'message': 'Screenshot must be 5 MB or smaller.'}, status=400)
 
     content_type = getattr(screenshot, 'content_type', '') or ''
+    filename = (getattr(screenshot, 'name', '') or '').lower()
     if content_type and content_type not in ALLOWED_IMAGE_TYPES:
-        return JsonResponse({'success': False, 'message': 'Only JPEG, PNG, or WebP images are allowed.'}, status=400)
+        if not content_type.startswith('image/') and not filename.endswith(('.jpg', '.jpeg', '.png', '.webp')):
+            return JsonResponse({
+                'success': False,
+                'message': 'Only JPEG, PNG, or WebP images are allowed.',
+            }, status=400)
 
     try:
         data_uri, screenshot_bytes = encode_upload_to_data_uri(screenshot, content_type=content_type)
@@ -247,57 +306,30 @@ def verify_subscription_screenshot(request, order_id):
     order.status = 'verifying'
     order.screenshot_data = data_uri
     order.verification_message = ''
-    order.save(update_fields=['status', 'screenshot_data', 'verification_message', 'updated_at'])
+    try:
+        order.save(update_fields=['status', 'screenshot_data', 'verification_message', 'updated_at'])
+    except ProgrammingError:
+        from config.db_migrations import run_migrations
+        migration_result = run_migrations()
+        if not migration_result.get('success'):
+            return JsonResponse({
+                'success': False,
+                'message': 'Subscription billing is being updated. Please try again in a moment.',
+            }, status=503)
+        order.save(update_fields=['status', 'screenshot_data', 'verification_message', 'updated_at'])
 
-    def event_stream():
-        yield _sse_event('upload_received', 'Screenshot received')
-        time.sleep(0.2)
-        yield _sse_event('reading_text', 'Reading transaction details')
-
-        image_stream = open_screenshot_stream(order) or BytesIO(screenshot_bytes)
-        try:
-            result = analyze_payment_screenshot(
-                image_stream,
-                PLATFORM_MPESA_DISPLAY_NAME,
-                order.amount,
-                _platform_mpesa_numbers(),
-            )
-        except Exception:
-            _escalate_to_admin_review(order, ocr_passed=False, verification_message='Payment submitted for admin approval.')
-            yield _sse_event(
-                'pending_approval',
-                'Your payment has been sent to EventHub for approval.',
-                order_id=order.id,
-            )
-            return
-
-        if result.get('ocr_unavailable'):
-            _escalate_to_admin_review(order, ocr_passed=False)
-            yield _sse_event(
-                'pending_approval',
-                'Your payment has been sent to EventHub for approval.',
-                order_id=order.id,
-            )
-            return
-
-        order.ocr_raw_text = result.get('ocr_text', '')
-        order.save(update_fields=['ocr_raw_text', 'updated_at'])
-
-        ocr_passed = bool(result.get('success'))
-        notes = result.get('notes', '') or 'Payment submitted for admin approval.'
-        _escalate_to_admin_review(order, ocr_passed=ocr_passed, verification_message=notes)
-
-        message = (
-            'Screenshot verified! Your upgrade request has been sent to EventHub for final approval.'
-            if ocr_passed else
-            'Your payment has been sent to EventHub for approval.'
-        )
-        yield _sse_event('pending_approval', message, ocr_passed=ocr_passed, order_id=order.id)
-
-    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
-    response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'
-    return response
+    try:
+        result = _run_subscription_screenshot_verification(order, screenshot_bytes)
+        return JsonResponse({'success': True, **result})
+    except Exception as exc:
+        logger.exception('Subscription screenshot verification failed for order %s', order.id)
+        order.status = 'failed'
+        order.verification_message = 'Verification failed. Please try uploading your screenshot again.'
+        order.save(update_fields=['status', 'verification_message', 'updated_at'])
+        return JsonResponse({
+            'success': False,
+            'message': 'Could not verify your screenshot. Please try again.',
+        }, status=500)
 
 
 def _admin_required(view_func):
