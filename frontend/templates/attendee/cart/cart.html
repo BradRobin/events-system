@@ -42,6 +42,7 @@
                     <h3>Booking Summary</h3>
                     <div class="summary-organizer-row"><span>Organizer:</span><strong id="summaryOrganizerName">—</strong></div>
                     <div class="summary-organizer-row"><span>Events:</span><span id="summaryEventCount">—</span></div>
+                    <div id="summaryCheckoutWarning" class="summary-checkout-warning" style="display: none;"></div>
                     <div class="summary-row"><span>Subtotal:</span><span id="subtotal">KES 0</span></div>
                     <div id="discountRow" class="summary-row discount" style="display: none;"><span>Discount:</span><span id="discountAmount">-KES 0</span></div>
                     <div class="summary-row total"><span>Total Amount:</span><span id="totalAmount">KES 0</span></div>
@@ -93,6 +94,6 @@
 
 {% block extra_js %}
 <script src="{% static 'js/shared/cart-storage.js' %}?v=2"></script>
-<script src="{% static 'js/attendee/payments/checkout.js' %}?v=2"></script>
-<script src="{% static 'js/attendee/cart/cart.js' %}?v=2"></script>
+<script src="{% static 'js/attendee/payments/checkout.js' %}?v=3"></script>
+<script src="{% static 'js/attendee/cart/cart.js' %}?v=3"></script>
 {% endblock %}

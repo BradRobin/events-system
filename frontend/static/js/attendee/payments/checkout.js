@@ -149,7 +149,12 @@
             body: JSON.stringify(payload),
         });
         const data = await response.json();
-        if (!response.ok || !data.success) throw new Error(data.message || 'Checkout failed');
+        if (!response.ok || !data.success) {
+            const err = new Error(data.message || 'Checkout failed');
+            err.code = data.code;
+            err.organizerName = data.organizer_name;
+            throw err;
+        }
         return data.order;
     }
 
@@ -469,6 +474,17 @@
         }
     }
 
+    function showCheckoutError(e) {
+        if (e.code === 'organizer_payment_not_configured') {
+            showToast(
+                e.message || `${e.organizerName || 'This organizer'} has not set up M-Pesa payment details yet.`,
+                'error'
+            );
+            return;
+        }
+        showToast(e.message || 'Checkout failed', 'error');
+    }
+
     async function processNextInQueue() {
         if (!checkoutQueue.length || checkoutQueueIndex >= checkoutQueue.length) {
             showToast('All payments processed.', 'success');
@@ -489,7 +505,7 @@
             );
             openCheckoutModal(order);
         } catch (e) {
-            showToast(e.message, 'error');
+            showCheckoutError(e);
             closeCheckoutModal();
         }
     }
@@ -526,11 +542,9 @@
             const order = await createOrder(eventId, ticketType, quantity, getCheckoutMpesaName());
             openCheckoutModal(order);
         } catch (e) {
-            showToast(e.message, 'error');
+            showCheckoutError(e);
         }
     }
-
-    document.addEventListener('DOMContentLoaded', () => {
         const closeBtn = document.getElementById('checkoutClose');
         if (closeBtn) closeBtn.addEventListener('click', () => closeCheckoutModal());
 

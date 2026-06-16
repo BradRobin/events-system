@@ -75,6 +75,22 @@ class PaymentOrderTests(TestCase):
         self.assertEqual(data['order']['total_amount'], 5000.0)
         self.assertEqual(data['order']['ticket_type'], 'VIP')
 
+    def test_create_payment_order_rejects_unconfigured_mpesa(self):
+        self.organizer.mpesa_display_name = ''
+        self.organizer.mpesa_till = ''
+        self.organizer.save()
+        self.client.force_login(self.attendee)
+        response = self.client.post(
+            '/api/attendee/payment-orders/create/',
+            data='{"event_id": %d, "ticket_type": "Regular", "quantity": 1}' % self.event.id,
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 403)
+        data = response.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['code'], 'organizer_payment_not_configured')
+        self.assertIn('M-Pesa', data['message'])
+
     def test_fulfill_payment_order_decrements_seats(self):
         order = PaymentOrder.objects.create(
             attendee=self.attendee,

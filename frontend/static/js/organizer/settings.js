@@ -33,6 +33,8 @@ async function loadMpesaSettings() {
         document.getElementById('mpesaTill').value = m.mpesa_till || '';
         document.getElementById('mpesaPochi').value = m.mpesa_pochi || '';
         document.getElementById('mpesaSendMoney').value = m.mpesa_send_money || '';
+        const banner = document.getElementById('mpesaConfigBanner');
+        if (banner) banner.style.display = m.is_configured ? 'none' : 'block';
     } catch(e) {}
 }
 
@@ -47,6 +49,7 @@ async function saveMpesa(e) {
     };
     try {
         await OrganizerAPI.settings.updateMpesa(data);
+        await loadMpesaSettings();
         if(window.showToast) window.showToast('M-Pesa settings saved', 'success');
     } catch(e) { if(window.showToast) window.showToast(e.message, 'error'); }
 }
@@ -154,4 +157,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPaymentSettings();
     loadTeam();
     loadApiKeys();
+
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+        const trigger = document.querySelector(`#settingsTab button[data-bs-target="#${tab}"]`);
+        if (trigger && window.bootstrap?.Tab) {
+            bootstrap.Tab.getOrCreateInstance(trigger).show();
+        }
+    }
 });

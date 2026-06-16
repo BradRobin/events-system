@@ -123,6 +123,10 @@ async function enrichCartItemsFromApi() {
             item.organizer_id = ev.organizer_id || item.organizer_id;
             item.organizer_name = organizerName;
             item.organizer = organizerName;
+            item.can_checkout = ev.can_checkout !== false;
+            item.checkout_block_reason = ev.checkout_block_reason || '';
+            item.checkout_block_code = ev.checkout_block_code || '';
+            item.organizer_mpesa_configured = ev.organizer_mpesa_configured !== false;
             if (!item.ticket_type) item.ticket_type = item.tier || 'regular';
             if (!item.category) item.category = ev.category_name || ev.category;
             if (!item.location) item.location = ev.location || ev.venue;
@@ -135,6 +139,19 @@ async function enrichCartItemsFromApi() {
     cartEnriching = false;
     normalizeCartItems();
     saveCartToLocalStorage();
+}
+
+function isItemCheckoutBlocked(item) {
+    return item.can_checkout === false;
+}
+
+function getGroupCheckoutStatus(group) {
+    const blocked = group.items.filter(isItemCheckoutBlocked);
+    if (!blocked.length) return { canCheckout: true, reason: '' };
+    return {
+        canCheckout: false,
+        reason: blocked[0].checkout_block_reason || 'This event cannot be purchased right now.',
+    };
 }
 
 function normalizeCartItems() {
@@ -206,6 +223,11 @@ function hideSummary() {
     if (discountRow) discountRow.style.display = 'none';
     if (appliedPromoDiv) appliedPromoDiv.style.display = 'none';
     selectedOrganizerKey = null;
+    const summaryWarningEl = document.getElementById('summaryCheckoutWarning');
+    if (summaryWarningEl) {
+        summaryWarningEl.style.display = 'none';
+        summaryWarningEl.textContent = '';
+    }
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
     if (proceedBtn) proceedBtn.disabled = true;
     updateCheckoutBar();
@@ -269,9 +291,21 @@ function updateSummaryForOrganizer(organizerKey) {
     sessionStorage.setItem('selected_items', JSON.stringify(organizerItems));
     sessionStorage.setItem('selected_total', total);
 
+    const checkoutStatus = getGroupCheckoutStatus({ items: organizerItems });
+    const summaryWarningEl = document.getElementById('summaryCheckoutWarning');
+    if (summaryWarningEl) {
+        if (!checkoutStatus.canCheckout) {
+            summaryWarningEl.style.display = 'block';
+            summaryWarningEl.textContent = checkoutStatus.reason;
+        } else {
+            summaryWarningEl.style.display = 'none';
+            summaryWarningEl.textContent = '';
+        }
+    }
+
     const proceedBtn = document.getElementById('proceedToPaymentBtn');
     if (proceedBtn) {
-        proceedBtn.disabled = cartEnriching;
+        proceedBtn.disabled = cartEnriching || !checkoutStatus.canCheckout;
         proceedBtn.textContent = organizerItems.length > 1
             ? `Pay ${organizerName} (${organizerItems.length} events)`
             : `Pay ${organizerName}`;
@@ -300,19 +334,24 @@ function updateCheckoutBar() {
         if (labelEl) labelEl.textContent = `${groups.length} organizers — pay each separately`;
         if (amountEl) amountEl.textContent = formatCurrency(cartData.subtotal);
         if (btn) {
+            const selectedGroup = selectedOrganizerKey
+                ? groups.find(g => g.key === selectedOrganizerKey)
+                : null;
+            const selectedBlocked = selectedGroup && !getGroupCheckoutStatus(selectedGroup).canCheckout;
             btn.textContent = selectedOrganizerKey ? 'Continue to payment' : 'Select organizer above';
-            btn.disabled = !selectedOrganizerKey;
+            btn.disabled = !selectedOrganizerKey || selectedBlocked;
         }
         return;
     }
 
     const group = groups[0];
+    const checkoutStatus = getGroupCheckoutStatus(group);
     selectedOrganizerKey = group.key;
     if (labelEl) labelEl.textContent = `Pay ${group.organizer}`;
     if (amountEl) amountEl.textContent = formatCurrency(group.total - (cartData.discount_amount || 0));
     if (btn) {
         btn.textContent = group.items.length > 1 ? `Pay (${group.items.length} events)` : 'Proceed to payment';
-        btn.disabled = false;
+        btn.disabled = !checkoutStatus.canCheckout;
     }
 }
 
@@ -374,6 +413,11 @@ function payOrganizerGroup(organizerKey) {
         showToast('No events for this organizer', 'error');
         return;
     }
+    const checkoutStatus = getGroupCheckoutStatus({ items });
+    if (!checkoutStatus.canCheckout) {
+        showToast(checkoutStatus.reason, 'error');
+        return;
+    }
     proceedToCheckout();
 }
 
@@ -427,9 +471,10 @@ function displayCart() {
     for (let g = 0; g < groups.length; g++) {
         const group = groups[g];
         const isSelected = selectedOrganizerKey === group.key;
+        const checkoutStatus = getGroupCheckoutStatus(group);
         const safeKey = escapeHtml(group.key).replace(/'/g, "\\'");
         html += `
-            <div class="organizer-group ${isSelected ? 'is-selected' : ''}" data-organizer-key="${escapeHtml(group.key)}">
+            <div class="organizer-group ${isSelected ? 'is-selected' : ''} ${checkoutStatus.canCheckout ? '' : 'checkout-blocked'}" data-organizer-key="${escapeHtml(group.key)}">
                 <div class="organizer-group-header" onclick="selectOrganizerGroup('${safeKey}')">
                     <div class="organizer-select">
                         <h4>${escapeHtml(group.organizer)}</h4>
@@ -437,7 +482,10 @@ function displayCart() {
                     </div>
                     <span class="organizer-total">${formatCurrency(group.total)}</span>
                 </div>
-                <p class="organizer-payment-note"><i class="fas fa-mobile-alt"></i> M-Pesa payment goes to <strong>${escapeHtml(group.organizer)}</strong></p>
+                ${checkoutStatus.canCheckout
+                    ? `<p class="organizer-payment-note"><i class="fas fa-mobile-alt"></i> M-Pesa payment goes to <strong>${escapeHtml(group.organizer)}</strong></p>`
+                    : `<div class="checkout-block-warning"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(checkoutStatus.reason)}</div>`
+                }
                 <div class="organizer-group-items">
         `;
         for (let i = 0; i < group.items.length; i++) {
@@ -446,8 +494,9 @@ function displayCart() {
         html += `
                 </div>
                 <div class="organizer-group-actions">
-                    <button type="button" class="organizer-pay-btn" onclick="event.stopPropagation(); payOrganizerGroup('${safeKey}')">
-                        <i class="fas fa-mobile-alt"></i> Pay ${escapeHtml(group.organizer)}
+                    <button type="button" class="organizer-pay-btn${checkoutStatus.canCheckout ? '' : ' is-disabled'}" ${checkoutStatus.canCheckout ? '' : 'disabled'}
+                        onclick="event.stopPropagation(); payOrganizerGroup('${safeKey}')">
+                        <i class="fas fa-mobile-alt"></i> ${checkoutStatus.canCheckout ? `Pay ${escapeHtml(group.organizer)}` : 'Checkout unavailable'}
                     </button>
                 </div>
             </div>
@@ -469,8 +518,9 @@ function displayCart() {
 
 function renderBookingItem(item) {
     const orgLine = getOrganizerName(item);
+    const blocked = isItemCheckoutBlocked(item);
     return `
-        <div class="booking-item" data-id="${item.id}">
+        <div class="booking-item ${blocked ? 'checkout-blocked-item' : ''}" data-id="${item.id}">
             <div class="item-image" style="background-image: url('${item.image || '/static/images/placeholder.jpg'}')"></div>
             <div class="item-details">
                 <h4>${escapeHtml(item.title)}</h4>
@@ -615,6 +665,11 @@ function proceedToCheckout() {
     const selectedItems = getSelectedGroupItems();
     if (!selectedItems.length) {
         showToast('Select an organizer group to pay', 'error');
+        return;
+    }
+    const checkoutStatus = getGroupCheckoutStatus({ items: selectedItems });
+    if (!checkoutStatus.canCheckout) {
+        showToast(checkoutStatus.reason, 'error');
         return;
     }
 
