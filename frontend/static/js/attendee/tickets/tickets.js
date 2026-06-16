@@ -36,6 +36,25 @@ function setupEventListeners() {
             renderTickets();
         });
     }
+
+    const ticketsList = document.getElementById('ticketsList');
+    if (ticketsList && !ticketsList.dataset.reviewDelegationBound) {
+        ticketsList.dataset.reviewDelegationBound = '1';
+        ticketsList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.past-event-review-btn, .past-event-review-edit');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const eventId = parseInt(btn.dataset.eventId, 10);
+            if (!eventId || Number.isNaN(eventId)) {
+                showReviewToast('Could not open review for this event.', 'error');
+                return;
+            }
+            const ticket = allTickets.find(t => Number(t.event_id) === eventId);
+            const reviewId = btn.dataset.reviewId ? parseInt(btn.dataset.reviewId, 10) : null;
+            openReviewModal(eventId, ticket?.title || 'Event', reviewId);
+        });
+    }
 }
 
 function mapApiTicket(t) {
@@ -66,6 +85,7 @@ function mapApiTicket(t) {
         id: t.ticket_number || t.id,
         booking_id: t.booking_id || t.ticket_number,
         event_id: t.event?.id || t.event_id,
+        end_date: t.event?.end_date || t.end_date,
         title: eventTitle,
         category: t.category || 'Event',
         date: eventDate,
@@ -288,10 +308,10 @@ async function loadTickets() {
     }
     try {
         const headers = { Authorization: `Bearer ${token}` };
+        await loadUserReviews();
         const [upRes, pastRes] = await Promise.all([
             fetch('/api/attendee/tickets/upcoming/', { headers, credentials: 'same-origin' }),
             fetch('/api/attendee/tickets/past/', { headers, credentials: 'same-origin' }),
-            loadUserReviews(),
         ]);
         const up = await upRes.json();
         const past = await pastRes.json();
@@ -337,9 +357,15 @@ function getFilteredTickets() {
     today.setHours(0, 0, 0, 0);
     
     if (currentTab === 'upcoming') {
-        filtered = filtered.filter(ticket => new Date(ticket.date) >= today);
+        filtered = filtered.filter(ticket => {
+            const eventEnd = ticket.end_date || ticket.date;
+            return new Date(eventEnd) >= today;
+        });
     } else if (currentTab === 'past') {
-        filtered = filtered.filter(ticket => new Date(ticket.date) < today);
+        filtered = filtered.filter(ticket => {
+            const eventEnd = ticket.end_date || ticket.date;
+            return new Date(eventEnd) < today;
+        });
     }
     
     if (currentSearch) {
@@ -393,29 +419,21 @@ function renderTickets() {
         return card;
     }).join('');
     setupFlipTickets();
-    setupPastEventReviewHandlers();
-}
-
-function setupPastEventReviewHandlers() {
-    document.querySelectorAll('.past-event-review-btn, .past-event-review-edit').forEach(btn => {
-        if (btn.dataset.reviewBound) return;
-        btn.dataset.reviewBound = '1';
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const eventId = parseInt(btn.dataset.eventId, 10);
-            const ticket = allTickets.find(t => t.event_id === eventId);
-            const reviewId = btn.dataset.reviewId ? parseInt(btn.dataset.reviewId, 10) : null;
-            openReviewModal(eventId, ticket?.title || 'Event', reviewId);
-        });
-    });
 }
 
 function setupReviewModal() {
     const modal = document.getElementById('eventReviewModal');
-    if (!modal) return;
+    if (!modal || modal.dataset.reviewModalBound) return;
+    modal.dataset.reviewModalBound = '1';
 
     modal.querySelectorAll('[data-close-review-modal]').forEach(el => {
         el.addEventListener('click', closeReviewModal);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.hidden) {
+            closeReviewModal();
+        }
     });
 
     const starsContainer = document.getElementById('eventReviewStars');
@@ -439,7 +457,10 @@ function setupReviewModal() {
 
 function openReviewModal(eventId, eventTitle, reviewId = null) {
     const modal = document.getElementById('eventReviewModal');
-    if (!modal) return;
+    if (!modal) {
+        showReviewToast('Review form is unavailable. Please refresh the page.', 'error');
+        return;
+    }
 
     const existing = userReviewsByEvent[eventId];
     reviewModalState = {
@@ -456,18 +477,24 @@ function openReviewModal(eventId, eventTitle, reviewId = null) {
     if (titleEl) titleEl.textContent = reviewModalState.reviewId ? 'Update your review' : 'Rate this event';
     if (eventEl) eventEl.textContent = eventTitle;
     if (commentEl) commentEl.value = existing?.comment || '';
-    if (submitBtn) submitBtn.textContent = reviewModalState.reviewId ? 'Save changes' : 'Submit review';
+    if (submitBtn) {
+        submitBtn.textContent = reviewModalState.reviewId ? 'Save changes' : 'Submit review';
+        submitBtn.disabled = reviewModalState.rating < 1;
+    }
 
     setReviewModalRating(reviewModalState.rating);
     modal.hidden = false;
+    modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('review-modal-open');
+    commentEl?.focus();
 }
 
 function closeReviewModal() {
     const modal = document.getElementById('eventReviewModal');
     if (!modal) return;
     modal.hidden = true;
+    modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('review-modal-open');
     reviewModalState = { eventId: null, reviewId: null, rating: 0 };
@@ -507,7 +534,7 @@ async function submitEventReview() {
     const comment = (document.getElementById('eventReviewComment')?.value || '').trim();
     const token = localStorage.getItem('attendee_access_token');
     if (!token) {
-        alert('Please log in to submit a review.');
+        showReviewToast('Please log in to submit a review.', 'error');
         return;
     }
 
@@ -539,10 +566,10 @@ async function submitEventReview() {
         userReviewsByEvent[review.event_id] = review;
         closeReviewModal();
         renderTickets();
-        showReviewToast(reviewId ? 'Review updated!' : 'Thank you for your review!');
+        showReviewToast(reviewId ? 'Review updated!' : 'Thank you for your review!', 'success');
     } catch (error) {
         console.error('Error saving review:', error);
-        alert(error.message || 'Could not save your review. Please try again.');
+        showReviewToast(error.message || 'Could not save your review. Please try again.', 'error');
     } finally {
         if (submitBtn) {
             submitBtn.disabled = reviewModalState.rating < 1;
@@ -551,10 +578,11 @@ async function submitEventReview() {
     }
 }
 
-function showReviewToast(message) {
+function showReviewToast(message, type = 'success') {
     const toast = document.createElement('div');
-    toast.className = 'event-review-toast';
-    toast.innerHTML = `<i class="fas fa-check-circle"></i> ${escapeHtml(message)}`;
+    toast.className = `event-review-toast event-review-toast--${type}`;
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+    toast.innerHTML = `<i class="fas ${icon}"></i> ${escapeHtml(message)}`;
     document.body.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('is-visible'));
     setTimeout(() => {

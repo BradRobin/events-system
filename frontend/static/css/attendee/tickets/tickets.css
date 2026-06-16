@@ -352,3 +352,210 @@
         gap: 1.25rem;
     }
 }
+
+/* Event review modal */
+body.review-modal-open {
+    overflow: hidden;
+}
+
+.event-review-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.event-review-modal.is-open {
+    display: flex;
+}
+
+.event-review-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+}
+
+.event-review-modal-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 480px);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+    animation: reviewModalIn 0.22s ease;
+}
+
+@keyframes reviewModalIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.event-review-modal-close {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.event-review-modal-close:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.event-review-modal-dialog h2 {
+    margin: 0 2rem 0.35rem 0;
+    font-size: 1.25rem;
+    color: #1e293b;
+}
+
+.event-review-modal-event {
+    margin: 0 0 1rem;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.event-review-stars {
+    display: flex;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+}
+
+.event-review-star {
+    border: none;
+    background: none;
+    padding: 0.15rem;
+    font-size: 1.75rem;
+    line-height: 1;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.event-review-star:hover,
+.event-review-star.is-selected {
+    color: #f59e0b;
+    transform: scale(1.05);
+}
+
+.event-review-rating-label {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.event-review-comment-label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.event-review-comment {
+    width: 100%;
+    min-height: 110px;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    font: inherit;
+    resize: vertical;
+    box-sizing: border-box;
+    margin-bottom: 1rem;
+}
+
+.event-review-comment:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.event-review-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.event-review-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 0.65rem 1.15rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.event-review-btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.event-review-btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+.event-review-btn-primary {
+    background: linear-gradient(135deg, #f59e0b, #ec6408);
+    color: #fff;
+}
+
+.event-review-btn-primary:hover:not(:disabled) {
+    filter: brightness(1.03);
+}
+
+.event-review-btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.event-review-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 10060;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1.1rem;
+    border-radius: 0.75rem;
+    color: #fff;
+    background: #0f172a;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.event-review-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.event-review-toast--success i {
+    color: #34d399;
+}
+
+.event-review-toast--error i {
+    color: #f87171;
+}
