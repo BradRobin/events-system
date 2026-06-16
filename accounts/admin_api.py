@@ -996,6 +996,9 @@ def refunds_export(request):
 @admin_required_json
 def users_list_api(request):
     try:
+        from accounts.presence import get_online_user_ids
+
+        online_ids = get_online_user_ids()
         search = request.GET.get('search', '').strip()
         status = request.GET.get('status', '').strip()
         role = request.GET.get('role', 'all').strip()
@@ -1034,7 +1037,8 @@ def users_list_api(request):
             'status': 'active' if u.is_active else 'suspended',
             'email_verified': True,
             'created_at': u.date_joined.isoformat(),
-            'last_login': u.last_login.isoformat() if u.last_login else None
+            'last_login': u.last_login.isoformat() if u.last_login else None,
+            'is_online': u.id in online_ids,
         } for u in users_slice]
         
         pagination = {
@@ -1051,8 +1055,10 @@ def users_list_api(request):
 @admin_required_json
 def users_stats(request):
     try:
+        from accounts.presence import count_online_users, ONLINE_WINDOW_MINUTES
+
         total = User.objects.count()
-        active = User.objects.filter(is_active=True).count()
+        online_users = count_online_users()
         
         # Counter by roles
         attendees = User.objects.filter(role='attendee').count()
@@ -1065,7 +1071,8 @@ def users_stats(request):
         
         stats = {
             'total': total,
-            'active': active,
+            'online_users': online_users,
+            'online_window_minutes': ONLINE_WINDOW_MINUTES,
             'new_this_month': new_this_month,
             'total_bookings': Ticket.objects.count(),
             'attendees': attendees,

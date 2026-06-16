@@ -272,6 +272,44 @@
     font-weight: 600;
 }
 
+.stat-card.online-stat {
+    border-color: rgba(16, 185, 129, 0.35);
+    background: linear-gradient(135deg, #ecfdf5, white);
+}
+
+.stat-card.online-stat .stat-icon i {
+    color: var(--success);
+    font-size: 0.65rem;
+    animation: online-pulse 2s ease-in-out infinite;
+}
+
+.stat-hint {
+    display: block;
+    font-size: 0.65rem !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 500 !important;
+    margin-top: 0.15rem;
+    color: var(--gray-light) !important;
+}
+
+.online-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-left: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+    vertical-align: middle;
+    animation: online-pulse 2s ease-in-out infinite;
+}
+
+@keyframes online-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.65; transform: scale(0.92); }
+}
+
 /* ============================================
    USER TYPE TABS
    ============================================ */

@@ -17,4 +17,5 @@ urlpatterns = [
     path('profile/stats/', views.profile_stats, name='profile_stats'),
     path('profile/upload-avatar/', views.profile_upload_avatar, name='profile_upload_avatar'),
     path('profile/delete-account/', views.profile_delete_account, name='profile_delete_account'),
+    path('presence/heartbeat/', views.presence_heartbeat, name='presence_heartbeat'),
 ]

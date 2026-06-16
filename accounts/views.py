@@ -387,3 +387,28 @@ def profile_upload_avatar(request):
         'message': 'Avatar uploaded successfully.',
         'user': user_payload(user)
     })
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def presence_heartbeat(request):
+    """
+    Client heartbeat — called when users interact with the web app.
+    Works for anonymous visitors (session_id only) and authenticated users.
+    """
+    from accounts.presence import touch_presence
+
+    data = parse_json_body(request)
+    if data is None:
+        data = {}
+
+    session_id = (data.get('session_id') or '').strip()
+    if not session_id or len(session_id) > 64:
+        return json_error('session_id is required.', status=400)
+
+    path = (data.get('path') or '')[:500]
+    user, _auth_error = resolve_authenticated_user(request)
+
+    touch_presence(session_id=session_id, user=user, path=path)
+    return JsonResponse({'success': True})
+

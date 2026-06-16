@@ -72,6 +72,31 @@ class User(AbstractUser):
         return f"{self.username} ({self.role})"
 
 
+class UserPresence(models.Model):
+    """Tracks browser sessions for real-time online user counts."""
+    session_id = models.CharField(max_length=64, unique=True, db_index=True)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='presence_sessions',
+    )
+    last_seen = models.DateTimeField(db_index=True)
+    role = models.CharField(max_length=20, blank=True, default='')
+    path = models.CharField(max_length=500, blank=True, default='')
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'last_seen']),
+            models.Index(fields=['last_seen']),
+        ]
+
+    def __str__(self):
+        label = self.user.username if self.user_id else self.session_id[:8]
+        return f"Presence({label})"
+
+
 class TeamMember(models.Model):
     id = models.CharField(max_length=8, unique=True, primary_key=True)
     organizer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='team_members_rel')

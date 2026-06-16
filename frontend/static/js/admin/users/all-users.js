@@ -7,11 +7,19 @@ let currentPage = 1;
 let totalPages = 1;
 let currentUserId = null;
 let currentRole = 'all';
+let onlineStatsTimer = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadUsers();
     loadStats();
     setupEventListeners();
+    onlineStatsTimer = setInterval(loadStats, 30000);
+});
+
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        loadStats();
+    }
 });
 
 function setupEventListeners() {
@@ -54,7 +62,12 @@ async function loadStats() {
         const data = await apiRequest('/api/admin/users/stats/');
         if (data.stats) {
             document.getElementById('totalUsers').textContent = data.stats.total || 0;
-            document.getElementById('activeUsers').textContent = data.stats.active || 0;
+            document.getElementById('onlineUsers').textContent = data.stats.online_users ?? 0;
+            const hint = document.getElementById('onlineUsersHint');
+            if (hint) {
+                const mins = data.stats.online_window_minutes || 5;
+                hint.textContent = `Active in last ${mins} min`;
+            }
             document.getElementById('newUsers').textContent = data.stats.new_this_month || 0;
             document.getElementById('totalBookings').textContent = data.stats.total_bookings || 0;
             
@@ -120,6 +133,7 @@ function displayUsers(users) {
                     </div>
                     <div>
                         <strong>${escapeHtml(user.full_name || user.username)}</strong>
+                        ${user.is_online ? '<span class="online-dot" title="Online now"></span>' : ''}
                         <br>
                         <small class="text-muted">@${escapeHtml(user.username)}</small>
                     </div>
