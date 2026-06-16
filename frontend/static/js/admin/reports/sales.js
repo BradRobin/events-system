@@ -53,11 +53,12 @@ function updateSalesKPIs(kpis) {
     document.getElementById('totalSales').textContent = formatCurrency(kpis.total_sales);
     document.getElementById('totalTicketsSold').textContent = formatNumber(kpis.total_tickets);
     document.getElementById('avgOrderValue').textContent = formatCurrency(kpis.avg_order_value);
-    document.getElementById('growthRate').textContent = `${kpis.growth_rate}%`;
-    
+    document.getElementById('growthRate').textContent = `${formatNumber(kpis.growth_rate)}%`;
+
     updateSalesTrend('salesTrend', kpis.sales_trend);
     updateSalesTrend('ticketsTrend', kpis.tickets_trend);
     updateSalesTrend('avgOrderTrend', kpis.avg_order_trend);
+    updateSalesTrend('growthTrend', { percentage: kpis.growth_rate });
 }
 
 function updateSalesTrend(elementId, trend) {
@@ -124,12 +125,12 @@ function updateTopSellingEvents(events) {
         <div class="top-event-item">
             <div class="top-event-rank">${i+1}</div>
             <div class="top-event-info">
-                <div class="top-event-name">${escapeHtml(e.name)}</div>
-                <div class="top-event-meta">${e.category || 'Uncategorized'}</div>
+                <div class="top-event-name">${escapeHtml(e.name || e.title || 'Unknown Event')}</div>
+                <div class="top-event-meta">${escapeHtml(e.category || 'Uncategorized')}</div>
             </div>
             <div class="top-event-stats">
                 <div class="top-event-revenue">${formatCurrency(e.revenue)}</div>
-                <div class="top-event-tickets">${formatNumber(e.tickets_sold)} tickets</div>
+                <div class="top-event-tickets">${formatNumber(e.tickets_sold ?? e.tickets ?? 0)} tickets</div>
             </div>
         </div>
     `).join('');
@@ -174,7 +175,7 @@ function updateDailySalesTable(sales) {
             <td class="text-right">${formatNumber(item.tickets_sold)}</td>
             <td class="text-right amount">${formatCurrency(item.revenue)}</td>
             <td class="text-right">${formatCurrency(item.avg_order_value)}</td>
-            <td>${escapeHtml(item.top_event || '-')}</td>
+            <td>${escapeHtml(item.top_event || '—')}</td>
         </tr>
     `).join('');
     
@@ -256,7 +257,12 @@ async function exportSalesReport() {
         doc.text('Top Selling Events', 20, yPosition);
         yPosition += 5;
         
-        const eventsData = (data.top_events || []).map((e, i) => [`#${i+1}`, e.name, formatCurrency(e.revenue), `${formatNumber(e.tickets_sold)} tickets`]);
+        const eventsData = (data.top_events || []).map((e, i) => [
+            `#${i+1}`,
+            e.name || e.title || 'Unknown Event',
+            formatCurrency(e.revenue),
+            `${formatNumber(e.tickets_sold ?? e.tickets ?? 0)} tickets`,
+        ]);
         
         if (eventsData.length) {
             doc.autoTable({
@@ -320,8 +326,16 @@ function resetSalesFilters() {
     loadSalesReport();
 }
 
-function formatCurrency(amount) { return `Kes ${Number(amount).toLocaleString('en-KE')}`; }
-function formatNumber(num) { return Number(num).toLocaleString('en-KE'); }
+function formatCurrency(amount) {
+    const value = Number(amount);
+    const safe = Number.isFinite(value) ? value : 0;
+    return `Kes ${safe.toLocaleString('en-KE')}`;
+}
+function formatNumber(num) {
+    const value = Number(num);
+    const safe = Number.isFinite(value) ? value : 0;
+    return safe.toLocaleString('en-KE');
+}
 function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-KE') : 'N/A'; }
 function escapeHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 

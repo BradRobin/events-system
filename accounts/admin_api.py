@@ -2169,77 +2169,190 @@ def reports_kpi(request):
     except Exception as e:
         return safe_api_error_response(request, e)
 
+def _parse_report_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value.strip(), '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
+def _pct_change(current, previous):
+    if previous > 0:
+        return round(((current - previous) / previous) * 100, 1)
+    if current > 0:
+        return 100.0
+    return 0.0
+
+
+def _ticket_line_total(ticket):
+    return float(ticket.price * ticket.quantity)
+
+
+def _chart_bucket_key(dt, period):
+    if period == 'daily':
+        return dt.strftime('%Y-%m-%d'), dt.strftime('%d %b %Y')
+    if period == 'weekly':
+        iso = dt.isocalendar()
+        return f"{iso.year}-W{iso.week:02d}", f"W{iso.week} {iso.year}"
+    if period == 'yearly':
+        year = dt.strftime('%Y')
+        return year, year
+    return dt.strftime('%Y-%m'), dt.strftime('%b %Y')
+
+
+def _summarize_tickets(tickets):
+    total_sales = sum(_ticket_line_total(t) for t in tickets)
+    total_tickets = sum(int(t.quantity or 0) for t in tickets)
+    order_count = len(tickets)
+    avg_order = round(total_sales / order_count, 2) if order_count else 0.0
+    return {
+        'total_sales': round(total_sales, 2),
+        'total_tickets': total_tickets,
+        'order_count': order_count,
+        'avg_order_value': avg_order,
+    }
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 @admin_required_json
 def reports_sales(request):
     try:
-        start_date = request.GET.get('start_date', '').strip()
-        end_date = request.GET.get('end_date', '').strip()
-        tickets_qs = Ticket.objects.exclude(status='cancelled').select_related('event', 'event__category')
-        if start_date:
-            tickets_qs = tickets_qs.filter(purchase_date__date__gte=start_date)
-        if end_date:
-            tickets_qs = tickets_qs.filter(purchase_date__date__lte=end_date)
+        start_date_str = request.GET.get('start_date', '').strip()
+        end_date_str = request.GET.get('end_date', '').strip()
+        period = request.GET.get('period', 'monthly').strip() or 'monthly'
 
-        tickets = list(tickets_qs.order_by('-purchase_date'))
-        total_sales = sum(float(t.price * t.quantity) for t in tickets)
-        total_tickets = sum(t.quantity for t in tickets)
-        avg_order = total_sales / len(tickets) if tickets else 0
+        end_date = _parse_report_date(end_date_str) or timezone.now().date()
+        start_date = _parse_report_date(start_date_str) or (end_date - timedelta(days=365))
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
 
-        # Monthly aggregation for charts
-        monthly = {}
-        for t in tickets:
-            label = t.purchase_date.strftime('%b %Y')
-            if label not in monthly:
-                monthly[label] = {'revenue': 0.0, 'tickets': 0}
-            monthly[label]['revenue'] += float(t.price * t.quantity)
-            monthly[label]['tickets'] += t.quantity
-        labels = list(monthly.keys())[-12:]
-        revenue_data = [monthly[l]['revenue'] for l in labels]
-        tickets_data = [monthly[l]['tickets'] for l in labels]
+        period_days = (end_date - start_date).days + 1
+        prev_end = start_date - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=period_days - 1)
+
+        def tickets_in_range(range_start, range_end):
+            return list(
+                Ticket.objects.exclude(status='cancelled')
+                .select_related('event', 'event__category')
+                .filter(
+                    purchase_date__date__gte=range_start,
+                    purchase_date__date__lte=range_end,
+                )
+                .order_by('purchase_date')
+            )
+
+        current_tickets = tickets_in_range(start_date, end_date)
+        previous_tickets = tickets_in_range(prev_start, prev_end)
+
+        current = _summarize_tickets(current_tickets)
+        previous = _summarize_tickets(previous_tickets)
+
+        revenue_growth = _pct_change(current['total_sales'], previous['total_sales'])
+        tickets_growth = _pct_change(current['total_tickets'], previous['total_tickets'])
+        avg_growth = _pct_change(current['avg_order_value'], previous['avg_order_value'])
+
+        # Chart series by selected period
+        buckets = {}
+        for t in current_tickets:
+            sort_key, label = _chart_bucket_key(t.purchase_date, period)
+            if sort_key not in buckets:
+                buckets[sort_key] = {'label': label, 'revenue': 0.0, 'tickets': 0}
+            buckets[sort_key]['revenue'] += _ticket_line_total(t)
+            buckets[sort_key]['tickets'] += int(t.quantity or 0)
+
+        sorted_buckets = sorted(buckets.items(), key=lambda item: item[0])[-12:]
+        labels = [b['label'] for _, b in sorted_buckets]
+        revenue_data = [round(b['revenue'], 2) for _, b in sorted_buckets]
+        tickets_data = [b['tickets'] for _, b in sorted_buckets]
 
         # Top events
         event_sales = {}
-        for t in tickets:
+        for t in current_tickets:
             key = t.event_id
             if key not in event_sales:
-                event_sales[key] = {'title': t.event.title, 'revenue': 0.0, 'tickets': 0}
-            event_sales[key]['revenue'] += float(t.price * t.quantity)
-            event_sales[key]['tickets'] += t.quantity
+                event_sales[key] = {
+                    'name': t.event.title,
+                    'title': t.event.title,
+                    'category': t.event.category.name if t.event.category else 'Uncategorized',
+                    'revenue': 0.0,
+                    'tickets_sold': 0,
+                }
+            event_sales[key]['revenue'] += _ticket_line_total(t)
+            event_sales[key]['tickets_sold'] += int(t.quantity or 0)
         top_events = sorted(event_sales.values(), key=lambda x: x['revenue'], reverse=True)[:5]
+        for row in top_events:
+            row['revenue'] = round(row['revenue'], 2)
 
         # Category breakdown
         cat_sales = {}
-        for t in tickets:
+        for t in current_tickets:
             cat = t.event.category.name if t.event.category else 'Uncategorized'
             if cat not in cat_sales:
                 cat_sales[cat] = {'name': cat, 'revenue': 0.0, 'tickets': 0}
-            cat_sales[cat]['revenue'] += float(t.price * t.quantity)
-            cat_sales[cat]['tickets'] += t.quantity
-        categories = list(cat_sales.values())
+            cat_sales[cat]['revenue'] += _ticket_line_total(t)
+            cat_sales[cat]['tickets'] += int(t.quantity or 0)
+        categories = [
+            {'name': c['name'], 'revenue': round(c['revenue'], 2), 'tickets': c['tickets']}
+            for c in cat_sales.values()
+        ]
 
-        # Daily sales table
+        # Daily breakdown (always by calendar day within the selected range)
         daily = {}
-        for t in tickets:
+        for t in current_tickets:
             day = t.purchase_date.strftime('%Y-%m-%d')
             if day not in daily:
-                daily[day] = {'date': day, 'orders': 0, 'tickets': 0, 'revenue': 0.0}
+                daily[day] = {
+                    'date': day,
+                    'orders': 0,
+                    'tickets_sold': 0,
+                    'revenue': 0.0,
+                    'event_totals': {},
+                }
+            line_total = _ticket_line_total(t)
             daily[day]['orders'] += 1
-            daily[day]['tickets'] += t.quantity
-            daily[day]['revenue'] += float(t.price * t.quantity)
-        daily_sales = sorted(daily.values(), key=lambda x: x['date'], reverse=True)[:30]
+            daily[day]['tickets_sold'] += int(t.quantity or 0)
+            daily[day]['revenue'] += line_total
+            event_title = t.event.title if t.event_id else 'Unknown Event'
+            daily[day]['event_totals'][event_title] = (
+                daily[day]['event_totals'].get(event_title, 0.0) + line_total
+            )
+
+        daily_sales = []
+        for day in sorted(daily.keys(), reverse=True):
+            row = daily[day]
+            orders = row['orders']
+            revenue = round(row['revenue'], 2)
+            top_event = '—'
+            if row['event_totals']:
+                top_event = max(row['event_totals'], key=row['event_totals'].get)
+            daily_sales.append({
+                'date': row['date'],
+                'orders': orders,
+                'tickets_sold': row['tickets_sold'],
+                'revenue': revenue,
+                'avg_order_value': round(revenue / orders, 2) if orders else 0.0,
+                'top_event': top_event,
+            })
 
         return JsonResponse({
             'success': True,
+            'period': {
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'previous_start': prev_start.isoformat(),
+                'previous_end': prev_end.isoformat(),
+            },
             'sales': [{
                 'id': t.ticket_number,
                 'event_title': t.event.title,
                 'category': t.event.category.name if t.event.category else 'N/A',
                 'quantity': t.quantity,
-                'total': float(t.price * t.quantity),
+                'total': _ticket_line_total(t),
                 'date': t.purchase_date.isoformat(),
-            } for t in tickets[:100]],
+            } for t in current_tickets[:100]],
             'labels': labels,
             'revenue_data': revenue_data,
             'tickets_data': tickets_data,
@@ -2247,13 +2360,13 @@ def reports_sales(request):
             'categories': categories,
             'daily_sales': daily_sales,
             'kpis': {
-                'total_sales': total_sales,
-                'total_tickets': total_tickets,
-                'avg_order_value': round(avg_order, 2),
-                'growth_rate': 0,
-                'sales_trend': {'percentage': 0},
-                'tickets_trend': {'percentage': 0},
-                'avg_order_trend': {'percentage': 0},
+                'total_sales': current['total_sales'],
+                'total_tickets': current['total_tickets'],
+                'avg_order_value': current['avg_order_value'],
+                'growth_rate': revenue_growth,
+                'sales_trend': {'percentage': revenue_growth},
+                'tickets_trend': {'percentage': tickets_growth},
+                'avg_order_trend': {'percentage': avg_growth},
             },
         })
     except Exception as e:
