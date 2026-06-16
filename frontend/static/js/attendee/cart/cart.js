@@ -758,13 +758,14 @@ async function processCheckout(e) {
     const billingInfo = { name: billingName, email: billingEmail, mpesa_name: billingMpesaName };
     sessionStorage.setItem('checkout_billing_info', JSON.stringify(billingInfo));
 
-    if (window.CheckoutFlow?.startOrganizerCheckout) {
+    if (typeof window.CheckoutFlow?.startOrganizerCheckout === 'function') {
         await window.CheckoutFlow.startOrganizerCheckout(selectedItems, billingInfo);
-    } else if (window.CheckoutFlow?.startCheckout) {
+    } else if (typeof window.CheckoutFlow?.startCheckout === 'function') {
         const first = selectedItems[0];
         await window.CheckoutFlow.startCheckout(first.id, first.ticket_type || 'regular', first.quantity);
     } else {
-        showToast('Payment system unavailable', 'error');
+        console.error('CheckoutFlow not loaded — check that checkout.js loaded without errors.');
+        showToast('Checkout could not start. Please refresh the page and try again.', 'error');
     }
 }
 

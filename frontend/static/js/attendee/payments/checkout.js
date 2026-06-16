@@ -546,6 +546,8 @@
             showCheckoutError(e);
         }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
         const closeBtn = document.getElementById('checkoutClose');
         if (closeBtn) closeBtn.addEventListener('click', () => closeCheckoutModal());
 
